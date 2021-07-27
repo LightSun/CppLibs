@@ -2,7 +2,7 @@
 #define TH_GENERIC_FILE "internal/THBlas.c"
 #else
 
-#include "THCommon.h"
+#include "../THCommon.h"
 
 #ifdef BLAS_F2C
 # define ffloat double

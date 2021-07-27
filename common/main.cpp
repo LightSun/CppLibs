@@ -1,15 +1,16 @@
 #include <iostream>
 
 //extern "C"{
-#include "THStorage.h"
+#include "TH.h"
 //}
 
 using namespace std;
 
-int main()
+extern "C" int main()
 {
     cout << "Hello World!" << endl;
 
-    THHalfStorage_new();
+    THIntStorage* ths_int = THIntStorage_new();
+    THIntStorage_newWithMapping("a.db", 1024, 0);
     return 0;
 }
