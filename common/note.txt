@@ -16,6 +16,34 @@ BLAS参考库使用的算法能高效地给出正确的结果，但仍有许多�
 ### 矩阵处理工具LAPACK(Linear Algebra PACKage)
 https://blog.csdn.net/helei001/article/details/18447001
 
+### MKL 矩阵运算
+
+
+### MMX-> SSE-> AVX 指令集
+- MMX: intel 奔腾处理器用的 (x86 handle SIMD)
+- SSE: 该指令集解决了MMX指令集身上存在的两大问题，引入新的独立寄存器解决了与浮点运算间的冲突问题，同时也就支持了浮点SIMD运算
+- AVX: 将SSE时代最大宽度为128-bit的寄存器拓宽到了256-bit。
+- VSX：64 bits
+- ps: https://baijiahao.baidu.com/s?id=1670915069941232375&wfr=spider&for=pc
+
 ### ps
 - openmp: https://blog.csdn.net/cloud_desktop/article/details/24421793
 gcc need option '-fopenmp'
+- exp(x):  e 的 x 次幂的值。
+- dims: 维数
+- omap3/omap4:  德州仪器开放硬件平台(基于linux). 树莓派没有开放一些关键性的设计（比如高速摄像头）。
+- simd: 单个指令操作多个数据。
+- blas, cblas, openblas, atlas, lapack, mkl 性能对比： https://www.zhihu.com/question/27872849
+
+
+### READ me 
+- Environment variables control the disabling of certain explicit SIMD optimizations.
+```
+x64 options:
+TH_NO_AVX2=1 # disable AVX2 codepaths
+TH_NO_AVX=1  # disable AVX codepaths
+TH_NO_SSE=1  # disable SSE codepaths
+
+ppc64le options:
+TH_NO_VSX=1  # disable VSX codepaths
+```
