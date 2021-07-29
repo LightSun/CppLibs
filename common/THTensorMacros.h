@@ -3,6 +3,7 @@
 
 /* fast method to access to tensor data */
 
+//get the element of target index=x0 for 1d tensor
 #define THTensor_fastGet1d(self, x0)                                    \
   (((self)->storage->data+(self)->storageOffset)[(x0)*(self)->stride[0]])
 

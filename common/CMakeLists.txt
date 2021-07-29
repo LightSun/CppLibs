@@ -18,7 +18,9 @@ SET(SRC_H
     THStorage.h
     THMemoryFile.h
 
+    TH.h
     THMath.h
+
     THLogAdd.h
     THRandom.h
     THSize.h
@@ -88,6 +90,8 @@ add_library(TH STATIC
     ${SRC_H}
     ${SRC_CPP}
     )
+# need -std=gnu99 for mingw
+
 #add_compile_options: for all target of current
 #target_compile_options: for special target
 
@@ -96,6 +100,13 @@ add_library(TH STATIC
 #for win32 need 'TH_EXPORTS' or else cause undefined reference '__imp_xxx'
 target_compile_definitions(TH PUBLIC TH_EXPORTS)
 
+add_subdirectory(lua-5.3.6)
+add_subdirectory(luaT)
+add_subdirectory(TH_lua)
+
+include_directories(lua-5.3.6/src)
+include_directories(luaT)
+
 add_executable(common
     main.cpp)
-target_link_libraries(common TH)
+target_link_libraries(common luaT TH lua)

@@ -2,7 +2,11 @@
 
 //extern "C"{
 #include "TH.h"
+#include "lua.hpp"
+#include "luaT.h"
 //}
+
+LUA_EXTERNC DLL_EXPORT int luaopen_libtorch(lua_State *L);
 
 using namespace std;
 
@@ -12,8 +16,11 @@ extern "C" int main()
 {
     cout << "Hello World!" << endl;
 
-    THIntStorage* ths_int = THIntStorage_new();
+    //THIntStorage* ths_int = THIntStorage_new();
     //THIntStorage_newWithMapping. flags是allocator的flags. TH_ALLOCATOR_XXX
-    THIntStorage_newWithMapping("a.db", 1024, 0);
+   // THIntStorage_newWithMapping("a.db", 1024, 0);
+    lua_State * ls = luaL_newstate();
+    luaopen_libtorch(ls);
+    lua_close(ls);
     return 0;
 }
