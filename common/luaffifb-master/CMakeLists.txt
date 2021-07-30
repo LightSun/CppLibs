@@ -1,0 +1,23 @@
+
+INCLUDE_DIRECTORIES(${LUA_INCLUDE})
+LINK_DIRECTORIES(${LUA_LIBDIR})
+
+#TODO latter will support arm
+#set(FFI_LIB_DIR E:/study/tools/build/ffi)
+
+#current only mingw
+#LINK_DIRECTORIES(${FFI_LIB_DIR}/x64)
+#IF(CMAKE_SIZEOF_VOID_P EQUAL 8)
+#    LINK_DIRECTORIES(${FFI_LIB_DIR}/x64)
+#ELSE(CMAKE_SIZEOF_VOID_P EQUAL 8)
+#    LINK_DIRECTORIES(${FFI_LIB_DIR}/x86)
+#ENDIF(CMAKE_SIZEOF_VOID_P EQUAL 8)
+
+SET(LUA_FFI_SRC ffi.h call.c ctype.c ffi.c parser.c)
+
+add_library(ffi
+    SHARED
+    ${LUA_FFI_SRC}
+    )
+
+TARGET_LINK_LIBRARIES(ffi ${LUALIB})

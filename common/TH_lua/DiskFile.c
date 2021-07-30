@@ -33,7 +33,7 @@ static int torch_DiskFile_isBigEndianCPU(lua_State *L)
 static int torch_DiskFile_nativeEndianEncoding(lua_State *L)
 {
   THFile *self = luaT_checkudata(L, 1, "torch.DiskFile");
-  THDiskFile_nativeEndianEncoding(self);
+  THDiskFile_nativeEndianEncoding(self);//mark self.isNativeEncoding = 1
   lua_settop(L, 1);
   return 1;
 }
@@ -41,7 +41,7 @@ static int torch_DiskFile_nativeEndianEncoding(lua_State *L)
 static int torch_DiskFile_littleEndianEncoding(lua_State *L)
 {
   THFile *self = luaT_checkudata(L, 1, "torch.DiskFile");
-  THDiskFile_littleEndianEncoding(self);
+  THDiskFile_littleEndianEncoding(self);//mark self.isNativeEncoding = THDiskFile_isLittleEndianCPU()
   lua_settop(L, 1);
   return 1;
 }

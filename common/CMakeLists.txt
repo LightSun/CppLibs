@@ -5,6 +5,10 @@ project(common LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+#SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DBUILD_WITH_GCC")
+#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBUILD_WITH_GCC")
+#add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1 -DTORCH_EXPORTS)
+
 SET(SRC_H
     THCommon.h
     THGeneral.h
@@ -100,13 +104,22 @@ add_library(TH STATIC
 #for win32 need 'TH_EXPORTS' or else cause undefined reference '__imp_xxx'
 target_compile_definitions(TH PUBLIC TH_EXPORTS)
 
+#set share variable for multi CMakeLists.txt
+set(LUA_INCLUDE ${CMAKE_SOURCE_DIR}/lua-5.3.6/src CACHE INTERNAL "lua header")
+set(LUA_LIBDIR E:/study/github/mine/CppLibs/build-common-Desktop_Qt_5_12_9_MinGW_64_bit-Debug/lua-5.3.6 CACHE INTERNAL "lua lib dir")
+set(LUALIB lua CACHE INTERNAL "lua lib name")
+#set_property(GLOBAL PROPERTY LUA_INCLUDE "lua-5.3.6/src") # need get_property when use
+#set_property(GLOBAL PROPERTY LUA_LIBDIR "E:/study/github/mine/CppLibs/build-common-Desktop_Qt_5_12_9_MinGW_64_bit-Debug/lua-5.3.6")
+#set_property(GLOBAL PROPERTY LUALIB "lua")
+
 add_subdirectory(lua-5.3.6)
 add_subdirectory(luaT)
 add_subdirectory(TH_lua)
+add_subdirectory(luaffifb-master)
 
 include_directories(lua-5.3.6/src)
 include_directories(luaT)
 
 add_executable(common
     main.cpp)
-target_link_libraries(common luaT TH lua)
+target_link_libraries(common luaT TH TH_lua ffi ${LUALIB})

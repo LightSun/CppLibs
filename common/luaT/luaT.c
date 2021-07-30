@@ -671,7 +671,7 @@ void luaT_getinnerparent(lua_State *L, const char *tname)
   }
 }
 
-
+//args: tname,parent_tname,constructor, deconstructor, factory_method, module_idx
 int luaT_lua_newmetatable(lua_State *L)
 {
   /* Local Variables */
@@ -689,12 +689,12 @@ int luaT_lua_newmetatable(lua_State *L)
 
   /* Push immediate parent module to stack */
   if(lua_isnoneornil(L, 6)) {
-    lua_pop(L, 1); /* remove the nil */
+    lua_pop(L, 1); /* remove the nil */  //left {tname,parent_tname,constructor, deconstructor, factory_method}
     is_in_module = luaT_fullparentname(tname, parent_name);
     if (is_in_module)
       luaT_getinnerparent(L, tname);
     else
-      lua_pushglobaltable(L);
+      lua_pushglobaltable(L); //left {tname,parent_tname,constructor, deconstructor, factory_method, _G}
   }
 
   if(!lua_istable(L, -1))

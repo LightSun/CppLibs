@@ -14,6 +14,7 @@ set(CMAKE_C_FLAGS_RELEASE ${FLAGS})
 
 INCLUDE_DIRECTORIES(src)
 add_library(lua
+    SHARED
     src/lapi.c
     src/lauxlib.c
     src/lbaselib.c
@@ -49,7 +50,7 @@ add_library(lua
     src/lstate.c
     src/ltm.c
     src/lgc.c
-    src/lua.c
+   # src/lua.c
     src/lundump.c
     src/lutf8lib.c
     src/lvm.c

@@ -1,5 +1,6 @@
 #include "general.h"
 #include "utils.h"
+#include "init.h"
 
 extern void torch_utils_init(lua_State *L);
 extern void torch_random_init(lua_State *L);
@@ -36,8 +37,6 @@ extern void torch_FloatTensorOperator_init(lua_State *L);
 extern void torch_DoubleTensorOperator_init(lua_State *L);
 
 extern void torch_TensorMath_init(lua_State *L);
-
-LUA_EXTERNC DLL_EXPORT int luaopen_libtorch(lua_State *L);
 
 int luaopen_libtorch(lua_State *L)
 {
