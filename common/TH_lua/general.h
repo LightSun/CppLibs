@@ -49,11 +49,11 @@ CPP_END
 #if defined(BUILD_WITH_GCC)
 # define TORCH_API TORCH_EXTERNC
 #elif defined(_WIN32)
-    #if defined(TORCH_EXPORTS)
-    #define TORCH_API TORCH_EXTERNC __declspec(dllexport)
-    #else
-    #define TORCH_API TORCH_EXTERNC __declspec(dllimport)
-    #endif
+#   if defined(TORCH_EXPORTS)
+#   define TORCH_API TORCH_EXTERNC __declspec(dllexport)
+#   else
+#   define TORCH_API TORCH_EXTERNC __declspec(dllimport)
+#   endif
 #else
 # define TORCH_API TORCH_EXTERNC
 #endif

@@ -108,6 +108,7 @@ target_compile_definitions(TH PUBLIC TH_EXPORTS)
 set(LUA_INCLUDE ${CMAKE_SOURCE_DIR}/lua-5.3.6/src CACHE INTERNAL "lua header")
 set(LUA_LIBDIR E:/study/github/mine/CppLibs/build-common-Desktop_Qt_5_12_9_MinGW_64_bit-Debug/lua-5.3.6 CACHE INTERNAL "lua lib dir")
 set(LUALIB lua CACHE INTERNAL "lua lib name")
+set(TORCH_LIB torch CACHE INTERNAL "torch lib name")
 #set_property(GLOBAL PROPERTY LUA_INCLUDE "lua-5.3.6/src") # need get_property when use
 #set_property(GLOBAL PROPERTY LUA_LIBDIR "E:/study/github/mine/CppLibs/build-common-Desktop_Qt_5_12_9_MinGW_64_bit-Debug/lua-5.3.6")
 #set_property(GLOBAL PROPERTY LUALIB "lua")
@@ -122,4 +123,4 @@ include_directories(luaT)
 
 add_executable(common
     main.cpp)
-target_link_libraries(common luaT TH TH_lua ffi ${LUALIB})
+target_link_libraries(common luaT TH ${TORCH_LIB} ffi ${LUALIB})

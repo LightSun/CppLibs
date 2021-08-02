@@ -1,15 +1,43 @@
 #include <iostream>
+#include <queue>
+#include <future>
+#include <functional>
+
 #include "TH.h"
 #include "luaT.h"
 #include "TH_lua/init.h"
+#include "lua.hpp"
 
 //LUA_EXTERNC DLL_EXPORT void luaT_getinnerparent(lua_State *L, const char *tname);
 
 using namespace std;
 
+#define CALL_LUA(L, func)\
+{int s = func(L);\
+if(s){\
+    cout << "CALL_LUA >> error: "<< lua_tostring(L, -1) << endl;\
+}else{\
+    cout << "CALL_LUA >> lua do string success." << endl;\
+}}
+static const luaL_Reg funcs[] = {
+{"libtorch", luaopen_libtorch},
+{NULL, NULL},
+};
+
+LUALIB_API void luaL_openlibs2(lua_State *L, const luaL_Reg funcs[]) {
+  const luaL_Reg *lib;
+  /* "require" functions from 'loadedlibs' and set results to global table */
+  for (lib = funcs; lib->func; lib++) {
+    luaL_requiref(L, lib->name, lib->func, 1);
+    lua_pop(L, 1);  /* remove lib */
+  }
+}
+
+#define LUA_DIR "E:/study/github/mine/CppLibs/common/lua_script"
+
 //THXXXStorage : 包含一堆操作内存的api. CRUD-fill-free-swap等操作.
 //THBlas.h:  线性代数运算，比如矩阵乘法
-int main()
+extern "C" int main()
 {
     cout << "Hello world" << endl;
    // THIntStorage* ths_int = THIntStorage_new();
@@ -18,14 +46,26 @@ int main()
 
     lua_State * L = luaL_newstate();
     luaL_openlibs(L);
-    luaopen_libtorch(L);
-    if(luaL_dostring(L, "package.path=\"../common/lua_script/?.lua;\"..package.path"
-                     ";print('package.path = ', package.path)")){
+    luaL_openlibs2(L, funcs);
+    //luaopen_libtorch(L);
+    if(luaL_dostring(L, "package.path=\"E:/study/github/mine/CppLibs/common/lua_script/?.lua;"
+                     "\"..\"E:/study/github/mine/CppLibs/common/lua_script/test/?.lua;\"..package.path"
+                     ";print('package.path = ', package.path)"
+                     ";print('package.cpath = ', package.cpath)")){
         cout << "error: "<< lua_tostring(L, -1) << endl;
     }else{
         cout << "lua do string success." << endl;
     }
     //luaT_getinnerparent(ls, "torch.DiskFile");
+    CALL_LUA(L, [](lua_State * L){
+        return luaL_dofile(L, "../common/lua_script/init.lua");
+    });
+    CALL_LUA(L, [](lua_State * L){
+        return luaL_dofile(L, "../common/lua_script/test/longSize.lua");
+    });
+    CALL_LUA(L, [](lua_State * L){
+        return luaL_dofile(L, "../common/lua_script/test/test_aliasMultinomial.lua");
+    });
     lua_close(L);
 
     /*

@@ -32,7 +32,6 @@ static int torch_Generator_read(lua_State *L)
   return 0;
 }
 
-
 static const struct luaL_Reg torch_Generator_table_ [] = {
   {"write", torch_Generator_write},
   {"read", torch_Generator_read},

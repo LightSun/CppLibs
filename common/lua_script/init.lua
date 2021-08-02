@@ -9,8 +9,12 @@ if not table.unpack then
    table.unpack = unpack
 end
 
-require "paths"
-paths.require "libtorch"
+-- require "paths"
+-- paths.require "libtorch"
+require "libtorch"
+local tu = require 'TableUtils'
+tu.logTable(torch);
+
 
 -- Keep track of all thread local variables torch.
 -- if a Lua VM is passed to another thread thread local
@@ -158,7 +162,7 @@ require('torch.CmdLine')
 require('torch.FFInterface')
 require('torch.Tester')
 require('torch.TestSuite')
-require('torch.test')
+--require('torch.test')
 function torch.totable(obj)
    if torch.isTensor(obj) or torch.isStorage(obj) then
       return obj:totable()

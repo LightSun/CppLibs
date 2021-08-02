@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-#project(TH_luaPro LANGUAGES C CXX)
+project(TH_luaPro LANGUAGES C CXX)
 
 include_directories(..)
 include_directories(../internal)
@@ -29,11 +29,11 @@ SET(TH_lua_src
     init.c
     )
 
-add_library(TH_lua STATIC
+add_library(${TORCH_LIB} STATIC
     ${TH_lua_src}
     ${TH_lua_H}
     )
-target_compile_definitions(TH_lua PUBLIC TORCH_EXPORTS)
+target_compile_definitions(${TORCH_LIB} PUBLIC TORCH_EXPORTS)
 #target_compile_options(TH_lua PUBLIC -DTORCH_EXPORTS -D_WIN32_WINNT=0x0502)
 
-target_link_libraries(TH_lua luaT TH ${LUALIB})
+target_link_libraries(${TORCH_LIB} luaT TH ${LUALIB})

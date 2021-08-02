@@ -1268,7 +1268,7 @@ MT_DECLARE_BIN_OPERATOR(mul,    BIN_OPERATOR_ERROR(multiplication) )
 MT_DECLARE_BIN_OPERATOR(div,    BIN_OPERATOR_ERROR(division) )
 MT_DECLARE_BIN_OPERATOR(mod,    BIN_OPERATOR_ERROR(modulo) )
 MT_DECLARE_BIN_OPERATOR(pow,    BIN_OPERATOR_ERROR(power) )
-MT_DECLARE_BIN_OPERATOR(concat, BIN_OPERATOR_ERROR(concat) )
+//MT_DECLARE_BIN_OPERATOR(concat, BIN_OPERATOR_ERROR(concat) )
 MT_DECLARE_BIN_OPERATOR(eq,
                     lua_settop(L, 2);
                     lua_pushcfunction(L, luaT_lua_isequal);
@@ -1285,6 +1285,35 @@ MT_DECLARE_OPERATOR(call, luaL_error(L, "%s has no call operator", luaT_typename
 MT_DECLARE_OPERATOR(unm, luaL_error(L, "%s has no negation operator", luaT_typename(L, 1)))
 MT_DECLARE_OPERATOR(len, luaL_error(L, "%s has no length operator", luaT_typename(L, 1)))
 
+int luaT_mt__concat(lua_State *L){
+    //luaT_stackdump(L);
+    if(!lua_getmetatable(L, 1) && !lua_getmetatable(L,2) )
+      luaL_error(L, "internal error in __concat"
+              ": no metatable in both operands");
+    lua_getfield(L, -1, "__concat__");
+    if(lua_isnil(L, -1))
+    {
+        //luaL_error(L, "both %s and %s have no " "concat" " operator",
+        //        luaT_typename(L, 1), luaT_typename(L,2));
+        lua_pushfstring(L, "both %s and %s have no " "concat" " operator",
+                       luaT_typename(L, 1), luaT_typename(L,2));
+        return 1;
+    }
+    else
+    {
+      if(lua_isfunction(L, -1))
+      {
+        lua_insert(L, 1); /* insert function */
+        lua_pop(L, 1); /* remove metatable */
+        //luaT_stackdump(L);
+        lua_call(L, lua_gettop(L)-1, LUA_MULTRET);
+          /* we return the result of the call */
+        return lua_gettop(L);
+      }
+      /* we return the thing the user left in __tostring__ */
+    }
+    return 0;
+}
 
 /* constructor metatable methods */
 int luaT_cmt__call(lua_State *L)
