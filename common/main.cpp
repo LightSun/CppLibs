@@ -7,6 +7,7 @@
 #include "luaT.h"
 #include "TH_lua/init.h"
 #include "lua.hpp"
+#include "luaffifb-master/ffi.h"
 
 //LUA_EXTERNC DLL_EXPORT void luaT_getinnerparent(lua_State *L, const char *tname);
 
@@ -21,6 +22,7 @@ if(s){\
 }}
 static const luaL_Reg funcs[] = {
 {"libtorch", luaopen_libtorch},
+{"ffi", luaopen_ffi},
 {NULL, NULL},
 };
 
@@ -32,6 +34,10 @@ LUALIB_API void luaL_openlibs2(lua_State *L, const luaL_Reg funcs[]) {
     lua_pop(L, 1);  /* remove lib */
   }
 }
+
+//-----------
+extern char buf[512];
+extern "C" void test_call_pppppii(void* a, void* b, void* c, void* d, void* e, int f, int g);
 
 #define LUA_DIR "E:/study/github/mine/CppLibs/common/lua_script"
 
@@ -48,8 +54,8 @@ extern "C" int main()
     luaL_openlibs(L);
     luaL_openlibs2(L, funcs);
     //luaopen_libtorch(L);
-    if(luaL_dostring(L, "package.path=\"E:/study/github/mine/CppLibs/common/lua_script/?.lua;"
-                     "\"..\"E:/study/github/mine/CppLibs/common/lua_script/test/?.lua;\"..package.path"
+    if(luaL_dostring(L, "package.path=\"" LUA_DIR "/?.lua;"
+                     "\"..\"" LUA_DIR "/test/?.lua;\"..package.path"
                      ";print('package.path = ', package.path)"
                      ";print('package.cpath = ', package.cpath)")){
         cout << "error: "<< lua_tostring(L, -1) << endl;
@@ -66,7 +72,15 @@ extern "C" int main()
     CALL_LUA(L, [](lua_State * L){
         return luaL_dofile(L, "../common/lua_script/test/test_aliasMultinomial.lua");
     });
+    CALL_LUA(L, [](lua_State * L){
+        return luaL_dofile(L, "../common/lua_script/test/test_ffi.lua");
+    });
     lua_close(L);
+
+    int a = 5;
+    test_call_pppppii(&a, &a, &a, &a, &a, 3, 2);
+    printf(buf);
+    printf("\r\n");
 
     /*
     char arr[2] ={'.', '\0'};

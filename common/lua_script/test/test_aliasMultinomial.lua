@@ -4,7 +4,7 @@ local tester = torch.Tester()
 local function aliasMultinomial()
    local n_class = 10000
    local probs = torch.Tensor(n_class):uniform(0,1) -- uniform: 均匀抽样
-   print("probs: ", probs)
+   --print("probs: ", probs)
    probs:div(probs:sum())
    local a = torch.Timer()
    local state = torch.multinomialAliasSetup(probs)

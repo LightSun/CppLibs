@@ -3,6 +3,7 @@
 -- and follow instructions to install
 -- https://github.com/facebook/luaffifb
 local ok, ffi = pcall(require, 'ffi')
+print("load ffi: ", ok, ffi)
 
 local function checkArgument(condition, fn, ud, msg, level)
    local level = level or 3

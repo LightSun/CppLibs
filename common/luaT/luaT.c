@@ -1295,7 +1295,7 @@ int luaT_mt__concat(lua_State *L){
     {
         //luaL_error(L, "both %s and %s have no " "concat" " operator",
         //        luaT_typename(L, 1), luaT_typename(L,2));
-        lua_pushfstring(L, "both %s and %s have no " "concat" " operator",
+        lua_pushfstring(L, "= both %s and %s have no " "concat" " operator",
                        luaT_typename(L, 1), luaT_typename(L,2));
         return 1;
     }

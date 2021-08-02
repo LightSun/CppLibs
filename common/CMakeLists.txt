@@ -122,5 +122,7 @@ include_directories(lua-5.3.6/src)
 include_directories(luaT)
 
 add_executable(common
+    luaffifb-master/luaffi_test.h
+    luaffifb-master/test.c
     main.cpp)
 target_link_libraries(common luaT TH ${TORCH_LIB} ffi ${LUALIB})

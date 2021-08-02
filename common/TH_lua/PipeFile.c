@@ -1,5 +1,6 @@
 #include "general.h"
 
+//(name, mode, isQuiet)
 static int torch_PipeFile_new(lua_State *L)
 {
   const char *name = luaL_checkstring(L, 1);

@@ -2,7 +2,10 @@
 INCLUDE_DIRECTORIES(${LUA_INCLUDE})
 LINK_DIRECTORIES(${LUA_LIBDIR})
 
+project(ffiPro LANGUAGES C)
+
 #TODO latter will support arm
+#LUA_FFI_BUILD_AS_DLL
 #set(FFI_LIB_DIR E:/study/tools/build/ffi)
 
 #current only mingw
@@ -19,5 +22,6 @@ add_library(ffi
     SHARED
     ${LUA_FFI_SRC}
     )
+target_compile_definitions(ffi PRIVATE LUA_FFI_BUILD_AS_DLL)
 
 TARGET_LINK_LIBRARIES(ffi ${LUALIB})

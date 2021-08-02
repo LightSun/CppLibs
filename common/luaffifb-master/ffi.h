@@ -360,6 +360,9 @@ struct cdata {
 typedef void (*cfunction)(void);
 
 #ifdef HAVE_COMPLEX
+#ifndef complex
+#define complex _Complex
+#endif
 typedef double complex complex_double;
 typedef float complex complex_float;
 static complex_double mk_complex_double(double real, double imag) {

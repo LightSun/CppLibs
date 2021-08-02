@@ -176,6 +176,14 @@
 - key-value:      div     function: 00000000004489b0
 - key-value:      typename        function: 0000000000612587
 
+### ffi 修改日志
+- add 
+```c
+#ifndef complex
+#define complex _Complex
+#endif
+```
+
 ###log1p 函数的意义
 - 在数据预处理时首先可以对偏度比较大的数据用log1p函数进行转化，使其更加服从高斯分布，此步处理可能会使我们后续的分类结果得到一个更好的结果；
 - 平滑处理很容易被忽略掉，导致模型的结果总是达不到一定的标准，同样使用逼格更高的log1p能避免复值得问题——复值指一个自变量对应多个因变量；
