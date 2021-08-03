@@ -1,3 +1,4 @@
+-- lua ffi good doc:  https://www.cnblogs.com/jimodetiantang/p/9413168.html
 local assert , error = assert , error
 local ipairs , pairs = ipairs , pairs
 local tonumber = tonumber
@@ -8,7 +9,7 @@ local strgmatch = string.gmatch
 local osremove = os.remove
 
 local ffi = require "ffi"
-local osname = require "libs.platform"
+local osname = require "libs.platform" --can use ffi.os
 local tu = require "TableUtils"
 
 --print(":", "a"..[[avutil]]) -- aavutil
@@ -148,6 +149,11 @@ end
 
 local function ffi_add_include_dir ( dir )
 	tblinsert ( include_dirs , dir )
+end
+
+function ffi.getCAddr(ctype, var)
+ local addr = ffi.new(ctype.."[1]", ctx)
+ return addr;
 end
 
 if osname == "Linux" or osname == "OSX" or osname == "POSIX" or osname == "BSD" then

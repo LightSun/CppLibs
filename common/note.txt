@@ -225,6 +225,7 @@ gcc need option '-fopenmp'
 - omap3/omap4:  德州仪器开放硬件平台(基于linux). 树莓派没有开放一些关键性的设计（比如高速摄像头）。
 - simd: 单个指令操作多个数据。
 - blas, cblas, openblas, atlas, lapack, mkl 性能对比： https://www.zhihu.com/question/27872849
+- lua ffi比较好的文档： https://www.cnblogs.com/jimodetiantang/p/9413168.html
 
 ### READ me 
 - Environment variables control the disabling of certain explicit SIMD optimizations.

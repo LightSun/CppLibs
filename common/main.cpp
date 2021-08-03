@@ -68,10 +68,10 @@ extern "C" int main()
     }
     //luaT_getinnerparent(ls, "torch.DiskFile");
     CALL_LUA(L, [](lua_State * L){
-        return luaL_dofile(L, "../common/lua_script/initAll.lua");
+        return luaL_dofile(L, LUA_DIR "/initAll.lua");
     });
     CALL_LUA(L, [](lua_State * L){
-         PRINT_RESULT(luaL_dofile(L, "../common/lua_script/my_test/tests.lua"));
+         PRINT_RESULT(luaL_dofile(L, LUA_DIR "/my_test/tests.lua"));
          return 0;
     });
     lua_close(L);

@@ -14,6 +14,7 @@ require "my_test.test_file"
 require "libs.platform"
 require "libs.ffi_util"
 require "libs.ffi_ffmpeg"
+require "my_test.test_ffmpeg_decode_video"
 
 
 

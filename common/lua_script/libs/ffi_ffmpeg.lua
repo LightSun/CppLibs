@@ -25,12 +25,13 @@ ffi_defs ( [[ffmpeg_funcs.h]] , [[ffmpeg_defs.h]] , {
 	} )
 
 -- must load in order
-local avutil, avdevice, swresample, swscale,avcodec , avformat, avfilter
+local avutil, swresample, swscale, avcodec, avformat, avfilter, avdevice
 local osname = require "libs.platform"
 -- assert ( jit , "jit table unavailable" )
 -- Windows binaries from http://ffmpeg.zeranoe.com/builds/  not avaliable
 if osname == "Windows" then 
 	avutil 		= ffi.load ( rel_dir .. [[bin/avutil-57]] )
+	--postproc	= ffi.load ( rel_dir .. [[bin/postproc-56]] )
 	swresample  = ffi.load ( rel_dir .. [[bin/swresample-4]])
 	swscale     = ffi.load ( rel_dir .. [[bin/swscale-6]])
 	avcodec 	= ffi.load ( rel_dir .. [[bin/avcodec-59]] )
@@ -39,6 +40,7 @@ if osname == "Windows" then
 	avdevice 	= ffi.load ( rel_dir .. [[bin/avdevice-59]] )
 elseif osname == "Linux" or osname == "OSX" or osname == "POSIX" or osname == "BSD" then
 	avutil 		= ffi.load ( [[libavutil]] )
+	--postproc 	= ffi.load ( [[libpostproc]] )
 	swresample 	= ffi.load ( [[libswresample]] )
 	swscale 	= ffi.load ( [[libswscale]] )
 	avcodec 	= ffi.load ( [[libavcodec]] )
@@ -51,8 +53,12 @@ end
 
 local ffmpeg = {
 	avutil = avutil ;
+	avdevice = avdevice;
+	swresample = swresample;
+	swscale = swscale;
 	avcodec = avcodec ;
 	avformat = avformat ;
+	avfilter = avfilter ;
 
 	AV_TIME_BASE = 1000000 ;
 }
@@ -121,12 +127,70 @@ function ffmpeg.read_frames ( formatctx )
 			end
 		end , formatctx , packet
 end
+		
+---------------------------------------------------------------
+function ffmpeg.avcodec_find_decoder(avcodec_val)
+	return avcodec.avcodec_find_decoder(avcodec_val)
+end
+
+function ffmpeg.av_parser_init(avcodec_id)
+	-- parser = av_parser_init(codec->id);
+	return assert(avcodec.av_parser_init(avcodec_id), "av_parser_init() failed.");
+end
+
+function ffmpeg.avcodec_alloc_context3(avcodec0)
+	-- parser = av_parser_init(codec->id);
+	return assert(avcodec.avcodec_alloc_context3(avcodec0), "avcodec_alloc_context3() failed");
+end
+
+function ffmpeg.avcodec_open2(ctx, codec0, ops)
+-- int avcodec_open2(AVCodecContext *avctx, const AVCodec *codec, AVDictionary **options);
+return assert(avcodec.avcodec_open2(ctx, codec0, ops), "avcodec_open2() failed.")
+end 
+
+function ffmpeg.av_frame_alloc()
+-- int avcodec_open2(AVCodecContext *avctx, const AVCodec *codec, AVDictionary **options);
+return assert(avcodec.av_frame_alloc(), "av_frame_alloc() failed")
+end 
+
+function ffmpeg.av_packet_alloc()
+return assert(avcodec.av_packet_alloc(), "av_packet_alloc() failed.");
+end
+
+function ffmpeg.av_parser_parse2()
+return assert(avcodec.av_parser_parse2(), "av_parser_parse2() failed.");
+end
+
+------------------------- free methods ------------------------------
+function ffmpeg.av_parser_close(parser)
+	avcodec.av_parser_close(parser);
+end
+function ffmpeg.avcodec_free_context(ctx)
+	-- &ctx
+	local ctx_addr = ffi.getCAddr("AVCodecContext*", ctx)
+	avcodec.avcodec_free_context(ctx_addr);
+end
+function ffmpeg.av_frame_free(frame)
+	local addr = ffi.getCAddr("AVFrame*", frame)
+	avcodec.av_frame_free(addr);
+end
+function ffmpeg.av_packet_free(av_pkt)
+	local addr = ffi.getCAddr("AVPacket*", av_pkt)
+	avcodec.av_packet_free(addr);
+end
+----------------------- packet handle methods ------------------------
+function ffmpeg.avcodec_receive_frame(dec_ctx, frame)
+	return assert(avcodec.avcodec_receive_frame(dec_ctx, frame), "avcodec_receive_frame() failed");
+end
+function ffmpeg.avcodec_send_packet(dec_ctx, pkt)
+	return assert(avcodec.avcodec_send_packet(dec_ctx, pkt), "avcodec_send_packet() failed");
+end
 
 --TODO  ffmpeg changed. the old may not right.
 --avcodec.avcodec_init()
 --avcodec.avcodec_register_all()
 --avformat.av_register_all()
 
-ffmpeg.avInit();
+--ffmpeg.avInit();
 
 return ffmpeg
