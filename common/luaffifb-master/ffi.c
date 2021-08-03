@@ -2741,7 +2741,12 @@ static int ffi_load(lua_State* L)
         libname = lua_pushfstring(L, LIB_FORMAT_1, lua_tostring(L, 1));
         *lib = LoadLibraryA(libname);
         lua_pop(L, 1);
+#ifdef _WIN32
+        if(!*lib){
+            printf("load lib failed: %s, code = %d\r\n", libname, (int)GetLastError());
+        }
     }
+#endif
 #endif
 
 #ifdef LIB_FORMAT_2
@@ -2757,7 +2762,7 @@ static int ffi_load(lua_State* L)
     }
 
     lua_newtable(L);
-    lua_setuservalue(L, -2);
+    lua_setuservalue(L, -2);//pop a value from top and set value for obj of -2(idx)
 
     push_upval(L, &cmodule_mt_key);
     lua_setmetatable(L, -2);

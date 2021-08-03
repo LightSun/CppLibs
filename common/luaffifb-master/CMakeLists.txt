@@ -19,7 +19,7 @@ project(ffiPro LANGUAGES C)
 SET(LUA_FFI_SRC ffi.h call.c ctype.c ffi.c parser.c)
 
 add_library(ffi
-    SHARED
+    STATIC
     ${LUA_FFI_SRC}
     )
 target_compile_definitions(ffi PRIVATE LUA_FFI_BUILD_AS_DLL)

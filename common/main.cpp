@@ -17,9 +17,12 @@ using namespace std;
 {int s = func(L);\
 if(s){\
     cout << "CALL_LUA >> error: "<< lua_tostring(L, -1) << endl;\
-}else{\
-    cout << "CALL_LUA >> lua do string success." << endl;\
 }}
+#define PRINT_RESULT(s)\
+{if(s){\
+    cout << "CALL_LUA >> error: "<< lua_tostring(L, -1) << endl;\
+}}
+
 static const luaL_Reg funcs[] = {
 {"libtorch", luaopen_libtorch},
 {"ffi", luaopen_ffi},
@@ -39,7 +42,8 @@ LUALIB_API void luaL_openlibs2(lua_State *L, const luaL_Reg funcs[]) {
 extern char buf[512];
 extern "C" void test_call_pppppii(void* a, void* b, void* c, void* d, void* e, int f, int g);
 
-#define LUA_DIR "E:/study/github/mine/CppLibs/common/lua_script"
+//#define LUA_DIR "E:/study/github/mine/CppLibs/common/lua_script"
+#define LUA_DIR "../common/lua_script"
 
 //THXXXStorage : 包含一堆操作内存的api. CRUD-fill-free-swap等操作.
 //THBlas.h:  线性代数运算，比如矩阵乘法
@@ -54,8 +58,8 @@ extern "C" int main()
     luaL_openlibs(L);
     luaL_openlibs2(L, funcs);
     //luaopen_libtorch(L);
-    if(luaL_dostring(L, "package.path=\"" LUA_DIR "/?.lua;"
-                     "\"..\"" LUA_DIR "/test/?.lua;\"..package.path"
+    if(luaL_dostring(L, "package.path=\"" LUA_DIR "/?.lua;" 
+                     "\"..package.path"
                      ";print('package.path = ', package.path)"
                      ";print('package.cpath = ', package.cpath)")){
         cout << "error: "<< lua_tostring(L, -1) << endl;
@@ -64,16 +68,11 @@ extern "C" int main()
     }
     //luaT_getinnerparent(ls, "torch.DiskFile");
     CALL_LUA(L, [](lua_State * L){
-        return luaL_dofile(L, "../common/lua_script/init.lua");
+        return luaL_dofile(L, "../common/lua_script/initAll.lua");
     });
     CALL_LUA(L, [](lua_State * L){
-        return luaL_dofile(L, "../common/lua_script/test/longSize.lua");
-    });
-    CALL_LUA(L, [](lua_State * L){
-        return luaL_dofile(L, "../common/lua_script/test/test_aliasMultinomial.lua");
-    });
-    CALL_LUA(L, [](lua_State * L){
-        return luaL_dofile(L, "../common/lua_script/test/test_ffi.lua");
+         PRINT_RESULT(luaL_dofile(L, "../common/lua_script/my_test/tests.lua"));
+         return 0;
     });
     lua_close(L);
 

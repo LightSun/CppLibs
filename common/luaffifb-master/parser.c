@@ -228,12 +228,57 @@ static void require_token_line(lua_State* L, struct parser* P, struct token* tok
 static void check_token(lua_State* L, struct parser* P, int type, const char* str, const char* err, ...)
 {
     struct token tok;
-    if (!next_token(L, P, &tok) || tok.type != type || (tok.type == TOK_TOKEN && (tok.size != strlen(str) || memcmp(tok.str, str, tok.size) != 0))) {
+    if (!next_token(L, P, &tok)
+            || tok.type != type
+            || (tok.type == TOK_TOKEN && (tok.size != strlen(str)|| memcmp(tok.str, str, tok.size) != 0))) {
+        printf("next token is: %d\r\n", tok.type); //19(,)
+       // next_token(L, P, &tok);
+        //printf("next->next token is: %d, %s\r\n", tok.type, tok.str);
+
         va_list ap;
         va_start(ap, err);
         lua_pushvfstring(L, err, ap);
         lua_error(L);
     }
+}
+static void check_token_program_pack(lua_State* L, struct parser* P, int type, const char* str, const char* err, ...)
+{
+    struct token tok;
+    int res = next_token(L, P, &tok);
+    if (res) {
+        if(tok.type != type){
+            if(tok.type == TOK_COMMA){
+                //#pragma pack(push,_CRT_PACKING)
+                require_token(L, P, &tok);
+                if(tok.type == TOK_TOKEN){
+                    if(IS_LITERAL(tok, "_CRT_PACKING")){
+                        P->align_mask = (unsigned) (_CRT_PACKING - 1);
+                    }else {
+                        P->align_mask = (unsigned) (tok.integer - 1);
+                    }
+                    check_token(L, P, TOK_CLOSE_PAREN, "", "check_token_program_pack: invalid pack directive on line %d", P->line);
+                }else{
+                    goto error;
+                }
+            }else{
+                if(tok.type == TOK_TOKEN && (tok.size != strlen(str)
+                            || memcmp(tok.str, str, tok.size) != 0)){
+                    goto error;
+                }
+            }
+        }
+    }else{
+        goto error;
+    }
+    return;
+error:{
+        printf("next token is: %d\r\n", tok.type);
+        va_list ap;
+        va_start(ap, err);
+        lua_pushvfstring(L, err, ap);
+        lua_error(L);
+    }
+
 }
 
 static void put_back(struct parser* P)
@@ -985,6 +1030,43 @@ static int parse_type_name(lua_State* L, struct parser* P)
     return 0;
 }
 
+//return 1 if need break.
+static int process_alignof(lua_State* L, struct parser* P, struct token* tok, unsigned* align)
+{
+    if(tok->type == TOK_TOKEN && (IS_LITERAL(*tok, "__alignof__") || IS_LITERAL(*tok, "alignof"))){
+        require_token(L, P, tok);
+        if(tok->type == TOK_OPEN_PAREN){
+             require_token(L, P, tok);
+             if(tok->type == TOK_TOKEN){
+                 if(IS_LITERAL(*tok, "long")){
+                     require_token(L, P, tok);
+                     if(tok->type == TOK_TOKEN){
+                         if(IS_LITERAL(*tok, "long"))
+                            *align = __alignof__(long long) - 1;
+                         else{
+                             //TODO latter handle
+                         }
+                     }else{
+                         *align = __alignof__(long) - 1;
+                         put_back(P);
+                     }
+                 }else{
+                     //TODO latter handle
+                 }
+                 check_token(L, P, TOK_CLOSE_PAREN, NULL, "check_token-alignof: expected align(#) on line %d", P->line);
+                 return 1;
+             }else {
+                luaL_error(L, "not TOK_NUMBER-0: expected align(#) on line %d. tok = %d", P->line, tok->type);
+             }
+        }else{
+             luaL_error(L, "not TOK_NUMBER-1: expected align(#) on line %d. tok = %d", P->line, tok->type);
+        }
+    }else{
+        //printf("%s \r\n",tok->str);
+        luaL_error(L, "not TOK_NUMBER-2: expected align(#) on line %d. tok = %d", P->line, tok->type);
+        return 0;
+    }
+}
 /* parse_attribute parses a token to see if it is an attribute. It may then
  * parse some following tokens to decode the attribute setting the appropriate
  * fields in ct. It will return 1 if the token was used (and possibly some
@@ -1040,7 +1122,9 @@ static int parse_attribute(lua_State* L, struct parser* P, struct token* tok, st
                     require_token(L, P, tok);
 
                     if (tok->type != TOK_NUMBER) {
-                        luaL_error(L, "expected align(#) on line %d", P->line);
+                        if(process_alignof(L, P, tok, &align)){
+                            break;
+                        }
                     }
 
                     switch (tok->integer) {
@@ -1053,11 +1137,11 @@ static int parse_attribute(lua_State* L, struct parser* P, struct token* tok, st
                         luaL_error(L, "unsupported align size on line %d", P->line);
                     }
 
-                    check_token(L, P, TOK_CLOSE_PAREN, NULL, "expected align(#) on line %d", P->line);
+                    check_token(L, P, TOK_CLOSE_PAREN, NULL, "check_token: expected align(#) on line %d", P->line);
                     break;
 
                 default:
-                    luaL_error(L, "expected align(#) on line %d", P->line);
+                    luaL_error(L, "default: expected align(#) on line %d", P->line);
                 }
 
                 /* __attribute__(aligned(#)) is only supposed to increase alignment */
@@ -2061,11 +2145,13 @@ static int parse_root(lua_State* L, struct parser* P)
         if (tok.type == TOK_SEMICOLON) {
             /* empty semicolon in root continue on */
 
-        } else if (tok.type == TOK_POUND) {
+        } else if (tok.type == TOK_POUND) { //#
 
             check_token(L, P, TOK_TOKEN, "pragma", "unexpected pre processor directive on line %d", P->line);
             check_token(L, P, TOK_TOKEN, "pack", "unexpected pre processor directive on line %d", P->line);
-            check_token(L, P, TOK_OPEN_PAREN, "", "invalid pack directive on line %d", P->line);
+            check_token(L, P, TOK_OPEN_PAREN, "", "TOK_POUND: invalid pack directive on line %d", P->line);
+            //if last is pack
+            //add handle '#pragma pack()'
 
             require_token(L, P, &tok);
 
@@ -2075,13 +2161,15 @@ static int parse_root(lua_State* L, struct parser* P)
                 }
 
                 P->align_mask = (unsigned) (tok.integer - 1);
-                check_token(L, P, TOK_CLOSE_PAREN, "", "invalid pack directive on line %d", P->line);
+                check_token(L, P, TOK_CLOSE_PAREN, "", "TOK_POUND - TOK_NUMBER: invalid pack directive on line %d", P->line);
 
             } else if (tok.type == TOK_TOKEN && IS_LITERAL(tok, "push")) {
                 int line = P->line;
                 unsigned previous_alignment = P->align_mask;
-
-                check_token(L, P, TOK_CLOSE_PAREN, "", "invalid pack directive on line %d", P->line);
+                //TOK_CLOSE_PAREN means ')'
+                //#pragma pack(push,_CRT_PACKING)
+               // check_token(L, P, TOK_CLOSE_PAREN, "", "TOK_TOKEN-push: invalid pack directive on line %d", P->line)
+                check_token_program_pack(L, P, TOK_CLOSE_PAREN, "", "TOK_TOKEN-push: invalid pack directive on line %d", P->line);
 
                 if (parse_root(L, P) != PRAGMA_POP) {
                     luaL_error(L, "reached end of string without a pragma pop to match the push on line %d", line);
@@ -2090,13 +2178,14 @@ static int parse_root(lua_State* L, struct parser* P)
                 P->align_mask = previous_alignment;
 
             } else if (tok.type == TOK_TOKEN && IS_LITERAL(tok, "pop")) {
-                check_token(L, P, TOK_CLOSE_PAREN, "", "invalid pack directive on line %d", P->line);
+                check_token(L, P, TOK_CLOSE_PAREN, "", "TOK_TOKEN -pop: invalid pack directive on line %d", P->line);
                 return PRAGMA_POP;
 
             } else {
-                luaL_error(L, "invalid pack directive on line %d", P->line);
+                //default pack
+                P->align_mask = (unsigned) (_CRT_PACKING - 1);
+                //luaL_error(L, "unknown: invalid pack directive on line %d", P->line);
             }
-
 
         } else if (tok.type != TOK_TOKEN) {
             return luaL_error(L, "unexpected character on line %d", P->line);

@@ -183,6 +183,13 @@
 #define complex _Complex
 #endif
 ```
+- luaffi 不支持复杂的汇编指令. eg:
+```C
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic pop
+__attribute__((deprecated)) typedef struct...
+```
 
 ###log1p 函数的意义
 - 在数据预处理时首先可以对偏度比较大的数据用log1p函数进行转化，使其更加服从高斯分布，此步处理可能会使我们后续的分类结果得到一个更好的结果；
@@ -219,7 +226,6 @@ gcc need option '-fopenmp'
 - simd: 单个指令操作多个数据。
 - blas, cblas, openblas, atlas, lapack, mkl 性能对比： https://www.zhihu.com/question/27872849
 
-
 ### READ me 
 - Environment variables control the disabling of certain explicit SIMD optimizations.
 ```
@@ -231,3 +237,6 @@ TH_NO_SSE=1  # disable SSE codepaths
 ppc64le options:
 TH_NO_VSX=1  # disable VSX codepaths
 ```
+
+### FAQ
+- in windows. when one dll load another. may LoadLibrary failed. see 'https://blog.csdn.net/shaoyiju/article/details/83796293'
