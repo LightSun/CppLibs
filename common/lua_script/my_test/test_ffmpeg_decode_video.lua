@@ -128,6 +128,7 @@ local function _main(filename, outfilename)
         data = inbuf;
         while data_size > 0 do
 		    print("start av_parser_parse2")
+			-- //crash here .why?
             ret = ffmpeg.av_parser_parse2(parser, c, pk_data_holder, pkt_size,
                                    data, data_size, AV_NOPTS_VALUE[0], AV_NOPTS_VALUE[0], 0);
 			print("av_parser_parse2: ret = ", ret)
@@ -156,8 +157,8 @@ local function _main(filename, outfilename)
 	return 0;
 end
 
-local dir = "E:/study/android/sdk/docs/design/media"
--- local dir = "E:/study/android_sdk/docs/design/media"
+-- local dir = "E:/study/android/sdk/docs/design/media"
+local dir = "E:/study/android_sdk/docs/design/media"
 _main(dir.."/scroll_index.mp4", "d:/scroll_index.data")
 print("ffmpeg test decode video end.")
 
