@@ -3,6 +3,7 @@ local ffi = require "ffi"
 local ffi_util = require "libs.ffi_util"
 local ffmpeg = require "libs.ffi_ffmpeg"
 local INBUF_SIZE=4096
+local AV_INPUT_BUFFER_PADDING_SIZE = 64
 local C = ffi.C
 
 local function pgm_save(buf, wrap, xsize, ysize, filename)
@@ -18,7 +19,7 @@ local function decode(dec_ctx, frame, pkt, filename)
 	--char buf[1024];
     --int ret;
 	local buf0 = ffi.new("char[?]", 1024)
-	local buf = ffi_util.getCAddr("char", buf0)
+	local buf = ffi.getCAddr("char", buf0)
 
     local ret = ffmpeg.avcodec_send_packet(dec_ctx, pkt);
     if (ret < 0) then
@@ -52,64 +53,93 @@ local function decode(dec_ctx, frame, pkt, filename)
     end
 end
 
-local function main(filename, outfilename)
+local function _main(filename, outfilename)
    local pkt = ffmpeg.av_packet_alloc();
    --  uint8_t inbuf[INBUF_SIZE + AV_INPUT_BUFFER_PADDING_SIZE];
-   local inbuf0 = ffi.new("uint8_t[?]", INBUF_SIZE + ffmpeg.avcodec.AV_INPUT_BUFFER_PADDING_SIZE)
-   local inbuf = ffi.new("uint8_t[1]", inbuf0)
+   local inbuf0 = ffi.new("uint8_t[?]", INBUF_SIZE + AV_INPUT_BUFFER_PADDING_SIZE)
+   local inbuf = ffi.getCAddr("uint8_t", inbuf0[0])
+   print("inbuf: ", inbuf)
    --  /* set end of buffer to 0 (this ensures that no overreading happens for damaged MPEG streams) */
-   C.memset(inbuf + INBUF_SIZE, 0, ffmpeg.avcodec.AV_INPUT_BUFFER_PADDING_SIZE)
+   C.memset(inbuf + INBUF_SIZE, 0, AV_INPUT_BUFFER_PADDING_SIZE)
    
     -- /* find the MPEG-1 video decoder */
     local codec = ffmpeg.avcodec_find_decoder(ffmpeg.avcodec.AV_CODEC_ID_MPEG2VIDEO);
 	if (not codec) then
 		error("Codec not found\n");
+	else
+		print("codec: ", codec)
 	end
 	local parser = ffmpeg.av_parser_init(codec.id);
 	if (not parser) then
 		error("parser not found\n");
+	else	
+		print("parser: ", parser)
 	end
 	local c = ffmpeg.avcodec_alloc_context3(codec);
-	if (not parser) then
+	if (not c) then
 		error("Could not allocate video codec context");
 	end
 	
-	if (ffmpeg.avcodec_open2(c, codec, NULL) < 0) then
+	if (ffmpeg.avcodec_open2(c, codec, nil) < 0) then
 		error("Could not open codec");
+	else	
+		print("open codec success.")
 	end
 	
 	local f = C.fopen(filename, "rb");
 	if(not f) then 
 		print("Could not open file = ", filename)
 		error("open file")
+	else	
+		print("open file success: ", filename)
 	end
-	local frame = ffmpeg.av_frame_alloc();
+	local frame = ffmpeg.av_frame_alloc();	
 	if (not frame) then
 		error("Could not allocate video frame");
+	else
+		print("av_frame_alloc: ", frame);
 	end
 	
-	local data_size, data;
-	local pkt_data = ffi_util.getCAddr("uint8_t*", pkt.data)
-	local pkt_size = ffi_util.getCAddr("int", pkt.size)
+	--lua ffi 指针(0)的指针不能用 getCAddr
+	--print("cast addr: ",tonumber(ffi.cast("intptr_t",pkt.data))) -- (intptr_t)pkt.data
+	local pk_data_holder = ffi.new("uint8_t**");
+	
+	local AV_NOPTS_VALUE = ffi.new("int64_t[1]")
+	AV_NOPTS_VALUE[0] = ffi.i64(0x8000000000000000);
+	print("pkt.data: ", pkt.data, pk_data_holder, AV_NOPTS_VALUE[0])
+	
+	local data_size, data, ret;
+	--local pkt_data = ffi.getCAddr("uint8_t", pkt.data)
+	local pkt_size = ffi.getCAddr("int", pkt.size)
+	print("---- start loop -------", pkt_size)
+	
 	while (C.feof(f) == 0) do
+	    
 		--/* read raw data from the input file */
+		print("start read")
         data_size = C.fread(inbuf, 1, INBUF_SIZE, f);
         if (data_size == 0) then
+			print("data_size == 0")
             break;
 		end;
+		print("fread size: ", data_size)
 
         --/* use the parser to split the data into frames */
         data = inbuf;
-        while (data_size > 0) do
-            ret = ffmpeg.av_parser_parse2(parser, c, pkt_data, pkt_size,
-                                   data, data_size, ffmpeg.avcodec.AV_NOPTS_VALUE, ffmpeg.avcodec.AV_NOPTS_VALUE, 0);
+        while data_size > 0 do
+		    print("start av_parser_parse2")
+            ret = ffmpeg.av_parser_parse2(parser, c, pk_data_holder, pkt_size,
+                                   data, data_size, AV_NOPTS_VALUE[0], AV_NOPTS_VALUE[0], 0);
+			print("av_parser_parse2: ret = ", ret)
+			print("pk_data_holder: ", ffi.sizeof(pk_data_holder))
             if (ret < 0) then
                 error("Error while call av_parser_parse2()");
             end
             data      = data + ret;
             data_size = data_size - ret;
 			-- *p=y -> p[0] = y
-            if (pkt_size[0]) then
+            if (pkt_size[0] ~= 0) then
+				pkt.data = pk_data_holder[0];
                 decode(c, frame, pkt, outfilename);
 			end
         end
@@ -120,11 +150,14 @@ local function main(filename, outfilename)
     C.fclose(f);
 
     ffmpeg.av_parser_close(parser);
-    ffmpeg.avcodec_free_context(ffi_util.getCAddr("AVCodecContext*", c));
-    ffmpeg.av_frame_free(ffi_util.getCAddr("AVFrame*", frame));
-    ffmpeg.av_packet_free(ffi_util.getCAddr("AVPacket*", pkt));
+    ffmpeg.avcodec_free_context(ffi.getCAddr("AVCodecContext*", c));
+    ffmpeg.av_frame_free(ffi.getCAddr("AVFrame*", frame));
+    ffmpeg.av_packet_free(ffi.getCAddr("AVPacket*", pkt));
 	return 0;
 end
 
-main("E:/study/android_sdk/docs/design/media/scroll_index.mp4", "d:/scroll_index.data")
+local dir = "E:/study/android/sdk/docs/design/media"
+-- local dir = "E:/study/android_sdk/docs/design/media"
+_main(dir.."/scroll_index.mp4", "d:/scroll_index.data")
+print("ffmpeg test decode video end.")
 

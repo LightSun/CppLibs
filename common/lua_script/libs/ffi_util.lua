@@ -139,7 +139,8 @@ local function ffi_defs ( func_file , def_file , headers , skipcdef , skipdefine
 	if not skipdefines then
 		defs = ffi_process_defines ( defs )
 	end
-
+	--local tu = require("TableUtils")
+	--tu.logTable(defs);
 	return funcs , defs
 end
 
@@ -152,7 +153,10 @@ local function ffi_add_include_dir ( dir )
 end
 
 function ffi.getCAddr(ctype, var)
- local addr = ffi.new(ctype.."[1]", ctx)
+ print("ffi.getCAddr start: ", ctype, var)
+ local addr = ffi.new(ctype.."[1]", var)
+ -- local addr = ffi.typeof("$ *", var)
+ print("ffi.getCAddr end: ",ctype, var)
  return addr;
 end
 

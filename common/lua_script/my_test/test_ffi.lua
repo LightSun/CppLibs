@@ -10,7 +10,11 @@ local function image_ramp_green(n)
     img[i].green = i*f
     img[i].alpha = 255
   end
-  print("img: ", img)
+ -- local ptr = ffi.typeof("$ *", img[0]) -- error
+  local a = 5;
+  local ptr = ffi.new("int[1]", a)
+  print("ptr[0]: ", ptr[0], a)
+  print("img: ", img, ptr)
   return img
 end
 
@@ -28,9 +32,11 @@ for i=1,1000 do
 end
 
 --local ffi = require("ffi")
-ffi.cdef[[
-int printf(const char *fmt, ...);
-]]
-ffi.C.printf("Hello %s!", "world\r\n")
+--
+--ffi.cdef[[
+--int printf(const char *fmt, ...);
+--]]
+--ffi.C.printf("Hello %s!", "world\r\n")
+
 
 print("lua ffi test end.")

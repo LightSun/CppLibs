@@ -150,15 +150,16 @@ end
 
 function ffmpeg.av_frame_alloc()
 -- int avcodec_open2(AVCodecContext *avctx, const AVCodec *codec, AVDictionary **options);
-return assert(avcodec.av_frame_alloc(), "av_frame_alloc() failed")
+return assert(avutil.av_frame_alloc(), "av_frame_alloc() failed")
 end 
 
 function ffmpeg.av_packet_alloc()
 return assert(avcodec.av_packet_alloc(), "av_packet_alloc() failed.");
 end
 
-function ffmpeg.av_parser_parse2()
-return assert(avcodec.av_parser_parse2(), "av_parser_parse2() failed.");
+function ffmpeg.av_parser_parse2(parser_ctx, avctx, pp_outbuf, p_outbuf_size,
+                     p_buf, buf_size, pts, dts, pos)
+return assert(avcodec.av_parser_parse2(parser_ctx, avctx, pp_outbuf, p_outbuf_size, p_buf, buf_size, pts, dts, pos), "av_parser_parse2() failed.");
 end
 
 ------------------------- free methods ------------------------------
