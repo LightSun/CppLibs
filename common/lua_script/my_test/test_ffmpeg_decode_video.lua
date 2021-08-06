@@ -7,6 +7,7 @@ local AV_INPUT_BUFFER_PADDING_SIZE = 64
 local C = ffi.C
 
 local function pgm_save(buf, wrap, xsize, ysize, filename)
+	print("start pgm_save...");
 	local f = C.fopen(filename,"wb");
     C.fprintf(f, "P5\n%d %d\n%d\n", xsize, ysize, 255);
     for i = 0, ysize - 1, 1 do
@@ -16,10 +17,11 @@ local function pgm_save(buf, wrap, xsize, ysize, filename)
 end
 
 local function decode(dec_ctx, frame, pkt, filename)
+	print("start decode...");
 	--char buf[1024];
     --int ret;
 	local buf0 = ffi.new("char[?]", 1024)
-	local buf = ffi.getCAddr("char", buf0)
+	--local buf = ffi.getCAddr("char", buf0)
 
     local ret = ffmpeg.avcodec_send_packet(dec_ctx, pkt);
     if (ret < 0) then
@@ -45,11 +47,11 @@ local function decode(dec_ctx, frame, pkt, filename)
         C.fflush(C.stdout);
 
         --/* the picture is allocated by the decoder. no need to free it */
-        C.snprintf(buf, ffi.sizeof(buf0), "%s-%d", filename, dec_ctx.frame_number);
+        C.snprintf(buf0, 1024, "%s-%d", filename, dec_ctx.frame_number);
 	    frame_data = frame.data;		 --frame.data[0]
 		frame_linesize = frame.linesize; -- frame.linesize[0]
         pgm_save(frame_data, frame_linesize,
-			frame.width, frame.height, buf);
+			frame.width, frame.height, buf0);
     end
 end
 
@@ -100,13 +102,15 @@ local function _main(filename, outfilename)
 		print("av_frame_alloc: ", frame);
 	end
 	
-	--lua ffi 指针(0)的指针不能用 getCAddr
-	--print("cast addr: ",tonumber(ffi.cast("intptr_t",pkt.data))) -- (intptr_t)pkt.data
-	local pk_data_holder = ffi.new("uint8_t**");
+	--lua ffi 多级指针不能用 getCAddr
+	--print("cast addr: ",tonumber(ffi.cast("intptr_t",pkt.data))) -- (intptr_t)pkt.data	
+	local pk_data_holder = ffi.new("uint8_t*[1]");
+	local ptr = ffi.new("uint8_t[1]")
+	ptr[0] = 0
+	pk_data_holder[0] = ptr
 	
-	local AV_NOPTS_VALUE = ffi.new("int64_t[1]")
-	AV_NOPTS_VALUE[0] = ffi.i64(0x8000000000000000);
-	print("pkt.data: ", pkt.data, pk_data_holder, AV_NOPTS_VALUE[0])
+	local AV_NOPTS_VALUE = ffi.new("int64_t", 0x8000000000000000)
+	print("pkt.data: ", pk_data_holder, AV_NOPTS_VALUE)
 	
 	local data_size, data, ret;
 	--local pkt_data = ffi.getCAddr("uint8_t", pkt.data)
@@ -130,18 +134,21 @@ local function _main(filename, outfilename)
 		    print("start av_parser_parse2")
 			-- //crash here .why?
             ret = ffmpeg.av_parser_parse2(parser, c, pk_data_holder, pkt_size,
-                                   data, data_size, AV_NOPTS_VALUE[0], AV_NOPTS_VALUE[0], 0);
+                                   data, data_size, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
 			print("av_parser_parse2: ret = ", ret)
-			print("pk_data_holder: ", ffi.sizeof(pk_data_holder))
+			print("pk_data_holder: ", ffi.sizeof(pk_data_holder), ffi.sizeof(pk_data_holder[0]))
             if (ret < 0) then
                 error("Error while call av_parser_parse2()");
             end
             data      = data + ret;
             data_size = data_size - ret;
+			print("pkt_size[0]: ", pkt_size[0])
 			-- *p=y -> p[0] = y
             if (pkt_size[0] ~= 0) then
-				pkt.data = pk_data_holder[0];
+				print("--- before decode ---", pkt.data) --TODO wait fix data(u8**)  
+				pkt.data[0] = pk_data_holder[0][0];
                 decode(c, frame, pkt, outfilename);
+				print("--- after decode ---")
 			end
         end
 	end
@@ -157,8 +164,8 @@ local function _main(filename, outfilename)
 	return 0;
 end
 
--- local dir = "E:/study/android/sdk/docs/design/media"
-local dir = "E:/study/android_sdk/docs/design/media"
+local dir = "E:/study/android/sdk/docs/design/media"
+-- local dir = "E:/study/android_sdk/docs/design/media"
 _main(dir.."/scroll_index.mp4", "d:/scroll_index.data")
 print("ffmpeg test decode video end.")
 

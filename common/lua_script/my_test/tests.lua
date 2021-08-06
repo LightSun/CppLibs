@@ -9,13 +9,13 @@ end
 
 require "test.longSize"
 require "test.test_aliasMultinomial"
-require "my_test.test_ffi"
+--require "my_test.test_ffi"
 require "my_test.test_file"
 require "libs.platform"
 require "libs.ffi_util"
 require "libs.ffi_ffmpeg"
---require "my_test.test_ffmpeg_decode_video"
-require "my_test.test_ffi_stest"
+--require "my_test.test_ffi_stest"
+require "my_test.test_ffmpeg_decode_video"
 
 
 
