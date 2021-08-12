@@ -1064,8 +1064,8 @@ static int process_alignof(lua_State* L, struct parser* P, struct token* tok, un
     }else{
         //printf("%s \r\n",tok->str);
         luaL_error(L, "not TOK_NUMBER-2: expected align(#) on line %d. tok = %d", P->line, tok->type);
-        return 0;
     }
+    return 0;
 }
 /* parse_attribute parses a token to see if it is an attribute. It may then
  * parse some following tokens to decode the attribute setting the appropriate

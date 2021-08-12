@@ -106,7 +106,8 @@ target_compile_definitions(TH PUBLIC TH_EXPORTS)
 
 #set share variable for multi CMakeLists.txt
 set(LUA_INCLUDE ${CMAKE_SOURCE_DIR}/lua-5.3.6/src CACHE INTERNAL "lua header")
-set(LUA_LIBDIR E:/study/github/mine/CppLibs/build-common-Desktop_Qt_5_12_9_MinGW_64_bit-Debug/lua-5.3.6 CACHE INTERNAL "lua lib dir")
+#set(LUA_LIBDIR E:/study/github/mine/CppLibs/build-common-Desktop_Qt_5_12_9_MinGW_64_bit-Debug/lua-5.3.6 CACHE INTERNAL "lua lib dir")
+set(LUA_LIBDIR ${CMAKE_CURRRENT_BINARY_DIR}/lua-5.3.6 CACHE INTERNAL "lua lib dir")
 set(LUALIB lua CACHE INTERNAL "lua lib name")
 set(TORCH_LIB torch CACHE INTERNAL "torch lib name")
 #set_property(GLOBAL PROPERTY LUA_INCLUDE "lua-5.3.6/src") # need get_property when use
@@ -117,6 +118,7 @@ add_subdirectory(lua-5.3.6)
 add_subdirectory(luaT)
 add_subdirectory(TH_lua)
 add_subdirectory(luaffifb-master)
+add_subdirectory(nn/THNN/)
 
 include_directories(lua-5.3.6/src)
 include_directories(luaT)

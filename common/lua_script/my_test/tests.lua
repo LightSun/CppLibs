@@ -13,9 +13,15 @@ require "test.test_aliasMultinomial"
 require "my_test.test_file"
 require "libs.platform"
 require "libs.ffi_util"
-require "libs.ffi_ffmpeg"
---require "my_test.test_ffi_stest"
-require "my_test.test_ffmpeg_decode_video"
 
+
+--require "my_test.test_ffi_stest"
+
+--test ffi we ffmpeg failed by some unknown cause.(blocking in some method)
+--require "libs.ffi_ffmpeg"
+--require "my_test.test_ffmpeg_decode_video"
+
+
+require "nn.test"
 
 

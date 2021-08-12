@@ -1986,6 +1986,17 @@ static void push_number(lua_State* L, int64_t val, int ct_usr, const struct ctyp
     }
 }
 
+static void push_unumber(lua_State* L, uint64_t val, int ct_usr, const struct ctype* ct)
+{
+    if ((ct->pointers || ct->type == INTPTR_TYPE) && sizeof(intptr_t) != sizeof(uint64_t)) {
+        uintptr_t* p = (uintptr_t*) push_cdata(L, ct_usr, ct);
+        *p = val;
+    } else {
+        uint64_t* p = (uint64_t*) push_cdata(L, ct_usr, ct);
+        *p = val;
+    }
+}
+
 static int call_user_op(lua_State* L, const char* opfield, int idx, int ct_usr, const struct ctype* ct)
 {
     idx = lua_absindex(L, idx);
@@ -2297,7 +2308,13 @@ static int cdata_sub(lua_State* L)
                                                                             \
     } else if (lt.pointers || rt.pointers) {                                \
         luaL_error(L, "can't operate on a pointer value");                  \
-                                                                            \
+    } else if (ct.is_unsigned) {                                            \
+           uint64_t res;                                                       \
+           uint64_t left = check_intptr(L, 1, lp, &lt);                        \
+           uint64_t right = check_intptr(L, 2, rp, &rt);                       \
+                                                                               \
+           DO_NORMAL(left, right, res);                                        \
+           push_unumber(L, res, ct_usr, &ct);                                   \
     } else {                                                                \
         int64_t res;                                                        \
         int64_t left = check_intptr(L, 1, lp, &lt);                         \
@@ -2830,7 +2847,7 @@ static void* lookup_global(lua_State* L, int modidx, int nameidx, const char** p
     assert(lua_gettop(L) == top + 1);
     return sym;
 }
-
+//search c function symbol
 static int cmodule_index(lua_State* L)
 {
     const char* asmname;
@@ -2986,7 +3003,18 @@ static int cmodule_newindex(lua_State* L)
     set_value(L, 3, sym, -1, &ct, 1);
     return 0;
 }
+static int cmodule_gc(lua_State* L)
+{
+    void * lib = *(void **)lua_touserdata(L, 1);
 
+#ifdef _WIN32
+    FreeLibrary((HANDLE)lib);
+#else
+    dlclose(lib);
+#endif
+
+    return 0;
+}
 static int jit_gc(lua_State* L)
 {
     size_t i;
@@ -3106,6 +3134,7 @@ static const luaL_Reg ctype_mt[] = {
 static const luaL_Reg cmodule_mt[] = {
     {"__index", &cmodule_index},
     {"__newindex", &cmodule_newindex},
+    {"__gc", &cmodule_gc},
     {NULL, NULL}
 };
 
