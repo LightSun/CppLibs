@@ -11,6 +11,9 @@ require "test.longSize"
 require "test.test_aliasMultinomial"
 --require "my_test.test_ffi"
 require "my_test.test_file"
+require "my_test.test_storage"
+require "my_test.test_tensor"
+
 require "libs.platform"
 require "libs.ffi_util"
 
@@ -23,5 +26,7 @@ require "libs.ffi_util"
 
 
 require "nn.test"
+-- require "test.nn.LinearTHNN"
+-- require "test.nn.benchmarks.IndexLinear"
 
 
