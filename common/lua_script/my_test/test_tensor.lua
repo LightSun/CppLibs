@@ -349,7 +349,16 @@ return val
 end
 )
 
-y = x:sub(2, 4)
+--[[
+print(x)
+ 1   2   3   4   5   6
+ 7   8   9  10  11  12
+ 13  14  15  16  17  18
+ 19  20  21  22  23  24
+ 25  26  27  28  29  30
+ ]]--
+
+y = x:sub(2, 4) -- no memory copy
 --[[
 print(y)
  7   8   9  10  11  12
@@ -359,17 +368,174 @@ print(y)
 ]]--
 
 z = x:sub(2,4,3,4) -- y:sub(3,4)
---[[
-print(x)
- 1   2   3   4   5   6
- 7   8   9  10  11  12
- 13  14  15  16  17  18
- 19  20  21  22  23  24
- 25  26  27  28  29  30
- ]]--
+
 print("x:sub(2,4,3,4): \n", z)
 --[[
 9  10
 15  16
 21  22
  ]]--
+ 
+ ----- [Tensor] select(dim, index) --------------
+
+y = x:select(1, 2) -- 选择第1维(这里是行)的 第2. 
+--[[
+print("select: y = \n",y)
+  7
+  8
+  9
+ 10
+ 11
+ 12
+[torch.FloatTensor of size 6]
+]]--
+
+y = x:select(2, 2) -- 选择第2维(这里是列)的 第2. 
+--[[
+print("select: y = ",y)
+ 2
+  8
+ 14
+ 20
+ 26
+[torch.FloatTensor of size 5]
+]]--
+
+--=============== [Tensor] [{ dim1,dim2,... }] or [{ {dim1s,dim1e}, {dim2s,dim2e} }] =====================
+--The indexing operator [] can be used to combine narrow/sub and select in a concise and efficient way. It can also be used to copy, and fill (sub) tensors.
+print("--------- start indexing operator ---------")
+--print("x[{ 1,3 }]: ",x[{ 1,3 }])  -- 第1行第3列
+--print("x[{ 2,{2,4} }]: ", x[{ 2,{2,4} }]) -- 第2行，第2~4列(均包含)
+--print("x[{ {},4 }]: ", x[{ {},4 }])  -- 第4列
+-- x[{ {},2 }] = torch.range(1,5)
+
+-- x[torch.lt(x,0)] = -2  -- 将所有小于0的数设置为-2.
+
+--------- [Tensor] index(dim, index) -----
+-- index函数会使用内存拷贝--底层则是storage。
+
+print("========== start : [Tensor] index(dim, index) =========")
+
+y = x:index(1,torch.LongTensor{3,1}) -- 表示取第1维的第3行 和 第1行，组成新的tensor. 
+--[[
+print(y)
+ 13  14  15  16  17  18
+  1   2   3   4   5   6
+[torch.FloatTensor of size 2x6]
+]]--
+y = torch.Tensor()
+y:index(x,1,torch.LongTensor{3,1})
+--[[
+print(y)
+等同于 y = x:index(1,torch.LongTensor{3,1})
+]]--
+
+--- ============ [Tensor] indexCopy(dim, index, tensor) =============
+print("=========== start [Tensor] indexCopy(dim, index, tensor) ==========")
+z=torch.Tensor(5,2)
+z:select(2,1):fill(-1)
+z:select(2,2):fill(-2)
+
+-- z中的元素到 y的第2维（列），第5列和第一列。note: shape the shape must be the same. or else error.
+y = x:clone();
+y:indexCopy(2,torch.LongTensor{5,1},z);
+--print(y)
+--[[
+ -2   2   3   4  -1   6
+ -2   8   9  10  -1  12
+ -2  14  15  16  -1  18
+ -2  20  21  22  -1  24
+ -2  26  27  28  -1  30
+[torch.FloatTensor of size 5x6]
+]]--
+
+---=========== [Tensor] indexAdd(dim, index, tensor) =============
+print("============ [Tensor] indexAdd(dim, index, tensor) ======== ")
+z = torch.Tensor(5, 2)
+z:select(2,1):fill(-1)
+z:select(2,2):fill(-2)
+
+y = x:clone();
+y:indexAdd(2,torch.LongTensor{5,1},z) -- 将第2维的，第5列所有元素值+(-1). 第1列所有元素值+(-2)
+--print(y)
+--[[
+ -1   2   3   4   4   6
+  5   8   9  10  10  12
+ 11  14  15  16  16  18
+ 17  20  21  22  22  24
+ 23  26  27  28  28  30
+[torch.FloatTensor of size 5x6]
+]]--
+
+---- =========== [Tensor] indexFill(dim, index, val) ==============
+-- 类似 [Tensor] indexAdd(dim, index, tensor), 只不过是设置, not add
+
+--- ============ [Tensor] gather(dim, index) =================
+-- gather: 
+print("======== [Tensor] gather(dim, index) ==========")
+x = torch.IntTensor(5, 5)
+local val = 0
+x = x:apply(function(x)
+val = val + 1;
+return val
+end
+)
+--[[
+print(x)
+ 1   2   3   4   5
+  6   7   8   9  10
+ 11  12  13  14  15
+ 16  17  18  19  20
+ 21  22  23  24  25
+[torch.IntTensor of size 5x5]
+]]--
+
+-- dim = 1, index = 行.
+-- 这里 torch.LongTensor{{1, 2, 3, 4, 5}, {2, 3, 4, 5, 1}} 表示生成2行5列
+y = x:gather(1, torch.LongTensor{{1, 2, 3, 4, 5}, {2, 3, 4, 5, 1}})
+--print(y)
+-- {1, 2, 3, 4, 5} -> (1,1) (2,2) (3,3) (4,4) (5,5)
+-- {2, 3, 4, 5, 1} -> (2,1) (3,2) (4,3) (5,4) (1,5) 
+-- ...
+-- {a1, a2, a3, a4, a5} -> {a1,1},{a2,2},{a3,3},{a4,4},{a5,5}
+
+--[[  1   7  13  19  25
+  6  12  18  24   5
+[torch.IntTensor of size 2x5] ]]--
+
+
+-- dim = 2, index = 列
+-- torch.LongTensor{{1, 2}, {2, 3}, {3, 4}, {4, 5}, {5, 1}} 表示
+-- 1, 将会生成5行2列的数据。
+--[[
+第1行: {1, 2} -> (1,1),(1,2)
+第2行: {2, 3} -> (2,2),(2,3)
+第3行: {3, 4} -> (3,3),(3,4)
+...
+第n行: {k1, k2} -> (n,k1),(n,k2)
+]]--
+z = x:gather(2, torch.LongTensor{{1, 2}, {2, 3}, {3, 4}, {4, 5}, {5, 1}})
+--print(z)
+--[[
+ 1   2
+  7   8
+ 13  14
+ 19  20
+ 25  21
+[torch.IntTensor of size 5x2]
+]]--
+
+
+--=================== [Tensor] scatter(dim, index, src|val) ============
+print("============ [Tensor] scatter(dim, index, src|val) ===========")
+y = torch.zeros(3, 5):int():scatter(1, torch.LongTensor{{1, 2, 3, 1, 1}, {3, 1, 1, 2, 3}}, x)
+--[[
+
+]]--
+print(y)
+--[[
+ 1   7   8   4   5
+  0   2   0   9   0
+  6   0   3   0  10
+[torch.IntTensor of size 3x5]
+]]--
