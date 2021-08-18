@@ -150,7 +150,7 @@ x:size()   --- 4  5  [torch.LongStorage of size 2]
 
 ------ [number] stride(dim) -------
 x = torch.Tensor(4,5):zero()
--- elements in a row are contiguous in memory
+-- elements in a row are contiguous(连续的) in memory
 x:stride(2) -- 1
 
 -- to go from one element to the next one in a column
@@ -523,19 +523,115 @@ z = x:gather(2, torch.LongTensor{{1, 2}, {2, 3}, {3, 4}, {4, 5}, {5, 1}})
  19  20
  25  21
 [torch.IntTensor of size 5x2]
-]]--
+--]]
 
 
 --=================== [Tensor] scatter(dim, index, src|val) ============
-print("============ [Tensor] scatter(dim, index, src|val) ===========")
-y = torch.zeros(3, 5):int():scatter(1, torch.LongTensor{{1, 2, 3, 1, 1}, {3, 1, 1, 2, 3}}, x)
---[[
+-- write values from tensor. dim start from 1 (in pytorch dim start from 0).
+--[[ 3维 ,反斜杠只是多行注释问题
+self[index[i][j][k]\][j][k]  = src[i][j][k]   if dim == 1  for pytorch 0,
+self[i][index[i][j][k]\][k]  = src[i][j][k]   if dim == 2  for pytorch 1,
+self[i][j][index[i][j]\[k]\] = src[i][j][k]   if dim == 3  for pytorch 2,
+--]]
 
+--[[ 2维
+--self[index[i][j]\][j] = src[i][j]     -- if dim == 1
+--self[i][index[i][j]\] = src[i][j]     -- if dim == 2
+--]]
+--[[
+  1   2   3   4   5
+  6   7   8   9  10
+ 11  12  13  14  15
+ 16  17  18  19  20
+ 21  22  23  24  25
 ]]--
-print(y)
+print("============ [Tensor] scatter(dim, index, src|val) ===========")
+
+
+-- dim = 1, index = 行.
+x2 = torch.zeros(3, 5):int()
+y = x2:scatter(1, torch.LongTensor{{1, 2, 3, 1, 1}, {3, 1, 1, 2, 3}}, x)
+print(x2 == y) -- true 
+--[[
+--第1行: (1,1), (2,2), (2,3), (1,4), (1,5) -> (self[index[1][1]\][1] = self[1][1] = x[1][1], self[index[1][2]\][2]= self[2][2] = x[1][2], self[index[1][3]\][3]=self[3][3]=x[1][3]...)
+--第2行: 		 (1, 2)		 	(2,4)  
+--	   (2,1)		 (1,3)			(2,5)
+--]]
+-- print(y)
 --[[
  1   7   8   4   5
   0   2   0   9   0
   6   0   3   0  10
 [torch.IntTensor of size 3x5]
 ]]--
+
+z = torch.zeros(2, 4):scatter(2, torch.LongTensor{{3}, {4}}, 1.23)
+--[[> z
+ 0.0000  0.0000  1.2300  0.0000
+ 0.0000  0.0000  0.0000  1.2300
+[torch.DoubleTensor of size 2x4]
+--]]
+
+--- index, indexCopy, indexAdd, gather, scatter操作都不会产生新的tensor.只是会在原来的tensor(storage)上修改.
+--- src/val可以是tensor(张量)或者标量（任意数字或者小数）
+---
+print(torch.zeros(2, 4) == torch.zeros(2, 4)) -- false
+
+--======================== [Tensor] maskedSelect(mask) ====================
+-- 掩码和张量必须具有相同数量的元素。 生成的 Tensor 将是一个与 Tensor 类型相同的一维张量，其大小为 mask:sum()。
+print("======== [Tensor] maskedSelect(mask) ==========")
+
+x2 = torch.range(1,12):double():resize(3,4)
+mask = torch.ByteTensor(2,6):bernoulli() -- 伯努利随机数
+print(mask)
+--[[
+ 1  0  1  0  0  0
+ 1  1  0  0  0  1
+[torch.ByteTensor of dimension 2x6]
+--]]
+
+-- x2 和 mask 元素个数必须相等
+y = x2:maskedSelect(mask)
+print(y)
+-- print(y == x2) -- false
+--[[
+  1
+  3
+  7
+  8
+ 12
+[torch.DoubleTensor of dimension 5]
+--]]
+
+--===================== [Tensor] maskedCopy(mask, tensor) ====================
+-- 类似[Tensor] maskedSelect(mask)
+print("======== [Tensor] maskedCopy(mask) ==========")
+t = torch.range(101,112):double()
+-- maskedCopy 要求输入tensor的元素个数要 >= mask中1的个数. 而且。x2和t的 tensor类型相同
+y = x2:maskedCopy(mask, t)
+print(y);
+--[[ mask
+ 1
+ 8
+[torch.DoubleTensor of size 2]
+> y
+ 101    2    3    4
+   5    6    7  102
+   9   10   11   12
+[torch.DoubleTensor of size 3x4]
+--]]
+
+--================== [Tensor] maskedFill(mask, val) ====================
+print("========== [Tensor] maskedFill(mask, val) ============ ")
+y = x2:maskedFill(mask, -1)
+print(x2)
+--print(y) -- -1
+
+
+--================== [Tensor] bernoulli() ================
+--从伯努利分布中提取二进制 随机数（0或1），输入张量应为包含用于绘制二进制随机数的概率的张量。
+--因此，输入中的所有值都必须在以下范围内(0,1)。
+
+----========================================
+----================== Search (result is LongTensor)======================
+----========================================
