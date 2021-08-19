@@ -378,7 +378,7 @@ print("x:sub(2,4,3,4): \n", z)
  
  ----- [Tensor] select(dim, index) --------------
 
-y = x:select(1, 2) -- 选择第1维(这里是行)的 第2. 
+y = x:select(1, 2) -- 选择第1维(这里是行)的 第2(行). 
 --[[
 print("select: y = \n",y)
   7
@@ -390,7 +390,7 @@ print("select: y = \n",y)
 [torch.FloatTensor of size 6]
 ]]--
 
-y = x:select(2, 2) -- 选择第2维(这里是列)的 第2. 
+y = x:select(2, 2) -- 选择第2维(这里是列)的 第2(列). 
 --[[
 print("select: y = ",y)
  2
@@ -634,4 +634,453 @@ print(x2)
 
 ----========================================
 ----================== Search (result is LongTensor)======================
-----========================================
+----- [LongTensor] nonzero(tensor) ----------
+-- 返回一个索引的2维数组. 每一行表示满足条件的, 行和列的索引(index).
+print("================= [LongTensor] nonzero(tensor) =============== ")
+
+x = torch.rand(4, 4):mul(3):floor():int()
+y = torch.nonzero(x); -- 等价于 y = x:nonzero()
+print(x)
+-- print(y) -- 行数表示满足条件的个数. 列数n个表示x是n维的
+--[[
+ 1  0  2  1
+ 0  0  0  2
+ 1  1  2  0
+ 0  0  2  0
+[torch.IntTensor of size 4x4]
+
+ 1  1
+ 1  3
+ 1  4
+ 2  4
+ 3  1
+ 3  2
+ 3  3
+ 4  3
+[torch.LongTensor of size 8x2]
+--]]
+
+print(x:eq(1):nonzero())
+
+
+---================ Expanding/Replicating/Squeezing Tensors ===============
+-- 扩展/复制/压缩张量
+---============================================================
+
+---- [result] expand([result,] sizes)-------
+-- sizes can either be a torch.LongStorage or numbers. ---------
+print("============= [result] expand([result,] sizes) =============")
+x = torch.rand(10,1)
+y = torch.expand(x, 10, 2) -- 10 * 2. change y will effect x.
+y:fill(1)
+i=0; y:apply(function() i=i+1;return i end)
+--print(y)
+--print(x)
+--[[
+ 2   2
+  4   4
+  6   6
+  8   8
+ 10  10
+ 12  12
+ 14  14
+ 16  16
+ 18  18
+ 20  20
+[torch.FloatTensor of size 10x2]
+
+  2
+  4
+  6
+  8
+ 10
+ 12
+ 14
+ 16
+ 18
+ 20
+[torch.FloatTensor of size 10x1]
+--]]
+
+------ [result] expandAs([result,] tensor) -------
+-- This is equivalent to self:expand(tensor:size())
+
+------ [Tensor] repeatTensor([result,] sizes) --------
+-- sizes can either be a torch.LongStorage or numbers. ---------
+print("========== [Tensor] repeatTensor([result,] sizes) ========")
+x = torch.rand(5)
+-- 水平（列）重复2-1次， 之后整体竖直（行)重复3-1次
+y = torch.repeatTensor(x,3,2) -- y: 3 * 10
+z = torch.repeatTensor(x,3,2,1)
+print(x)
+print(y)
+print(z)
+--[[
+ 0.3040
+ 0.4690
+ 0.1395
+ 0.1795
+ 0.4742
+[torch.FloatTensor of size 5]
+
+ 0.3040  0.4690  0.1395  0.1795  0.4742  0.3040  0.4690  0.1395  0.1795  0.4742
+ 0.3040  0.4690  0.1395  0.1795  0.4742  0.3040  0.4690  0.1395  0.1795  0.4742
+ 0.3040  0.4690  0.1395  0.1795  0.4742  0.3040  0.4690  0.1395  0.1795  0.4742
+[torch.FloatTensor of size 3x10]
+
+(1,.,.) =
+  0.3040  0.4690  0.1395  0.1795  0.4742
+  0.3040  0.4690  0.1395  0.1795  0.4742
+
+(2,.,.) =
+  0.3040  0.4690  0.1395  0.1795  0.4742
+  0.3040  0.4690  0.1395  0.1795  0.4742
+
+(3,.,.) =
+  0.3040  0.4690  0.1395  0.1795  0.4742
+  0.3040  0.4690  0.1395  0.1795  0.4742
+[torch.FloatTensor of size 3x2x5]
+
+--]]
+
+x = torch.rand(2, 3)
+y = torch.repeatTensor(x,3,2)
+--print(x)
+--print(y)
+--[[
+ 0.2586  0.8352  0.8584
+ 0.9659  0.4051  0.7208
+[torch.FloatTensor of size 2x3]
+
+ 0.2586  0.8352  0.8584  0.2586  0.8352  0.8584
+ 0.9659  0.4051  0.7208  0.9659  0.4051  0.7208
+ 
+ 0.2586  0.8352  0.8584  0.2586  0.8352  0.8584
+ 0.9659  0.4051  0.7208  0.9659  0.4051  0.7208
+ 
+ 0.2586  0.8352  0.8584  0.2586  0.8352  0.8584
+ 0.9659  0.4051  0.7208  0.9659  0.4051  0.7208
+[torch.FloatTensor of size 6x6]
+--]]
+
+---- [Tensor] squeeze([dim]) -------------
+-- 删除张量的所有单维度。 如果dim有值，则只压缩张量的那个特定维度(单维的)
+-- 只会删除单维的，多维的指定了dim也不会删除
+print("============== [Tensor] squeeze([dim]) ===============")
+x = torch.rand(2,1,3,1,2)
+y = torch.squeeze(x)
+z = torch.squeeze(x,4)
+--print(x)
+--print(y)
+--print(z)
+--[[
+(1,1,1,.,.) =
+  0.5261  0.0135
+
+(2,1,1,.,.) =
+  0.2048  0.1852
+
+(1,1,2,.,.) =
+  0.3771  0.9924
+
+(2,1,2,.,.) =
+  0.6343  0.5196
+
+(1,1,3,.,.) =
+  0.3940  0.4105
+
+(2,1,3,.,.) =
+  0.4197  0.5677
+[torch.FloatTensor of size 2x1x3x1x2]
+
+(1,.,.) =
+  0.5261  0.0135
+  0.3771  0.9924
+  0.3940  0.4105
+
+(2,.,.) =
+  0.2048  0.1852
+  0.6343  0.5196
+  0.4197  0.5677
+[torch.FloatTensor of size 2x3x2]
+
+(1,1,.,.) =
+  0.3898  0.5479
+  0.2049  0.3445
+  0.2405  0.6651
+
+(2,1,.,.) =
+  0.2197  0.7212
+  0.6834  0.9227
+  0.7602  0.8107
+[torch.FloatTensor of size 2x1x3x2]
+--]]
+
+
+--===============================================
+--===== Manipulating the tensor view ============
+--===============================================
+-- returns a Tensor which is another way of viewing the Storage of the given tensor
+-- no memory copy
+
+--- [result] view([result,] tensor, sizes) -------
+x = torch.range(1,6) -- 6个元素
+y=x:view(2,-1) -- 等价于  x:view(torch.LongStorage{2,2})
+z=x:view(3,-1)
+print(y)
+print(z)
+--[[
+[torch.FloatTensor of size 6]
+
+ 1  2  3
+ 4  5  6
+[torch.FloatTensor of size 2x3]
+
+ 1  2
+ 3  4
+ 5  6
+[torch.FloatTensor of size 3x2]
+--]]
+
+------ [result] viewAs([result,] tensor, template) ------
+x = torch.zeros(4)
+y = torch.Tensor(2,2)
+ --[[
+ print(x:viewAs(y))
+ 0 0
+ 0 0
+[torch.DoubleTensor of dimension 2x2]
+--]]
+
+
+------------ [Tensor] transpose(dim1, dim2) -------------
+-- no memory copy
+print("=========== [Tensor] transpose(dim1, dim2) =========== ")
+x = torch.Tensor(3,4):zero()
+x:select(2,3):fill(7) -- fill column 3 with 7
+
+-- 对于2维。x:transpose(1,2) 等价于 x:t()
+y = x:transpose(1,2) -- swap dimension 1 and 2 。对于二维而言就是行列交换。相当于旋转90度
+--print(y)
+--[[
+
+ 0  0  7  0
+ 0  0  7  0
+ 0  0  7  0
+[torch.DoubleTensor of dimension 3*4]
+
+ 0  0  0
+ 0  0  0
+ 7  7  7
+ 0  0  0
+[torch.DoubleTensor of dimension 4x3]
+--]]
+
+------------- [Tensor] t() -----------------
+------------ [Tensor] permute(dim1, dim2, ..., dimn) -----------
+--- 维度重新排序 -----
+print("=========== Tensor] permute(dim1, dim2, ..., dimn) =============")
+x = torch.Tensor(3,4,2,5)
+--[[
+> x:size()
+ 3
+ 4
+ 2
+ 5
+[torch.LongStorage of size 4]
+--]]
+
+y = x:permute(2,3,1,4) -- equivalent to y = x:transpose(1,3):transpose(1,2)
+--[[
+> y:size()
+ 4
+ 2
+ 3
+ 5
+[torch.LongStorage of size 4]
+--]]
+
+-------------------------- [Tensor] unfold(dim, size, step) ---------------
+-- Returns a tensor which contains all slices of size size in the dimension dim. Step between two slices is given by step.
+-- If sizedim is the original size of dimension dim, the size of dimension dim in the returned tensor will be (sizedim - size) / step + 1
+-- size:  表示return tensor的列数.
+-- step: 表示 2列 数据对应的差值。
+-- 
+print("============== [Tensor] unfold(dim, size, step) ================")
+local x = torch.Tensor(7) -- sizedim = 7
+for i=1,7 do x[i] = i end
+
+local y=x:unfold(1,  2, 1) -- (7-2) / 1 + 1
+local y2=x:unfold(1, 3, 1) -- (7-3) / 1 + 1
+local y3=x:unfold(1, 3, 2) -- (7-3) / 2 + 1
+print(y)
+print(y2)
+print(y3)
+--[[
+ 1  2
+ 2  3
+ 3  4
+ 4  5
+ 5  6
+ 6  7
+[torch.FloatTensor of size 6x2]
+
+ 1  2  3
+ 2  3  4
+ 3  4  5
+ 4  5  6
+ 5  6  7
+[torch.FloatTensor of size 5x3]
+
+ 1  2  3
+ 3  4  5
+ 5  6  7
+[torch.FloatTensor of size 3x3]
+--]]
+
+
+--------------- [self] apply(function) --------------
+print("================= [self] apply(function) =============")
+local i = 0
+local z = torch.range(1,6)
+local sum = 0
+z:apply(function(x) -- x是每个元素的值
+  i = i + 1
+  --print(sum, x)
+  sum = sum + x
+  return i
+end) -- fill up the tensor
+--print(sum)
+
+z = torch.range(1,6):resize(2,3)
+z:apply(function(x) -- x是每个元素的值
+  --print(x)	
+  return x + 1  -- 返回值表示z中该元素，修改后元素的值
+end) 
+print(z)
+
+
+---------- [self] map(tensor, function(xs, xt)) -----------
+-- 就是将给定的function 同时应用于self 和tensor的元素（xs，xt）。
+print("========= [self] map(tensor, function(xs, xt)) ============")
+local z = torch.range(1,6)
+local x = torch.range(100, 105)
+-- y 和 x 同一个对象
+y = x:map(z, function(xx, yy) 
+	return xx + yy 
+end) -- element-wise multiplication
+--print(y)
+--print(x)
+--print(z)
+
+------------ [self] map2(tensor1, tensor2, function(x, xt1, xt2)) -----------
+-- 同时操作3个tensor
+
+
+--=======================================================================
+--========= Dividing a tensor into a table of tensors(分割一个tensor为多个) =======
+--========================================================================
+---- [result] split([result,] tensor, size, [dim]) ----------
+-- 将第dim维分割，每份是size大小.不满足则取最大值。
+-- dim 默认值1
+print("======= [result] split([result,] tensor, size, [dim]) ==========")
+local function printTableSize(t)
+    print("--------- printTableSize -------")
+	for i=1,#t do
+		print("printTable: ", i)
+		print(t[i]:size())
+	end
+end
+x = torch.randn(3,4,5) -- 随机 3*4*5的矩阵
+y1=x:split(2,1) -- 将第,1个维度分割，每份为2，不满足的就取最大值
+y2=x:split(3,2)
+y3=x:split(2,3)
+--printTableSize(y1)
+--printTableSize(y2)
+--printTableSize(y3)
+--[[
+--------- printTableSize -------
+printTable:     1
+ 2
+ 4
+ 5
+[torch.LongStorage of size 3]
+
+printTable:     2
+ 1
+ 4
+ 5
+[torch.LongStorage of size 3]
+
+--------- printTableSize -------
+printTable:     1
+ 3
+ 3
+ 5
+[torch.LongStorage of size 3]
+
+printTable:     2
+ 3
+ 1
+ 5
+[torch.LongStorage of size 3]
+
+--------- printTableSize -------
+printTable:     1
+ 3
+ 4
+ 2
+[torch.LongStorage of size 3]
+
+printTable:     2
+ 3
+ 4
+ 2
+[torch.LongStorage of size 3]
+
+printTable:     3
+ 3
+ 4
+ 1
+[torch.LongStorage of size 3]
+--]]
+
+
+--------- [result] chunk([result,] tensor, n, [dim]) --------------
+-- 将tensor分割成为n份tensor。每份的大小等于math.ceil((size(dim)/n)---向上取整.
+-- 等价于： torch.split(result, tensor, math.ceil(tensor:size(dim)/n), dim)
+
+
+--==================== lua ffi access  =====================
+--====================== [result] data(tensor, [asnumber]) =================
+print("=========== FFI: [result] data(tensor, [asnumber]) ===============")
+t = torch.randn(3,2)
+--[[
+ 0.8008 -0.6103
+ 0.6473 -0.1870
+-0.0023 -0.4902
+[torch.DoubleTensor of dimension 3x2]
+--]]
+
+-- 必须保证是连续的内存. t:contiguous()方法 可以转化为连续的内存. data = torch.data(t:contiguous())
+t_data = torch.data(t)
+for i = 0,t:nElement()-1 do t_data[i] = 0 end
+print(t)
+--[[
+ 0 0
+ 0 0
+ 0 0
+[torch.DoubleTensor of dimension 3x2]
+--]]
+
+------------ [result] cdata(tensor, [asnumber]) -----------
+-- Returns a LuaJIT FFI pointer to the C structure of the tensor. Use this with caution, and look at FFI.lua for the members of the tensor ------
+
+
+---=========================================
+--===========Reference counting==========
+-- retain()
+-- Increment the reference counter of the tensor. 增加引用计数1
+
+-- free()
+-- Decrement the reference counter of the tensor. Free the tensor if the counter is at 0. 减少引用计数1，如果为0则释放内存
