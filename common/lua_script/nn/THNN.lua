@@ -51,7 +51,7 @@ ffi.cdef(base_declarations)
 
 -- expand macros, allow to use original lines from lib/THNN/generic/THNN.h
 local preprocessed = string.gsub(generic_THNN_h, 'TH_API void THNN_%(([%a%d_]+)%)', 'void THNN_TYPE%1')
-print("preprocessed: ", preprocessed)
+--print("preprocessed: ", preprocessed)
 
 local replacements =
 {

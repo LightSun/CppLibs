@@ -29,4 +29,6 @@ require "nn.test"
 -- require "test.nn.LinearTHNN"
 -- require "test.nn.benchmarks.IndexLinear"
 
+require "my_test.test_nn"
+
 
