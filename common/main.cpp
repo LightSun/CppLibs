@@ -8,6 +8,8 @@
 #include "TH_lua/init.h"
 #include "lua.hpp"
 #include "luaffifb-master/ffi.h"
+#include "paths/paths.h"
+#include "sys/sys.h"
 
 //LUA_EXTERNC DLL_EXPORT void luaT_getinnerparent(lua_State *L, const char *tname);
 
@@ -26,6 +28,8 @@ if(s){\
 static const luaL_Reg funcs[] = {
 {"libtorch", luaopen_libtorch},
 {"ffi", luaopen_ffi},
+{"libpaths", luaopen_libpaths},
+{"libsys", luaopen_libsys},
 {NULL, NULL},
 };
 

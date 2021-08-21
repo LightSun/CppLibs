@@ -27,7 +27,7 @@ print("with offset x: ", x)
 print("with offset y: ", y)
 
 -- create storage with share memory or not
-x = torch.CharStorage('hello.txt')
+x = torch.CharStorage('hello.txt') -- read only
 print("hello:",x)
 print("hello:",x:string())
 

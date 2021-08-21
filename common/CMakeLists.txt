@@ -94,6 +94,8 @@ add_library(TH STATIC
     ${SRC_H}
     ${SRC_CPP}
     )
+target_compile_definitions(TH PUBLIC USE_C11_ATOMICS) # if only use c.
+
 # need -std=gnu99 for mingw
 
 #add_compile_options: for all target of current
@@ -114,11 +116,16 @@ set(TORCH_LIB torch CACHE INTERNAL "torch lib name")
 #set_property(GLOBAL PROPERTY LUA_LIBDIR "E:/study/github/mine/CppLibs/build-common-Desktop_Qt_5_12_9_MinGW_64_bit-Debug/lua-5.3.6")
 #set_property(GLOBAL PROPERTY LUALIB "lua")
 
+set(EXT_JPEG_DIR)
+
 add_subdirectory(lua-5.3.6)
 add_subdirectory(luaT)
 add_subdirectory(TH_lua)
 add_subdirectory(luaffifb-master)
 add_subdirectory(nn/THNN/)
+add_subdirectory(paths)
+add_subdirectory(sys)
+add_subdirectory(image)
 
 include_directories(lua-5.3.6/src)
 include_directories(luaT)
@@ -127,4 +134,4 @@ add_executable(common
     luaffifb-master/luaffi_test.h
     luaffifb-master/test.c
     main.cpp)
-target_link_libraries(common luaT TH ${TORCH_LIB} ffi ${LUALIB})
+target_link_libraries(common luaT TH ${TORCH_LIB} ffi ${LUALIB} paths sys)

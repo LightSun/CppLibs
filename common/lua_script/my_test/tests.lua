@@ -30,5 +30,7 @@ require "nn.test"
 -- require "test.nn.benchmarks.IndexLinear"
 
 require "my_test.test_nn"
+require "optim"
+require "sys"
 
 
