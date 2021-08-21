@@ -2169,6 +2169,10 @@ static inline void image_(drawChar)(THTensor *output, int x, int y, unsigned cha
   }
 }
 
+#ifndef luaL_checkint
+#define luaL_checkint(l,arg) (int)luaL_checkinteger(l,arg)
+#endif
+
 int image_(Main_drawtext)(lua_State *L) {
   // get args
   THTensor *output = (THTensor *)luaT_checkudata(L, 1, torch_Tensor);

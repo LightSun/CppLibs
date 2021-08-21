@@ -116,7 +116,9 @@ set(TORCH_LIB torch CACHE INTERNAL "torch lib name")
 #set_property(GLOBAL PROPERTY LUA_LIBDIR "E:/study/github/mine/CppLibs/build-common-Desktop_Qt_5_12_9_MinGW_64_bit-Debug/lua-5.3.6")
 #set_property(GLOBAL PROPERTY LUALIB "lua")
 
-set(EXT_JPEG_DIR)
+SET(EXT_DIR ${CMAKE_SOURCE_DIR}/../ext_libs/mgw64 CACHE INTERNAL "ext dir")
+SET(EXT_JPEG_DIR ${EXT_DIR}/libjpeg-turbo CACHE INTERNAL "jpeg dir")
+SET(EXT_PNG_DIR ${EXT_DIR}/libpng CACHE INTERNAL "png dir")
 
 add_subdirectory(lua-5.3.6)
 add_subdirectory(luaT)
@@ -134,4 +136,4 @@ add_executable(common
     luaffifb-master/luaffi_test.h
     luaffifb-master/test.c
     main.cpp)
-target_link_libraries(common luaT TH ${TORCH_LIB} ffi ${LUALIB} paths sys)
+target_link_libraries(common image luaT TH ${TORCH_LIB} ffi ${LUALIB} paths sys)

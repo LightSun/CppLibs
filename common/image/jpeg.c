@@ -1,7 +1,7 @@
 
 #include <TH.h>
 #include <luaT.h>
-#include <jpeglib.h>
+#include "jpeglib.h"
 #include <setjmp.h>
 
 #if LUA_VERSION_NUM >= 503
