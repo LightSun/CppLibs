@@ -44,7 +44,7 @@ jpeg_mem_dest_dummy(j_compress_ptr c, unsigned char **obuf, unsigned long *osiz)
 
 #include "image.h"
 
-IMAGE_API int luaopen_libjpeg(lua_State *L)
+IMAGE_API int luaopen_libjpg(lua_State *L)
 {
   libjpeg_FloatMain_init(L);
   libjpeg_DoubleMain_init(L);

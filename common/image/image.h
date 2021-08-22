@@ -19,7 +19,7 @@ CPP_END
 #endif
 
 IMAGE_API int luaopen_libimage(lua_State *L);
-IMAGE_API int luaopen_libjpeg(lua_State *L);
+IMAGE_API int luaopen_libjpg(lua_State *L);
 IMAGE_API int luaopen_liblua_png(lua_State *L);
 IMAGE_API int luaopen_libppm(lua_State *L);
 
