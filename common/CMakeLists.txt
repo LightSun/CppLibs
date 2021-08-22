@@ -9,6 +9,35 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBUILD_WITH_GCC")
 #add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1 -DTORCH_EXPORTS)
 
+# OpenMP support?
+#SET(WITH_OPENMP ON CACHE BOOL "OpenMP support if available?")
+#    IF (APPLE AND CMAKE_COMPILER_IS_GNUCC)
+#        EXEC_PROGRAM (uname ARGS -v  OUTPUT_VARIABLE DARWIN_VERSION)
+#        STRING (REGEX MATCH "[0-9]+" DARWIN_VERSION ${DARWIN_VERSION})
+#        MESSAGE (STATUS "MAC OS Darwin Version: ${DARWIN_VERSION}")
+#        IF (DARWIN_VERSION GREATER 9)
+#        SET(APPLE_OPENMP_SUCKS 1)
+#        ENDIF (DARWIN_VERSION GREATER 9)
+#        EXECUTE_PROCESS (COMMAND ${CMAKE_C_COMPILER} -dumpversion
+#            OUTPUT_VARIABLE GCC_VERSION)
+#        IF (APPLE_OPENMP_SUCKS AND GCC_VERSION VERSION_LESS 4.6.2)
+#        MESSAGE(STATUS "Warning: Disabling OpenMP (unstable with this version of GCC)")
+#        MESSAGE(STATUS " Install GCC >= 4.6.2 or change your OS to enable OpenMP")
+#        SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unknown-pragmas")
+#        SET(WITH_OPENMP OFF CACHE BOOL "OpenMP support if available?" FORCE)
+#    ENDIF ()
+#ENDIF ()
+
+#IF (WITH_OPENMP)
+#FIND_PACKAGE(OpenMP)
+#IF(OPENMP_FOUND)
+#MESSAGE(STATUS "Compiling with OpenMP support")
+#SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+#SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+#ENDIF(OPENMP_FOUND)
+#ENDIF (WITH_OPENMP)
+
 SET(SRC_H
     THCommon.h
     THGeneral.h
@@ -116,9 +145,29 @@ set(TORCH_LIB torch CACHE INTERNAL "torch lib name")
 #set_property(GLOBAL PROPERTY LUA_LIBDIR "E:/study/github/mine/CppLibs/build-common-Desktop_Qt_5_12_9_MinGW_64_bit-Debug/lua-5.3.6")
 #set_property(GLOBAL PROPERTY LUALIB "lua")
 
+
+# ======= image module ============
 SET(EXT_DIR ${CMAKE_SOURCE_DIR}/../ext_libs/mgw64 CACHE INTERNAL "ext dir")
 SET(EXT_JPEG_DIR ${EXT_DIR}/libjpeg-turbo CACHE INTERNAL "jpeg dir")
 SET(EXT_PNG_DIR ${EXT_DIR}/libpng CACHE INTERNAL "png dir")
+
+set(IMAGE_LINKS luaT TH ${LUALIB} CACHE INTERNAL "image links")
+if(EXT_PNG_DIR)
+    include_directories(${EXT_PNG_DIR}/include)
+    link_directories(${EXT_PNG_DIR}/lib)
+    link_directories(${EXT_DIR}/zlib/lib)
+    #set(src ${src} png.c)
+    SET(IMAGE_LINKS ${IMAGE_LINKS} png_bundled z_bundled)
+endif (EXT_PNG_DIR)
+
+if(EXT_JPEG_DIR)
+    include_directories(${EXT_JPEG_DIR}/include)
+    link_directories(${EXT_JPEG_DIR}/lib)
+    #set(src ${src} jpeg.c)
+    SET(IMAGE_LINKS ${IMAGE_LINKS} turbojpeg jpeg)
+endif (EXT_JPEG_DIR)
+
+# end ======= image module ============
 
 add_subdirectory(lua-5.3.6)
 add_subdirectory(luaT)
@@ -137,3 +186,24 @@ add_executable(common
     luaffifb-master/test.c
     main.cpp)
 target_link_libraries(common image luaT TH ${TORCH_LIB} ffi ${LUALIB} paths sys)
+
+# default support openmp
+IF(NOT (FORCE_SKIP_OPENMP))
+    INCLUDE (${PROJECT_SOURCE_DIR}/cmake/openmp.cmake)
+    TENGINE_CHECK_LIB_OPENMP (_has_openmp)
+    IF (_has_openmp)
+        #TENGINE_USE_LIB_OPENMP (TH-static ON)
+        TENGINE_USE_LIB_OPENMP (TH        ON)
+        IF(MSVC)
+            SET_SOURCE_FILES_PROPERTIES(${TENGINE_SOURCE_FILES} PROPERTIES LANGUAGE CXX)
+            #TARGET_COMPILE_OPTIONS(TH-static PRIVATE /std:c++latest)
+            TARGET_COMPILE_OPTIONS(TH        PRIVATE /std:c++latest)
+        ENDIF()
+
+        SET (TENGINE_ENABLED_OPENMP ${OpenMP_C_VERSION} CACHE INTERNAL "" FORCE)
+    ENDIF()
+ENDIF()
+UNSET (_has_openmp)
+
+#汇总编译的信息
+include(cmake/summary.cmake)

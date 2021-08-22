@@ -44,7 +44,9 @@ static long ppm_get_long(FILE *fp)
 #include "generic/ppm.c"
 #include "THGenerateAllTypes.h"
 
-DLL_EXPORT int luaopen_libppm(lua_State *L)
+#include "image.h"
+
+IMAGE_API int luaopen_libppm(lua_State *L)
 {
   libppm_FloatMain_init(L);
   libppm_DoubleMain_init(L);

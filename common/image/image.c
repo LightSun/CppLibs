@@ -26,7 +26,9 @@
 #include "generic/image.c"
 #include "THGenerateAllTypes.h"
 
-DLL_EXPORT int luaopen_libimage(lua_State *L)
+#include "image.h"
+
+IMAGE_API int luaopen_libimage(lua_State *L)
 {
   image_FloatMain_init(L);
   image_DoubleMain_init(L);

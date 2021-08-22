@@ -42,7 +42,9 @@ jpeg_mem_dest_dummy(j_compress_ptr c, unsigned char **obuf, unsigned long *osiz)
 #include "generic/jpeg.c"
 #include "THGenerateAllTypes.h"
 
-DLL_EXPORT int luaopen_libjpeg(lua_State *L)
+#include "image.h"
+
+IMAGE_API int luaopen_libjpeg(lua_State *L)
 {
   libjpeg_FloatMain_init(L);
   libjpeg_DoubleMain_init(L);

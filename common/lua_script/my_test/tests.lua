@@ -32,5 +32,5 @@ require "nn.test"
 require "my_test.test_nn"
 require "optim"
 require "sys"
-
+require "image"
 

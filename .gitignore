@@ -31,4 +31,4 @@
 *.out
 *.app
 
-ext_libs/*
+#ext_libs

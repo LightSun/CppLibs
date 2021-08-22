@@ -10,6 +10,7 @@
 #include "luaffifb-master/ffi.h"
 #include "paths/paths.h"
 #include "sys/sys.h"
+#include "image/image.h"
 
 //LUA_EXTERNC DLL_EXPORT void luaT_getinnerparent(lua_State *L, const char *tname);
 
@@ -30,6 +31,7 @@ static const luaL_Reg funcs[] = {
 {"ffi", luaopen_ffi},
 {"libpaths", luaopen_libpaths},
 {"libsys", luaopen_libsys},
+{"libimage", luaopen_libimage},
 {NULL, NULL},
 };
 
