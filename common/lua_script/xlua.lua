@@ -1,1 +1,1 @@
-return "xlua.init"
+return require("xlua.init")

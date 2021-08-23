@@ -33,7 +33,7 @@ static const luaL_Reg funcs[] = {
 {"libsys", luaopen_libsys},
 {"libimage", luaopen_libimage},
 {"liblua_png", luaopen_liblua_png},
-{"libjpg", luaopen_libjpg},
+{"libjpeg", luaopen_libjpg},
 {"libppm", luaopen_libppm},
 {NULL, NULL},
 };

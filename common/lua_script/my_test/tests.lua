@@ -35,4 +35,4 @@ require "sys"
 require "xlua"
 require "image"
 
-require "my_test.test_image"
+require "image.test_rotate"

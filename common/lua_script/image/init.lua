@@ -27,6 +27,7 @@
 --
 -- history:
 --     July  1, 2011, 7:42PM - import from Torch5 - Clement Farabet
+-- display need qt
 ----------------------------------------------------------------------
 
 require 'torch'
@@ -34,6 +35,7 @@ require 'xlua'
 require 'dok'
 require 'libimage'
 
+-- current file path
 local fpath = require 'sys.fpath'
 
 local startswith = function(str, prefix)
@@ -615,7 +617,9 @@ rawset(image, 'translate', translate)
 
 ----------------------------------------------------------------------
 -- scale
---
+--[[ 
+	param desc: line-655
+--]]
 local function scale(...)
    local dst,src,width,height,mode,size
    local args = {...}
@@ -2304,7 +2308,7 @@ function image.laplacian(...)
 end
 
 ----------------------------------------------------------------------
---- Gaussian Pyramid
+--- Gaussian Pyramid (高斯金字塔- 其它也有拉普拉斯金字塔)
 --
 function image.gaussianpyramid(...)
    local dst,src,scales
