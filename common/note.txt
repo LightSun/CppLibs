@@ -217,6 +217,9 @@ https://blog.csdn.net/helei001/article/details/18447001
 - VSX：64 bits
 - ps: https://baijiahao.baidu.com/s?id=1670915069941232375&wfr=spider&for=pc
 
+### torch home
+- [torch7/wiki](https://github.com/torch/torch7/wiki/Cheatsheet#machine-learning)
+
 ### ps
 - openmp: https://blog.csdn.net/cloud_desktop/article/details/24421793
 gcc need option '-fopenmp'
@@ -238,6 +241,7 @@ TH_NO_SSE=1  # disable SSE codepaths
 ppc64le options:
 TH_NO_VSX=1  # disable VSX codepaths
 ```
+
 
 ### FAQ
 - in windows. when one dll load another. may LoadLibrary failed. see 'https://blog.csdn.net/shaoyiju/article/details/83796293'
