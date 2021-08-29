@@ -17,11 +17,13 @@ struct lua_State;
 
 class SkCanvas;
 class SkMatrix;
+class SkM44;
 class SkPaint;
 class SkPath;
 struct SkRect;
 class SkRRect;
 class SkTextBlob;
+class SkRegion;
 
 #define SkScalarToLua(x)    SkScalarToDouble(x)
 #define SkLuaToScalar(x)    SkDoubleToScalar(x)
@@ -55,10 +57,12 @@ public:
     void pushRRect(const SkRRect&, const char tableKey[] = nullptr);
     void pushDash(const SkPathEffect::DashInfo&, const char tableKey[] = nullptr);
     void pushMatrix(const SkMatrix&, const char tableKey[] = nullptr);
+    void pushMat44(const SkM44&, const char tableKey[] = nullptr);
     void pushPaint(const SkPaint&, const char tableKey[] = nullptr);
     void pushPath(const SkPath&, const char tableKey[] = nullptr);
     void pushCanvas(SkCanvas*, const char tableKey[] = nullptr);
     void pushTextBlob(const SkTextBlob*, const char tableKey[] = nullptr);
+    void pushRegion(const SkRegion&, const char tableKey[] = nullptr);
 
 private:
     lua_State*  fL;

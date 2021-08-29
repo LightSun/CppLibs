@@ -5,6 +5,7 @@
  * found in the LICENSE file.
  */
 
+#include "SkRefCnt.h"
 #include "SkLua.h"
 
 #if SK_SUPPORT_GPU
@@ -37,6 +38,8 @@
 #include "SkTileMode.h"
 #include "SkStream.h"
 #include "include/docs/SkPDFDocument.h"
+#include "SkRegion.h"
+#include "SkShader.h"
 #include <new>
 
 extern "C" {
@@ -63,6 +66,7 @@ DEF_MTNAME(DocHolder)
 DEF_MTNAME(SkImage)
 DEF_MTNAME(SkImageFilter)
 DEF_MTNAME(SkMatrix)
+DEF_MTNAME(SkM44)
 DEF_MTNAME(SkRRect)
 DEF_MTNAME(SkPath)
 DEF_MTNAME(SkPaint)
@@ -74,6 +78,7 @@ DEF_MTNAME(SkSurface)
 DEF_MTNAME(SkTextBlob)
 DEF_MTNAME(SkTypeface)
 DEF_MTNAME(SkFontStyle)
+DEF_MTNAME(SkRegion)
 
 template <typename T, typename... Args> T* push_new(lua_State* L, Args&&... args) {
     T* addr = (T*)lua_newuserdata(L, sizeof(T));
@@ -344,6 +349,10 @@ void SkLua::pushMatrix(const SkMatrix& matrix, const char key[]) {
     push_obj(fL, matrix);
     CHECK_SETFIELD(key);
 }
+void SkLua::pushMat44(const SkM44& mat, const char key[]){
+    push_obj(fL, mat);
+    CHECK_SETFIELD(key);
+}
 
 void SkLua::pushPaint(const SkPaint& paint, const char key[]) {
     push_obj(fL, paint);
@@ -364,7 +373,10 @@ void SkLua::pushTextBlob(const SkTextBlob* blob, const char key[]) {
     push_ref(fL, const_cast<SkTextBlob*>(blob));
     CHECK_SETFIELD(key);
 }
-
+void SkLua::pushRegion(const SkRegion& region, const char key[]){
+    push_obj(fL, region);
+    CHECK_SETFIELD(key);
+}
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -951,18 +963,6 @@ static int lpaint_getStrokeMiter(lua_State* L) {
     }
     return 0;
 }*/
-
-struct FontMetrics {
-    SkScalar    fTop;       //!< The greatest distance above the baseline for any glyph (will be <= 0)
-    SkScalar    fAscent;    //!< The recommended distance above the baseline (will be <= 0)
-    SkScalar    fDescent;   //!< The recommended distance below the baseline (will be >= 0)
-    SkScalar    fBottom;    //!< The greatest distance below the baseline for any glyph (will be >= 0)
-    SkScalar    fLeading;   //!< The recommended distance to add between lines of text (will be >= 0)
-    SkScalar    fAvgCharWidth;  //!< the average charactor width (>= 0)
-    SkScalar    fXMin;      //!< The minimum bounding box x value for all glyphs
-    SkScalar    fXMax;      //!< The maximum bounding box x value for all glyphs
-    SkScalar    fXHeight;   //!< the height of an 'x' in px, or 0 if no 'x' in face
-};
 
 //can replaced by SkFont/SkTypeface
 /*static int lpaint_getFontMetrics(lua_State* L) {
@@ -1959,13 +1959,13 @@ static int lsk_newTextBlob(lua_State* L) {
     lua2rect(L, 2, &bounds);
 
     std::unique_ptr<SkShaper> sk_shaper = SkShaper::Make();
-    sk_sp<SkTextBlobBuilderRunHandler> sp = sk_make_sp<SkTextBlobBuilderRunHandler>(text, SkPoint());
+    SkTextBlobBuilderRunHandler handler(text, SkPoint());
     //text is u8?
     sk_shaper->shape(text, strlen(text), SkFont(), true, (float)bounds.width(),
-                              (SkShaper::RunHandler*)sp.get());
+                              &handler);
 
-    push_ref<SkTextBlob>(L, sp->makeBlob());
-    SkLua(L).pushScalar(sp->endPoint().fY);
+    push_ref<SkTextBlob>(L, handler.makeBlob());
+    SkLua(L).pushScalar(handler.endPoint().fY);
     return 2;
 }
 
@@ -2039,7 +2039,30 @@ static int lsk_loadImage(lua_State* L) {
     }
     return 0;
 }
+//-------------- SkM44 -----------------
+static int skm44_new(lua_State* L){
+    push_new<SkM44>(L);
+    return 1;
+}
+static int skm44_gc(lua_State* L){
+    const SkM44* skm = get_obj<SkM44>(L, 1);
+    delete skm;
+}
 
+static const struct luaL_Reg gSkM44_Methods[] = {
+    { "__gc", skm44_gc },
+    { nullptr, nullptr }
+};
+//-------------- skregion ----------------
+static int skregion_gc(lua_State* L){
+    const SkRegion* skm = get_obj<SkRegion>(L, 1);
+    delete skm;
+}
+static const struct luaL_Reg gSkRegion_Methods[] = {
+    { "__gc", skregion_gc },
+    { nullptr, nullptr }
+};
+//--------------------------------------------------
 static void register_Sk(lua_State* L) {
     lua_newtable(L);
     lua_pushvalue(L, -1);
@@ -2051,6 +2074,7 @@ static void register_Sk(lua_State* L) {
     setfield_function(L, "newBlurImageFilter", lsk_newBlurImageFilter);
     setfield_function(L, "newLinearGradient", lsk_newLinearGradient);
     setfield_function(L, "newMatrix", lsk_newMatrix);
+    setfield_function(L, "newMat44", skm44_new);
     setfield_function(L, "newPaint", lsk_newPaint);
     setfield_function(L, "newPath", lsk_newPath);
     setfield_function(L, "newPictureRecorder", lsk_newPictureRecorder);
@@ -2079,6 +2103,7 @@ void SkLua::Load(lua_State* L) {
     REG_CLASS(L, SkImage);
     REG_CLASS(L, SkImageFilter);
     REG_CLASS(L, SkMatrix);
+    REG_CLASS(L, SkM44);
     REG_CLASS(L, SkPaint);
     REG_CLASS(L, SkPath);
     REG_CLASS(L, SkPathEffect);
@@ -2090,6 +2115,7 @@ void SkLua::Load(lua_State* L) {
     REG_CLASS(L, SkTextBlob);
     REG_CLASS(L, SkTypeface);
     REG_CLASS(L, SkFontStyle);
+    REG_CLASS(L, SkRegion);
 }
 
 extern "C" int luaopen_skia(lua_State* L);

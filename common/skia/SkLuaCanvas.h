@@ -8,6 +8,7 @@
 #ifndef SkLuaCanvas_DEFINED
 #define SkLuaCanvas_DEFINED
 
+#include "SkShader.h"
 #include "SkCanvas.h"
 #include "SkString.h"
 #include "SkVertices.h"
@@ -26,21 +27,13 @@ protected:
     SaveLayerStrategy getSaveLayerStrategy(const SaveLayerRec&) override;
     void willRestore() override;
 
+    void didSetM44(const SkM44&) override;
     void didConcat44(const SkM44&) override;
-    void didSetMatrix(const SkM44&) override;
+    void didTranslate(SkScalar, SkScalar) override;
+    void didScale(SkScalar, SkScalar)override;
 
     void onDrawDRRect(const SkRRect&, const SkRRect&, const SkPaint&) override;
-    virtual void onDrawText(const void* text, size_t byteLength, SkScalar x, SkScalar y,
-                            const SkPaint&) override;
-    virtual void onDrawPosText(const void* text, size_t byteLength, const SkPoint pos[],
-                               const SkPaint&) override;
-    virtual void onDrawPosTextH(const void* text, size_t byteLength, const SkScalar xpos[],
-                                SkScalar constY, const SkPaint&) override;
-    virtual void onDrawTextOnPath(const void* text, size_t byteLength, const SkPath& path,
-                                  const SkMatrix* matrix, const SkPaint&) override;
-    void onDrawTextRSXform(const void* text, size_t byteLength, const SkRSXform xform[],
-                           const SkRect* cull, const SkPaint& paint) override;
-    virtual void onDrawTextBlob(const SkTextBlob* blob, SkScalar x, SkScalar y,
+     void onDrawTextBlob(const SkTextBlob* blob, SkScalar x, SkScalar y,
                                 const SkPaint& paint) override;
 
     void onDrawPaint(const SkPaint&) override;
@@ -50,16 +43,6 @@ protected:
     void onDrawArc(const SkRect&, SkScalar, SkScalar, bool, const SkPaint&) override;
     void onDrawRRect(const SkRRect&, const SkPaint&) override;
     void onDrawPath(const SkPath&, const SkPaint&) override;
-    void onDrawBitmap(const SkBitmap&, SkScalar left, SkScalar top, const SkPaint*) override;
-    void onDrawBitmapRect(const SkBitmap&, const SkRect* src, const SkRect& dst, const SkPaint*,
-                          SrcRectConstraint) override;
-    void onDrawImage(const SkImage*, SkScalar left, SkScalar top, const SkPaint*) override;
-    void onDrawImageRect(const SkImage*, const SkRect* src, const SkRect& dst,
-                         const SkPaint*, SrcRectConstraint) override;
-    void onDrawBitmapNine(const SkBitmap&, const SkIRect& center, const SkRect& dst,
-                          const SkPaint*) override;
-    void onDrawVerticesObject(const SkVertices*, const SkMatrix* bones, int boneCount, SkBlendMode,
-                              const SkPaint&) override;
 
     void onClipRect(const SkRect&, SkClipOp, ClipEdgeStyle) override;
     void onClipRRect(const SkRRect&, SkClipOp, ClipEdgeStyle) override;
@@ -69,6 +52,45 @@ protected:
     void onDrawPicture(const SkPicture*, const SkMatrix*, const SkPaint*) override;
     void onDrawDrawable(SkDrawable*, const SkMatrix*) override;
 
+    bool onDoSaveBehind(const SkRect*) override;
+    void didRestore()override;
+    void onMarkCTM(const char*) override;
+
+    // NOTE: If you are adding a new onDraw  to SkCanvas, PLEASE add an override to
+    // SkCanvasEnforcer (in SkCanvasEnforcer.h). This ensures that subclasses using
+    // that mechanism  will be required to implement the new function.
+     void onDrawBehind(const SkPaint& paint) override;
+     void onDrawRegion(const SkRegion& region, const SkPaint& paint) override;
+     void onDrawGlyphRunList(const SkGlyphRunList& glyphRunList, const SkPaint& paint) override;
+
+     void onDrawPatch(const SkPoint cubics[12], const SkColor colors[4],
+                           const SkPoint texCoords[4], SkBlendMode mode, const SkPaint& paint) override;
+     void onDrawImage2(const SkImage*, SkScalar dx, SkScalar dy, const SkSamplingOptions&,
+                              const SkPaint*) override;
+     void onDrawImageRect2(const SkImage*, const SkRect& src, const SkRect& dst,
+                                  const SkSamplingOptions&, const SkPaint*, SrcRectConstraint) override;
+     void onDrawImageLattice2(const SkImage*, const Lattice&, const SkRect& dst,
+                                     SkFilterMode, const SkPaint*) override;
+     void onDrawAtlas2(const SkImage*, const SkRSXform[], const SkRect src[],
+                              const SkColor[], int count, SkBlendMode, const SkSamplingOptions&,
+                              const SkRect* cull, const SkPaint*) override;
+     void onDrawEdgeAAImageSet2(const ImageSetEntry imageSet[], int count,
+                                       const SkPoint dstClips[], const SkMatrix preViewMatrices[],
+                                       const SkSamplingOptions&, const SkPaint*,
+                                       SrcRectConstraint) override;
+
+     void onDrawVerticesObject(const SkVertices* vertices, SkBlendMode mode,
+                                      const SkPaint& paint) override;
+
+     void onDrawAnnotation(const SkRect& rect, const char key[], SkData* value) override;
+     void onDrawShadowRec(const SkPath&, const SkDrawShadowRec&) override;
+     void onDrawEdgeAAQuad(const SkRect& rect, const SkPoint clip[4], QuadAAFlags aaFlags,
+                                  const SkColor4f& color, SkBlendMode mode) override;
+
+     void onClipShader(sk_sp<SkShader>, SkClipOp) override;
+     void onResetClip() override;
+
+     void onDiscard() override;
 private:
     lua_State*  fL;
     SkString    fFunc;
