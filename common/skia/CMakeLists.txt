@@ -1,8 +1,8 @@
 
 # skia demo: https://fiddle.skia.org/named/
 
-#set(SKIA_DIR E:/baidudisk/skia-main)
-set(SKIA_DIR E:/study/google/skia-main)
+set(SKIA_DIR E:/baidudisk/skia-main)    #work
+#set(SKIA_DIR E:/study/google/skia-main) #home
 include_directories(${SKIA_DIR})
 include_directories(${SKIA_DIR}/include/core)
 include_directories(${SKIA_DIR}/modules)
@@ -13,60 +13,13 @@ link_directories(${SKIA_DIR}/out/Static)
 add_library(sklua
     SkLua.h SkLua.cpp
     SkLuaCanvas.h SkLuaCanvas.cpp
-    HelloWorld.h HelloWorld.cpp
     )
-SET(SKIA_APP_DIR ${SKIA_DIR}/tools/sk_app)
-SET(SKIA_GPU_DIR ${SKIA_DIR}/tools/gpu)
-set(src_gpu
-     ${SKIA_GPU_DIR}/BackendSurfaceFactory.cpp
-     ${SKIA_GPU_DIR}/BackendSurfaceFactory.h
-     ${SKIA_GPU_DIR}/BackendTextureImageFactory.cpp
-     ${SKIA_GPU_DIR}/BackendTextureImageFactory.h
-     ${SKIA_GPU_DIR}/FlushFinishTracker.cpp
-     ${SKIA_GPU_DIR}/FlushFinishTracker.h
-     ${SKIA_GPU_DIR}/GrContextFactory.cpp
-   #  ${SKIA_GPU_DIR}/GrTest.cpp
-     ${SKIA_GPU_DIR}/ManagedBackendTexture.cpp
-     ${SKIA_GPU_DIR}/ManagedBackendTexture.h
-     ${SKIA_GPU_DIR}/MemoryCache.cpp
-     ${SKIA_GPU_DIR}/MemoryCache.h
-     ${SKIA_GPU_DIR}/ProxyUtils.cpp
-   #  ${SKIA_GPU_DIR}/TestContext.cpp
-    # ${SKIA_GPU_DIR}/TestOps.cpp
-   #  ${SKIA_GPU_DIR}/TestOps.h
-     ${SKIA_GPU_DIR}/YUVUtils.cpp
-     ${SKIA_GPU_DIR}/YUVUtils.h
-     #${SKIA_GPU_DIR}/gl/GLTestContext.cpp
-     #${SKIA_GPU_DIR}/mock/MockTestContext.cpp
-    )
-set(skia_use_gl true)
-if(skia_use_gl)
-    set(src_gpu ${src_gpu}
-       #  ${SKIA_GPU_DIR}/gl/command_buffer/GLTestContext_command_buffer.cpp
-        )
-endif(skia_use_gl)
 
-#add_executable(skapp
-#    ${src_gpu}
-#    SkAppMain.cpp
-#    ${SKIA_APP_DIR}/Window.h
-#    ${SKIA_APP_DIR}/Window.cpp
-#    ${SKIA_APP_DIR}/WindowContext.h
-#    ${SKIA_APP_DIR}/WindowContext.cpp
-#    ${SKIA_APP_DIR}/GLWindowContext.h
-#    ${SKIA_APP_DIR}/GLWindowContext.cpp
-#    ${SKIA_APP_DIR}/RasterWindowContext.h
-#    ${SKIA_APP_DIR}/win/GLWindowContext_win.cpp
-#    ${SKIA_APP_DIR}/win/Window_win.h
-#    ${SKIA_APP_DIR}/win/Window_win.cpp
-#    ${SKIA_APP_DIR}/win/WindowContextFactory_win.h
-#    ${SKIA_APP_DIR}/win/RasterWindowContext_win.cpp
-#    ${SKIA_APP_DIR}/Application.h
-#    ${SKIA_APP_DIR}/CommandSet.h
-#    ${SKIA_APP_DIR}/CommandSet.cpp
-#    ${SKIA_APP_DIR}/DisplayParams.h
-#    )
-target_compile_definitions(sklua PUBLIC SK_GL)
+add_executable(skia-example
+    skia_example.h
+    skia_example.cpp
+    )
+#target_compile_definitions(sklua PUBLIC SK_GL)
 
 set(SK_LINK_LIBS skia skshaper)
 if(WIN32)
@@ -75,9 +28,7 @@ else(WIN32)
     #TODO other platform.
 endif(WIN32)
 
-set(SK_LINK_LIBS ${SK_LINK_LIBS} ${LUALIB})
-
-target_link_libraries(sklua ${SK_LINK_LIBS})
-#target_link_libraries(skapp ${SK_LINK_LIBS})
+target_link_libraries(sklua ${SK_LINK_LIBS} ${LUALIB})
+target_link_libraries(skia-example ${SK_LINK_LIBS})
 
 
