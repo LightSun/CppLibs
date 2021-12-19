@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 
 project(common LANGUAGES C CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 #SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DBUILD_WITH_GCC")
@@ -177,7 +177,7 @@ add_subdirectory(nn/THNN/)
 add_subdirectory(paths)
 add_subdirectory(sys)
 add_subdirectory(image)
-add_subdirectory(skia)
+#add_subdirectory(skia)
 
 include_directories(lua-5.3.6/src)
 include_directories(luaT)

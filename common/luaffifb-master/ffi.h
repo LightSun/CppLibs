@@ -366,10 +366,18 @@ typedef void (*cfunction)(void);
 typedef double complex complex_double;
 typedef float complex complex_float;
 static complex_double mk_complex_double(double real, double imag) {
+#ifdef __GNUC__
+    return real + imag * 1j;
+#else
     return real + imag * 1i;
+#endif
 }
 static complex_double mk_complex_float(double real, double imag) {
+#ifdef __GNUC__
+    return real + imag * 1j;
+#else
     return real + imag * 1i;
+#endif
 }
 #else
 typedef struct {
