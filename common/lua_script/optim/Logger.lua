@@ -176,6 +176,7 @@ function Logger:plot(...)
          gnuplot.title('<Logger::' .. self.name .. '>')
       end
       if self.epsfile then
+         print("before rm epsfile: ", self.epsfile)
          os.execute('rm -f "' .. self.epsfile .. '"')
          local epsfig = gnuplot.epsfigure(self.epsfile)
          if self.logscale then gnuplot.logscale('on') end
