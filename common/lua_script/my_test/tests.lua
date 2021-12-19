@@ -36,4 +36,4 @@ require "xlua"
 require "image"
 
 require "image.test_rotate"
-require "my_test.demos.example-linear-regression"
+require "my_test.demos.example-linear-regression" --need install gnuplot

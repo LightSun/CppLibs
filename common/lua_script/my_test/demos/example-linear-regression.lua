@@ -132,6 +132,7 @@ x, dl_dx = model:getParameters()
 -- that function with respect to x. x is the vector of trainable weights,
 -- which, in this example, are all the weights of the linear matrix of
 -- our model, plus one bias.
+-- 计算 损失 和 梯度
 
 feval = function(x_new)
    -- set x to x_new, if differnt
@@ -142,18 +143,25 @@ feval = function(x_new)
    end
 
    -- select a new training sample
-   _nidx_ = (_nidx_ or 0) + 1
+   _nidx_ = (_nidx_ or 0) + 1 -- 全局变量. 每次+1
    if _nidx_ > (#data)[1] then _nidx_ = 1 end
-
+   -- print("#data: ", #data) -- size tensor - [10][3]
+   --print("example-linear-regression >> ", "feval: _nidx_ = ", _nidx_) -- real value: 1-10
+   print("x_new: ", x_new)
    local sample = data[_nidx_]
    local target = sample[{ {1} }]      -- this funny looking syntax allows
    local inputs = sample[{ {2,3} }]    -- slicing of arrays.
+   -- target is out
+   --print("sample: ", sample) -- like 80 * 32 * 24
+   --print("target: ", target) -- like 80
+   --print("inputs: ", inputs) -- like 32 * 24
 
    -- reset gradients (gradients are always accumulated, to accommodate 
    -- batch methods)
    dl_dx:zero()
 
    -- evaluate the loss function and its derivative wrt x, for that sample
+   -- 评估该样本的损失函数及其导数 wrt x
    local loss_x = criterion:forward(model:forward(inputs), target)
    model:backward(inputs, criterion:backward(model.output, target))
 
@@ -164,14 +172,14 @@ end
 -- Given the function above, we can now easily train the model using SGD.
 -- For that, we need to define four key parameters:
 --   + a learning rate: the size of the step taken at each stochastic 
---     estimate of the gradient
---   + a weight decay, to regularize the solution (L2 regularization)
---   + a momentum term, to average steps over time
---   + a learning rate decay, to let the algorithm converge more precisely
+--     estimate of the gradient = 学习速率
+--   + a weight decay, to regularize the solution (L2 regularization) = 权重衰减，以正则化解决方案（L2 正则化）
+--   + a momentum term, to average steps over time = 一个动量项，随着时间的推移平均步数
+--   + a learning rate decay, to let the algorithm converge more precisely = 学习速率衰减率
 
 sgd_params = {
-   learningRate = 1e-3,
-   learningRateDecay = 1e-4,
+   learningRate = 1e-3, -- 0.001
+   learningRateDecay = 1e-4, 
    weightDecay = 0,
    momentum = 0
 }
@@ -197,14 +205,14 @@ for i = 1,1e4 do
       --   + a point x
       --   + some parameters, which are algorithm-specific
       
-      _,fs = optim.sgd(feval,x,sgd_params)
+      _,fs = optim.sgd(feval,x ,sgd_params)
 
       -- Functions in optim all return two things:
       --   + the new x, found by the optimization method (here SGD)
       --   + the value of the loss functions at all points that were used by
       --     the algorithm. SGD only estimates the function once, so
       --     that list just contains one value.
-
+      -- 当前的损失
       current_loss = current_loss + fs[1]
    end
 
@@ -236,3 +244,21 @@ for i = 1,(#data)[1] do
    local myPrediction = model:forward(data[i][{{2,3}}])
    print(string.format("%2d  %6.2f %6.2f", i, myPrediction[1], text[i]))
 end
+
+--[[
+x_new:    0.6675
+  1.1112
+ 31.6152
+
+ id  approx   text
+ 1   40.08  40.32
+ 2   42.76  42.92
+ 3   45.21  45.33
+ 4   48.78  48.85
+ 5   52.34  52.37
+ 6   57.02  57.00
+ 7   61.93  61.82
+ 8   69.94  69.78
+ 9   72.39  72.19
+10   79.75  79.42
+]]--
