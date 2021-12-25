@@ -16,7 +16,7 @@ static pthread_mutex_t ptm = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 //CompareAndSwap
-int atomic_cas(int volatile *a, int oldvalue, int newvalue)
+int h_atomic_cas(int volatile *a, int oldvalue, int newvalue)
 {
 #if defined(USE_C11_ATOMICS)
   return atomic_compare_exchange_strong(a, &oldvalue, newvalue);
@@ -44,7 +44,7 @@ int atomic_cas(int volatile *a, int oldvalue, int newvalue)
     return 0;
 #endif
 }
-int atomic_add(int volatile *a, int value){
+int h_atomic_add(int volatile *a, int value){
 #if defined(USE_C11_ATOMICS)
   return atomic_fetch_add(a, value);
 #elif defined(USE_MSC_ATOMICS)
@@ -56,12 +56,12 @@ int atomic_add(int volatile *a, int value){
   int oldvalue;
   do {
     oldvalue = *a;
-  } while (!atomic_cas(a, oldvalue, (oldvalue + value)));
+  } while (!h_atomic_cas(a, oldvalue, (oldvalue + value)));
   return oldvalue;
 #endif
 }
 
-int atomic_get(int volatile *a)
+int h_atomic_get(int volatile *a)
 {
 #if defined(USE_C11_ATOMICS)
   return atomic_load(a);
@@ -69,12 +69,12 @@ int atomic_get(int volatile *a)
   int value;
   do {
     value = *a;
-  } while (!atomic_cas(a, value, value));
+  } while (!h_atomic_cas(a, value, value));
   return value;
 #endif
 }
 
-void atomic_set(int volatile *a, int newvalue)
+void h_atomic_set(int volatile *a, int newvalue)
 {
 #if defined(USE_C11_ATOMICS)
   atomic_store(a, newvalue);
@@ -87,6 +87,6 @@ void atomic_set(int volatile *a, int newvalue)
   int oldvalue;
   do {
     oldvalue = *a;
-  } while (!atomic_cas(a, oldvalue, newvalue));
+  } while (!h_atomic_cas(a, oldvalue, newvalue));
 #endif
 }

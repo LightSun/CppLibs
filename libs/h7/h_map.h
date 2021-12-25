@@ -42,6 +42,7 @@ typedef struct h_map{
     int hashShift, mask, threshold;
     int stashCapacity;
     int pushIterations;
+    volatile int ref;
 
     struct Entries* entries1;
     struct Entries* entries2;

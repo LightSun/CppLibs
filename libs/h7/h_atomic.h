@@ -2,10 +2,10 @@
 
 #include <stdint.h>
 
-int atomic_add(int volatile *a, int value);
+int h_atomic_add(int volatile *a, int value);
 
-int atomic_cas(int volatile *a, int oldvalue, int newvalue);
+int h_atomic_cas(int volatile *a, int oldvalue, int newvalue);
 
-int atomic_get(int volatile *a);
+int h_atomic_get(int volatile *a);
 
-void atomic_set(int volatile *a, int newvalue);
+void h_atomic_set(int volatile *a, int newvalue);

@@ -6,6 +6,7 @@
 #include "h_mathutils.h"
 #include "h_alloctor.h"
 #include "h_string.h"
+#include "h_atomic.h"
 
 #define PRIME1 0xbe1f14b1
 #define PRIME2 0xb4b82e39
@@ -51,7 +52,9 @@ h_map* h_map_new(Func_Hash fun_hash, Func_KeyCompare comp_key,int initialCapacit
     return map;
 }
 void h_map_delete(h_map* map, Func_Delete func_key, Func_Delete func_value){
-    //TODO delete
+    if(h_atomic_add(&map->ref, -1) == 1){
+        //TODO delete
+    }
 }
 void* h_map_put(h_map* map, void* key, void* value){
     int hashCode = map->func_hash(key);
@@ -423,6 +426,9 @@ void h_map_dumpString(h_map* map,Func_ToStringAdd func, struct hstring* hs){
 }
 //-------------------- iterator ----------------
 typedef struct MapIterator{
-    int hasNext;
+    char hasNext;
     h_map* map;
+    int nextIndex, currentIndex;
+    char valid : 1; //1
+
 }MapIterator;
