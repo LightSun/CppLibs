@@ -26,12 +26,13 @@ static inline int hash3(h_map* map, int h) {
 static void _push(h_map* map, void* insertKey, void* insertValue, int index1, void* key1,
                  int index2, void* key2, int index3, void* key3);
 
-h_map* h_map_new(Func_Hash fun_hash, Func_KeyCompare comp_key,int initialCapacity, float loadFactor){
+h_map* h_map_new(Func_Hash fun_hash, Func_Compare comp_key,int initialCapacity, float loadFactor){
     assert(initialCapacity >= 0 );
     assert(loadFactor > 0 );
     //initialCapacity > 0. capacity > 1 << 30.
     int cap = h7_nextPowerOfTwo(initialCapacity);
     h_map* map = (h_map*)CALLOC(sizeof (h_map));
+    map->ref = 1;
     map->func_hash = fun_hash;
     map->func_compKey = comp_key;
     map->capacity = cap;
@@ -132,7 +133,7 @@ void h_map_ensureCapacity (h_map* map, int additionalCapacity) {
     int sizeNeeded = map->size + additionalCapacity;
     if (sizeNeeded >= map->threshold) h_map_resize(map, h7_nextPowerOfTwo((int)(sizeNeeded / map->loadFactor)));
 }
-void* h_map_findKey (h_map* map, Func_ValueCompare valComp, void* value, int identity) {
+void* h_map_findKey (h_map* map, Func_Compare valComp, void* value, int identity) {
        void** valueTable = map->valueTable;
        void** keyTable = map->keyTable;
        if (value == null) {
@@ -312,6 +313,9 @@ void h_map_resize (h_map* map, int newSize) {
         if (key != null) _putResize(map, key, oldValueTable[i]);
     }
 }
+int h_map_size(h_map* map){
+    return map->size;
+}
 void* h_map_get (h_map* map, void* key) {
    int hashCode = map->func_hash(key);
    int index = hashCode & map->mask;
@@ -381,7 +385,7 @@ void* h_map_remove (h_map* map, void* key) {
     }
     return _removeStash(map, key);
 }
-int h_map_containsValue(h_map* map, Func_ValueCompare valComp, void* value, int identity) {
+int h_map_containsValue(h_map* map, Func_Compare valComp, void* value, int identity) {
     void** keyTable = map->keyTable;
     void** valueTable = map->valueTable;
     if (value == null) {
@@ -437,6 +441,24 @@ void h_map_dumpString(h_map* map,Func_ToStringAdd func, struct hstring* hs){
         func(hs, valueTable[i]);
     }
     hstring_append(hs, "}");
+}
+h_map* h_map_copy (h_map* map, void* ctx, Func_Copy func_key, Func_Copy func_value){
+    h_map* newMap = h_map_new(map->func_hash, map->func_compKey, map->capacity - 1, map->loadFactor);
+    assert(map->capacity == newMap->capacity);
+    newMap->func_del_key = map->func_del_key;
+    newMap->func_del_value = map->func_del_value;
+    void* key;
+    void* value;
+    for (int n = map->capacity + map->stashSize, i = 0; i < n; i ++) {
+        key = map_keyTable(map, void*)[i];
+        if (key != null) {
+            value = map_valueTable(map, void*)[i];
+            if(func_key) key = func_key(ctx, key);
+            if(func_value) value = func_value(ctx, value);
+            h_map_put(newMap, key, value);
+        }
+    }
+    return newMap;
 }
 //-------------------- iterator ----------------
 typedef struct h_mapIterator{
