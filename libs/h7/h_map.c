@@ -51,10 +51,24 @@ h_map* h_map_new(Func_Hash fun_hash, Func_KeyCompare comp_key,int initialCapacit
     map->valueUnitSize = valueUnitSize;
     return map;
 }
-void h_map_delete(h_map* map, Func_Delete func_key, Func_Delete func_value){
+void h_map_delete(h_map* map){
     if(h_atomic_add(&map->ref, -1) == 1){
-        //TODO delete
+        for (int n = map->capacity + map->stashSize, i = 0; i < n; i ++) {
+            if (map->func_del_key && map_keyTable(map, void*)[i] != null) {
+                map->func_del_key(map_keyTable(map, void*)[i]);
+            }
+            if (map->func_del_value && map_valueTable(map, void*)[i] != null) {
+                map->func_del_value(map_valueTable(map, void*)[i]);
+            }
+        }
+        FREE(map->keyTable);
+        FREE(map->valueTable);
+        FREE(map);
     }
+}
+void h_map_set_del_funcs(h_map* map, Func_Delete func_key, Func_Delete func_value){
+    map->func_del_key = func_key;
+    map->func_del_value = func_value;
 }
 void* h_map_put(h_map* map, void* key, void* value){
     int hashCode = map->func_hash(key);
@@ -425,10 +439,86 @@ void h_map_dumpString(h_map* map,Func_ToStringAdd func, struct hstring* hs){
     hstring_append(hs, "}");
 }
 //-------------------- iterator ----------------
-typedef struct MapIterator{
-    char hasNext;
+typedef struct h_mapIterator{
     h_map* map;
-    int nextIndex, currentIndex;
+    int nextIndex;
+    int currentIndex;
+    char hasNext;
     char valid : 1; //1
+}h_mapIterator;
+h_mapIterator* h_mapIterator_new(h_map* map){
+    h_mapIterator* it = CALLOC(sizeof (h_mapIterator));
+    it->valid = 1;
+    it->map = map;
+    h_atomic_add(&map->ref, 1);
+    h_mapIterator_reset(it);
+    return it;
+}
+struct h_mapIterator* h_map_iterator(h_map* map){
+    return h_mapIterator_new(map);
+}
 
-}MapIterator;
+void h_mapIterator_delete(h_mapIterator* it){
+    h_map_delete(it->map);
+    FREE(it);
+}
+void h_mapIterator_reset(h_mapIterator* it){
+    it->currentIndex = -1;
+    it->nextIndex = -1;
+    h_mapIterator_advance(it);
+}
+void h_mapIterator_advance(h_mapIterator* it){
+    it->hasNext = 0;
+    void** keyTable = it->map->keyTable;
+    for (int n = it->map->capacity + it->map->stashSize; ++it->nextIndex < n;) {
+        if (keyTable[it->nextIndex] != null) {
+            it->hasNext = 1;
+            break;
+        }
+    }
+}
+int h_mapIterator_remove(h_mapIterator* it){
+    //next must be called before remove.
+    if (it->currentIndex < 0) return 0;
+    if (it->currentIndex >= it->map->capacity) {
+        h_map_removeStashIndex(it->map, it->currentIndex);
+    } else {
+        map_keyTable(it->map, void*)[it->currentIndex] = null;
+        map_valueTable(it->map, void*)[it->currentIndex] = null;
+    }
+    it->currentIndex = -1;
+    it->map->size--;
+    return 1;
+}
+int h_mapIterator_hasNext(h_mapIterator* it){
+    return it->hasNext;
+}
+int h_mapIterator_next(h_mapIterator* it,h_mapEntry* entry){
+    if(it->hasNext){
+        entry->value = map_valueTable(it->map, void*)[it->nextIndex];
+        entry->key = map_keyTable(it->map, void*)[it->nextIndex];
+        it->currentIndex = it->nextIndex;
+        h_mapIterator_advance(it);
+        return 1;
+    }
+    return 0;
+}
+int h_mapIterator_nextKey(h_mapIterator* it,h_mapEntry* entry){
+    if(it->hasNext){
+        entry->key = map_keyTable(it->map, void*)[it->nextIndex];
+        it->currentIndex = it->nextIndex;
+        h_mapIterator_advance(it);
+        return 1;
+    }
+    return 0;
+}
+int h_mapIterator_nextValue(h_mapIterator* it,h_mapEntry* entry){
+    if(it->hasNext){
+        entry->value = map_valueTable(it->map, void*)[it->nextIndex];
+        it->currentIndex = it->nextIndex;
+        h_mapIterator_advance(it);
+        return 1;
+    }
+    return 0;
+}
+//==========================================================================

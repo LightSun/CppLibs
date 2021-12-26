@@ -7,27 +7,15 @@
  * next higher POT size.
  * @author heaven7
  * @from Nathan Sweet */
-typedef struct Entry{
-    void* key;
-    void* value;
-}Entry;
-
-struct Entries;
-struct Values;
-struct Keys;
 
 struct hstring;
+struct h_mapIterator;
 
 typedef int (*Func_Hash)(void* key);
 typedef int (*Func_Delete)(void* k_or_v);
 typedef int (*Func_KeyCompare)(void* k1, void* k2);
 typedef int (*Func_ValueCompare)(void* v1, void* v2);
 typedef void (*Func_ToStringAdd)(struct hstring* hs, void* v1);
-
-#define H_MAP_callback(k, v)\
-typedef struct h_map_callback{\
-    int (*Func_Hash)(k key);\
-}h_map_callback;
 
 typedef struct h_map{
     void* keyTable;
@@ -44,18 +32,20 @@ typedef struct h_map{
     int pushIterations;
     volatile int ref;
 
-    struct Entries* entries1;
-    struct Entries* entries2;
-    struct Values* values1;
-    struct Values* values2;
-    struct Keys* keys1;
-    struct Keys* keys2;
     Func_Hash func_hash;
     Func_KeyCompare func_compKey;
+    Func_Delete func_del_key;
+    Func_Delete func_del_value;
 }h_map;
+typedef struct h_mapEntry{
+    void* key;
+    void* value;
+}h_mapEntry;
 
 h_map* h_map_new(Func_Hash fun_hash, Func_KeyCompare comp_key, int initialCapacity, float loadFactor);
-void h_map_delete(h_map* map, Func_Delete func_key, Func_Delete func_value);
+void h_map_delete(h_map* map);
+void h_map_set_del_funcs(h_map* map, Func_Delete func_key, Func_Delete func_value);
+
 void* h_map_put(h_map* map, void* key, void* value);
 void h_map_resize(h_map* map, int newSize);
 /** Increases the size of the backing array to acommodate the specified number of additional items. Useful before adding many
@@ -78,4 +68,14 @@ void h_map_removeStashIndex(h_map* map,int index);
 int h_map_containsValue(h_map* map, Func_ValueCompare valComp, void* value, int identity);
 int h_map_containsKey (h_map* map, void* key);
 void h_map_dumpString(h_map* map,Func_ToStringAdd func, struct hstring* hs);
-
+//TODO support multi thread.
+struct h_mapIterator* h_map_iterator(h_map* map);
+//------------------------------------------
+void h_mapIterator_advance(struct h_mapIterator* it);
+void h_mapIterator_reset(struct h_mapIterator* it);
+void h_mapIterator_delete(struct h_mapIterator* it);
+int h_mapIterator_remove(struct h_mapIterator* it);
+int h_mapIterator_hasNext(struct h_mapIterator* it);
+int h_mapIterator_next(struct h_mapIterator* it,h_mapEntry* entry);
+int h_mapIterator_nextKey(struct h_mapIterator* it,h_mapEntry* entry);
+int h_mapIterator_nextValue(struct h_mapIterator* it,h_mapEntry* entry);
