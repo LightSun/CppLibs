@@ -6,6 +6,8 @@ include(../cmake/summary.cmake)
 
 # USE_C11_ATOMICS,USE_MSC_ATOMICS,USE_GCC_ATOMICS,USE_PTHREAD_ATOMICS
 add_library(h7
+    h_common.h
+    h_type_delegate.h
     h_map.h
     h_map.c
     h_mathutils.h

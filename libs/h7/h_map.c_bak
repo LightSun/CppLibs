@@ -1,5 +1,6 @@
 
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 #include <assert.h>
 #include "h_map.h"
@@ -7,13 +8,26 @@
 #include "h_alloctor.h"
 #include "h_string.h"
 #include "h_atomic.h"
+#include "h_type_delegate.h"
 
 #define PRIME1 0xbe1f14b1
 #define PRIME2 0xb4b82e39
 #define PRIME3 0xced1c241
 #define null NULL
-#define map_keyTable(map, type) ((type*)map->keyTable)
-#define map_valueTable(map, type) ((type*)map->valueTable)
+//#define map_keyTable(map, type) ((type*)map->keyTable)
+//#define map_valueTable(map, type) ((type*)map->valueTable)
+
+#define MAP_DELETE_KEY_AT(map, i)\
+  uc.ptr = ((void**)map->keyTable)[i];\
+  map->key_delegate->Func_delete(&uc);
+
+#define MAP_DELETE_VALUE_AT(map, i)\
+  uc.ptr = ((void**)map->valueTable)[i];\
+  map->value_delegate->Func_delete(&uc);
+#define MAP_HAS_INDEX(map, index) (map->keySettedTable[index])
+#define MAP_KEY_INDEX_TO_UNION(map, i, cu) map->key_delegate->Func_PassToCommon(map->keyTable, i, cu)
+#define MAP_VALUE_INDEX_TO_UNION(map, i, cu) map->value_delegate->Func_PassToCommon(map->valueTable, i, cu)
+#define MAP_COMPARE_KEY(cu1, cu2) (map->key_delegate->Func_Compare(cu1, cu2))
 
 static inline int hash2(h_map* map, int h) {
     h *= PRIME2;
@@ -26,15 +40,15 @@ static inline int hash3(h_map* map, int h) {
 static void _push(h_map* map, void* insertKey, void* insertValue, int index1, void* key1,
                  int index2, void* key2, int index3, void* key3);
 
-h_map* h_map_new(Func_Hash fun_hash, Func_Compare comp_key,int initialCapacity, float loadFactor){
+h_map* h_map_new(struct h_type_delegate* key, struct h_type_delegate* value,int initialCapacity, float loadFactor){
     assert(initialCapacity >= 0 );
     assert(loadFactor > 0 );
     //initialCapacity > 0. capacity > 1 << 30.
     int cap = h7_nextPowerOfTwo(initialCapacity);
     h_map* map = (h_map*)CALLOC(sizeof (h_map));
     map->ref = 1;
-    map->func_hash = fun_hash;
-    map->func_compKey = comp_key;
+    map->key_delegate = key;
+    map->value_delegate= value;
     map->capacity = cap;
     map->loadFactor = loadFactor;
     map->threshold = (int)(cap * loadFactor);
@@ -43,44 +57,54 @@ h_map* h_map_new(Func_Hash fun_hash, Func_Compare comp_key,int initialCapacity, 
     map->stashCapacity = H7_MAX(3, (int)ceil(log(cap)) * 2);
     map->pushIterations = H7_MAX(H7_MIN(cap, 8), (int)sqrt(cap) / 8);
     //k-v data
-    int keyUnitSize = sizeof (void*);
-    int valueUnitSize = sizeof (void*);
+    int keyUnitSize = key->Func_size();
+    int valueUnitSize = value->Func_size();
     map->tableLen = cap + map->stashCapacity;
     map->keyTable = CALLOC(keyUnitSize * map->tableLen);
     map->valueTable = CALLOC(valueUnitSize * map->tableLen);
+    map->keySettedTable = CALLOC(sizeof (char) * map->tableLen);
     map->keyUnitSize = keyUnitSize;
     map->valueUnitSize = valueUnitSize;
     return map;
 }
+//TODO add ref function
 void h_map_delete(h_map* map){
     if(h_atomic_add(&map->ref, -1) == 1){
-        for (int n = map->capacity + map->stashSize, i = 0; i < n; i ++) {
-            if (map->func_del_key && map_keyTable(map, void*)[i] != null) {
-                map->func_del_key(map_keyTable(map, void*)[i]);
+        h_common_union uc;
+        if(strcmp(H_TYPE_NAME_PTR, map->key_delegate->name) == 0 && map->key_delegate->Func_delete){
+            for (int n = map->capacity + map->stashSize, i = 0; i < n; i ++) {
+                MAP_DELETE_KEY_AT(map, i);
             }
-            if (map->func_del_value && map_valueTable(map, void*)[i] != null) {
-                map->func_del_value(map_valueTable(map, void*)[i]);
+        }
+        if(strcmp(H_TYPE_NAME_PTR, map->value_delegate->name) == 0 && map->value_delegate->Func_delete){
+            for (int n = map->capacity + map->stashSize, i = 0; i < n; i ++) {
+                MAP_DELETE_VALUE_AT(map, i);
             }
         }
         FREE(map->keyTable);
         FREE(map->valueTable);
+        if(map->iterator){
+            FREE(map->iterator);
+        }
         FREE(map);
     }
 }
-void h_map_set_del_funcs(h_map* map, Func_Delete func_key, Func_Delete func_value){
-    map->func_del_key = func_key;
-    map->func_del_value = func_value;
-}
-void h_map_ref(h_map* map){
-    h_atomic_add(&map->ref, 1);
-}
-void* h_map_put(h_map* map, void* key, void* value){
-    int hashCode = map->func_hash(key);
+void h_map_put(h_map* map, h_common_union* key, h_common_union* value, h_mapEntry* old){
+    int hashCode = map->key_delegate->Func_hash(key);
     //check for key exist.
     int index1 = hashCode & map->mask;
+    int has_index1 = MAP_HAS_INDEX(map, index1);
+    if(has_index1){
+        MAP_KEY_INDEX_TO_UNION(map, index1, &old->key);
+        if(MAP_COMPARE_KEY(&old->key, key) == 0){
+            MAP_VALUE_INDEX_TO_UNION(map, index1, &old->value);
+            return;
+        }
+    }
+   // map->key_delegate->Func_PassToCommon(map->keyTable, i, &old->key);
     void* key1 = map_keyTable(map, void*)[index1];
-    if (map->func_compKey(key, key1) == 0) {
-        void* oldValue = map_keyTable(map, void*)[index1];
+    if ( map->key_delegate->Func_Compare(key, key1) == 0) {
+        void* oldValue = map_valueTable(map, void*)[index1];
         map_valueTable(map, void*)[index1] = value;
         return oldValue;
     }
@@ -88,7 +112,7 @@ void* h_map_put(h_map* map, void* key, void* value){
     int index2 = hash2(map, hashCode);
     void* key2 = map_keyTable(map, void*)[index2];
     if (map->func_compKey(key, key2) == 0) {
-        void* oldValue = map_keyTable(map, void*)[index2];
+        void* oldValue = map_valueTable(map, void*)[index2];
         map_valueTable(map, void*)[index2] = value;
         return oldValue;
     }
@@ -96,14 +120,14 @@ void* h_map_put(h_map* map, void* key, void* value){
     int index3 = hash3(map, hashCode);
     void* key3 = map_keyTable(map, void*)[index3];
     if (map->func_compKey(key, key3) == 0) {
-        void* oldValue = map_keyTable(map, void*)[index3];
+        void* oldValue = map_valueTable(map, void*)[index3];
         map_valueTable(map, void*)[index3] = value;
         return oldValue;
     }
     // Update key in the stash.
     for (int i = map->capacity, n = i + map->stashSize; i < n; i++) {
         if (map->func_compKey(key, map_keyTable(map, void*)[i]) == 0) {
-            void* oldValue = ((void**)map->valueTable)[i];
+            void* oldValue = map_valueTable(map, void*)[i];
             map_valueTable(map, void*)[i] = value;
             return oldValue;
         }
@@ -151,6 +175,7 @@ void* h_map_findKey (h_map* map, Func_Compare valComp, void* value, int identity
        }
        return null;
 }
+//---------------------------------------------------------------
 static void _putStash(h_map* map,void* key, void* value){
     if (map->stashSize == map->stashCapacity) {
         // Too many pushes occurred and the stash is full, increase the table size.
@@ -468,10 +493,10 @@ typedef struct h_mapIterator{
     h_map* map;
     int nextIndex;
     int currentIndex;
-    int hasNext;
-    volatile int valid; //1 means idle.
+    char hasNext;
+    char valid : 1; //1
 }h_mapIterator;
-static h_mapIterator* h_mapIterator_new(h_map* map){
+h_mapIterator* h_mapIterator_new(h_map* map){
     h_mapIterator* it = CALLOC(sizeof (h_mapIterator));
     it->valid = 1;
     it->map = map;
@@ -482,20 +507,24 @@ static h_mapIterator* h_mapIterator_new(h_map* map){
 struct h_mapIterator* h_map_iterator(h_map* map){
     if(map->iterator == NULL){
         map->iterator = h_mapIterator_new(map);
+    }
+    if(map->iterator->valid){
+        map->iterator->valid = 0;
     }else{
-        //if old is 1, means idle return it direct.
-        if(!h_atomic_cas(&map->iterator->valid, 1, 0)){
-            return h_mapIterator_new(map);
-        }
+        //if default iterator is used. return a new .
+        return h_mapIterator_new(map);
     }
     return map->iterator;
 }
 
 void h_mapIterator_delete(h_mapIterator* it){
-    int shared = it->map->iterator == it;
-    if(shared){
-        h_atomic_cas(&it->valid, 0, 1);
+    //if is the default. we never delete it here.
+    int should_delete = it != it->map->iterator;
+    if(should_delete){
+        h_map_delete(it->map);
+        FREE(it);
     }else{
+        it->valid = 1;
         h_map_delete(it->map);
     }
 }
@@ -520,8 +549,12 @@ int h_mapIterator_remove(h_mapIterator* it){
     if (it->currentIndex >= it->map->capacity) {
         h_map_removeStashIndex(it->map, it->currentIndex);
     } else {
+        void* key = map_keyTable(it->map, void*)[it->currentIndex];
+        void* value = map_valueTable(it->map, void*)[it->currentIndex];
         map_keyTable(it->map, void*)[it->currentIndex] = null;
         map_valueTable(it->map, void*)[it->currentIndex] = null;
+        if(key && it->map->func_del_key) it->map->func_del_key(key);
+        if(value && it->map->func_del_value) it->map->func_del_value(value);
     }
     it->currentIndex = -1;
     it->map->size--;
