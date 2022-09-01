@@ -8,7 +8,7 @@ struct hstring;
 
 typedef struct h_type_delegate{
     const char* name;
-    int (*Func_size)();
+    int unitSize; 
     int (*Func_hash)(h_common_union* k);
     void (*Func_delete)(h_common_union* k);
     //cast spec data to common

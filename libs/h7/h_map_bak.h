@@ -39,37 +39,37 @@ typedef struct h_mapEntry{
     h_common_union value;
 }h_mapEntry;
 
-h_map* h_map_new(struct h_type_delegate* key, struct h_type_delegate* value, int initialCapacity, float loadFactor);
-void h_map_delete(h_map* map);
+h_map* h_maps_new(struct h_type_delegate* key, struct h_type_delegate* value, int initialCapacity, float loadFactor);
+void h_maps_delete(h_map* map);
 
 //kv: the entry contains old value and new key
-void h_map_put(h_map* map, h_common_union* key, h_common_union* value, h_mapEntry* kv);
+void h_maps_put(h_map* map, h_common_union key, h_common_union value, h_mapEntry* kv);
 
-void h_map_resize(h_map* map, int newSize);
-int h_map_size(h_map* map);
+void h_maps_resize(h_map* map, int newSize);
+int h_maps_size(h_map* map);
 /** Increases the size of the backing array to acommodate the specified number of additional items. Useful before adding many
      * items to avoid multiple backing array resizes. */
-void h_map_ensureCapacity (h_map* map, int additionalCapacity);
+void h_maps_ensureCapacity (h_map* map, int additionalCapacity);
 /** Returns the key for the specified value, or null if it is not in the map. Note this traverses the entire map and compares
      * every value, which may be an expensive operation.
      * @param identity If true, uses == to compare the specified value with values in the map. If false, uses
      *           {@link #equals(Object)}. */
-void* h_map_findKey (h_map* map, Func_Compare valComp, void* value, int identity);
+void* h_maps_findKey (h_map* map, Func_Compare valComp, void* value, int identity);
 
-void* h_map_get(h_map* map, void* key);
-void h_map_clear (h_map* map);
-void* h_map_remove (h_map* map, void* key);
-void h_map_removeStashIndex(h_map* map,int index);
+void* h_maps_get(h_map* map, void* key);
+void h_maps_clear (h_map* map);
+void* h_maps_remove (h_map* map, void* key);
+void h_maps_removeStashIndex(h_map* map,int index);
 /** Returns true(1) if the specified value is in the map. Note this traverses the entire map and compares every value, which may be
      * an expensive operation.
      * @param identity If true, uses == to compare the specified value with values in the map. If false, uses
      *     . */
-int h_map_containsValue(h_map* map, Func_Compare valComp, void* value, int identity);
-int h_map_containsKey (h_map* map, void* key);
-void h_map_dumpString(h_map* map,Func_ToStringAdd func, struct hstring* hs);
-h_map* h_map_copy (h_map* map, void* ctx, Func_Copy func_key, Func_Copy func_value);
+int h_maps_containsValue(h_map* map, Func_Compare valComp, void* value, int identity);
+int h_maps_containsKey (h_map* map, void* key);
+void h_maps_dumpString(h_map* map,Func_ToStringAdd func, struct hstring* hs);
+h_map* h_maps_copy (h_map* map, void* ctx, Func_Copy func_key, Func_Copy func_value);
 //TODO support multi thread.
-struct h_mapIterator* h_map_iterator(h_map* map);
+struct h_mapIterator* h_maps_iterator(h_map* map);
 //------------------------------------------
 void h_mapIterator_advance(struct h_mapIterator* it);
 void h_mapIterator_reset(struct h_mapIterator* it);

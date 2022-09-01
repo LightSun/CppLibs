@@ -3,7 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
-#include "h_map.h"
+#include "h_map_bak.h"
 #include "h_mathutils.h"
 #include "h_alloctor.h"
 #include "h_string.h"
@@ -40,7 +40,7 @@ static inline int hash3(h_map* map, int h) {
 static void _push(h_map* map, void* insertKey, void* insertValue, int index1, void* key1,
                  int index2, void* key2, int index3, void* key3);
 
-h_map* h_map_new(struct h_type_delegate* key, struct h_type_delegate* value,int initialCapacity, float loadFactor){
+h_map* h_maps_new(struct h_type_delegate* key, struct h_type_delegate* value,int initialCapacity, float loadFactor){
     assert(initialCapacity >= 0 );
     assert(loadFactor > 0 );
     //initialCapacity > 0. capacity > 1 << 30.
@@ -57,8 +57,8 @@ h_map* h_map_new(struct h_type_delegate* key, struct h_type_delegate* value,int 
     map->stashCapacity = H7_MAX(3, (int)ceil(log(cap)) * 2);
     map->pushIterations = H7_MAX(H7_MIN(cap, 8), (int)sqrt(cap) / 8);
     //k-v data
-    int keyUnitSize = key->Func_size();
-    int valueUnitSize = value->Func_size();
+    int keyUnitSize = key->unitSize;
+    int valueUnitSize = value->unitSize;
     map->tableLen = cap + map->stashCapacity;
     map->keyTable = CALLOC(keyUnitSize * map->tableLen);
     map->valueTable = CALLOC(valueUnitSize * map->tableLen);
@@ -68,7 +68,7 @@ h_map* h_map_new(struct h_type_delegate* key, struct h_type_delegate* value,int 
     return map;
 }
 //TODO add ref function
-void h_map_delete(h_map* map){
+void h_maps_delete(h_map* map){
     if(h_atomic_add(&map->ref, -1) == 1){
         h_common_union uc;
         if(strcmp(H_TYPE_NAME_PTR, map->key_delegate->name) == 0 && map->key_delegate->Func_delete){
@@ -89,8 +89,8 @@ void h_map_delete(h_map* map){
         FREE(map);
     }
 }
-void h_map_put(h_map* map, h_common_union* key, h_common_union* value, h_mapEntry* old){
-    int hashCode = map->key_delegate->Func_hash(key);
+void h_maps_put(h_map* map, h_common_union key, h_common_union value, h_mapEntry* old){
+    int hashCode = map->key_delegate->Func_hash(&key);
     //check for key exist.
     int index1 = hashCode & map->mask;
     int has_index1 = MAP_HAS_INDEX(map, index1);
@@ -153,14 +153,14 @@ void h_map_put(h_map* map, h_common_union* key, h_common_union* value, h_mapEntr
         if (map->size++ >= map->threshold) h_map_resize(map, map->capacity << 1);
         return null;
     }
-    _push(map, key, value, index1, key1, index2, key2, index3, key3);
+    _push(map, &key, value, index1, key1, index2, key2, index3, key3);
     return null;
 }
-void h_map_ensureCapacity (h_map* map, int additionalCapacity) {
+void h_maps_ensureCapacity (h_map* map, int additionalCapacity) {
     int sizeNeeded = map->size + additionalCapacity;
     if (sizeNeeded >= map->threshold) h_map_resize(map, h7_nextPowerOfTwo((int)(sizeNeeded / map->loadFactor)));
 }
-void* h_map_findKey (h_map* map, Func_Compare valComp, void* value, int identity) {
+void* h_maps_findKey (h_map* map, Func_Compare valComp, void* value, int identity) {
        void** valueTable = map->valueTable;
        void** keyTable = map->keyTable;
        if (value == null) {
@@ -190,7 +190,7 @@ static void _putStash(h_map* map,void* key, void* value){
     map->stashSize++;
     map->size++;
 }
-static void _push(h_map* map, void* insertKey, void* insertValue, int index1, void* key1,
+static void _push(h_map* map, h_common_union* insertKey, h_common_union* insertValue, int index1, void* key1,
                  int index2, void* key2, int index3, void* key3){
     void** valueTable = map->valueTable;
     void** keyTable = map->keyTable;
@@ -317,7 +317,7 @@ static int _containsKeyStash (h_map* map, void* key) {
     return 0;
 }
 //-----------------------------------------
-void h_map_resize (h_map* map, int newSize) {
+void h_maps_resize (h_map* map, int newSize) {
     int oldEndIndex = map->capacity + map->stashSize;
 
     map->capacity = newSize;
@@ -341,10 +341,10 @@ void h_map_resize (h_map* map, int newSize) {
         if (key != null) _putResize(map, key, oldValueTable[i]);
     }
 }
-int h_map_size(h_map* map){
+int h_maps_size(h_map* map){
     return map->size;
 }
-void* h_map_get (h_map* map, void* key) {
+void* h_maps_get (h_map* map, void* key) {
    int hashCode = map->func_hash(key);
    int index = hashCode & map->mask;
    void** valueTable = map->valueTable;
@@ -358,7 +358,7 @@ void* h_map_get (h_map* map, void* key) {
    }
    return valueTable[index];
 }
-void h_map_removeStashIndex(h_map* map,int index) {
+void h_maps_removeStashIndex(h_map* map,int index) {
     void** valueTable = map->valueTable;
     void** keyTable = map->keyTable;
     // If the removed location was not last, move the last tuple to the removed location.
@@ -371,7 +371,7 @@ void h_map_removeStashIndex(h_map* map,int index) {
     } else
         valueTable[index] = null;
 }
-void h_map_clear (h_map* map) {
+void h_maps_clear (h_map* map) {
     void** valueTable = map->valueTable;
     void** keyTable = map->keyTable;
     for (int i = map->capacity + map->stashSize; i-- > 0;) {
@@ -381,7 +381,7 @@ void h_map_clear (h_map* map) {
     map->size = 0;
     map->stashSize = 0;
 }
-void* h_map_remove (h_map* map, void* key) {
+void* h_maps_remove (h_map* map, void* key) {
     void** valueTable = map->valueTable;
     void** keyTable = map->keyTable;
     int hashCode = map->func_hash(key);
@@ -413,7 +413,7 @@ void* h_map_remove (h_map* map, void* key) {
     }
     return _removeStash(map, key);
 }
-int h_map_containsValue(h_map* map, Func_Compare valComp, void* value, int identity) {
+int h_maps_containsValue(h_map* map, Func_Compare valComp, void* value, int identity) {
     void** keyTable = map->keyTable;
     void** valueTable = map->valueTable;
     if (value == null) {
@@ -428,7 +428,7 @@ int h_map_containsValue(h_map* map, Func_Compare valComp, void* value, int ident
     }
     return 0;
 }
-int h_map_containsKey (h_map* map, void* key) {
+int h_maps_containsKey (h_map* map, void* key) {
     void** keyTable = map->keyTable;
     int hashCode = map->func_hash(key);
     int index = hashCode & map->mask;
@@ -441,7 +441,7 @@ int h_map_containsKey (h_map* map, void* key) {
     }
     return 1;
 }
-void h_map_dumpString(h_map* map,Func_ToStringAdd func, struct hstring* hs){
+void h_maps_dumpString(h_map* map,Func_ToStringAdd func, struct hstring* hs){
     if (map->size == 0){
         hstring_append(hs, "{}");
         return;
@@ -470,7 +470,7 @@ void h_map_dumpString(h_map* map,Func_ToStringAdd func, struct hstring* hs){
     }
     hstring_append(hs, "}");
 }
-h_map* h_map_copy (h_map* map, void* ctx, Func_Copy func_key, Func_Copy func_value){
+h_map* h_maps_copy (h_map* map, void* ctx, Func_Copy func_key, Func_Copy func_value){
     h_map* newMap = h_map_new(map->func_hash, map->func_compKey, map->capacity - 1, map->loadFactor);
     assert(map->capacity == newMap->capacity);
     newMap->func_del_key = map->func_del_key;

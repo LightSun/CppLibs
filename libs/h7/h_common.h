@@ -51,4 +51,6 @@ typedef union h_common_union{
     void* ptr;
 }h_common_union;
 
+#define
+
 #endif // H_COMMON_H

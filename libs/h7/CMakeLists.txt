@@ -8,8 +8,10 @@ include(../cmake/summary.cmake)
 add_library(h7
     h_common.h
     h_type_delegate.h
-    h_map.h
-    h_map.c
+    #h_map.h
+    #h_map.c
+    h_map_bak.h
+    h_map_bak.c
     h_mathutils.h
     h_mathutils.c
     h_atomic.h
