@@ -1,4 +1,4 @@
-#include "THAllocator.h"
+﻿#include "THAllocator.h"
 #include "THAtomic.h"
 
 /* stuff for mapped files */

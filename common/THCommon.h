@@ -1,4 +1,4 @@
-#ifndef THCOMMON_H
+﻿#ifndef THCOMMON_H
 #define THCOMMON_H
 
 #include <stdlib.h>
@@ -17,12 +17,14 @@
 # define TH_EXTERNC extern
 #endif
 
+//when lib will be called from msvc, you should use  __declspec(dllexport) to export. __declspec(dllimport) to import
 #ifdef _WIN32
-# ifdef TH_EXPORTS
-#  define TH_API TH_EXTERNC __declspec(dllexport)
-# else
-#  define TH_API TH_EXTERNC __declspec(dllimport)
-# endif
+//# ifdef TH_EXPORTS
+//#  define TH_API TH_EXTERNC __declspec(dllexport)
+//# else
+//#  define TH_API TH_EXTERNC __declspec(dllimport)
+//# endif
+# define TH_API TH_EXTERNC
 #else
 # define TH_API TH_EXTERNC
 #endif
