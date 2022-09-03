@@ -1,24 +1,58 @@
-#include <stdio.h>
+﻿#include <stdio.h>
 #include "binary_search.h"
 
-#define MACRO_findFirstNeqPos(a, start, len, key, out) \
-{\
-    int _high = start + len;\
-    int _low = start - 1;\
-    int _guess = -1;\
-    while(_high - _low > 1) {\
-        _guess = (_high + _low) / 2;\
-        if (a[_guess] != key) {\
-            _low = _guess;\
-        } else {\
-            _high = _guess;\
+#define DEF_BINARY_SEARCH_IMPL(type, name)\
+    static int findFirstNeqPos_##name(type* a, int start, int len, type key) {\
+        int high = start + len;\
+        int low = start - 1;\
+        int guess = -1;\
+        while(high - low > 1) {\
+            guess = (high + low) / 2;\
+            if (a[guess] != key) {\
+                low = guess;\
+            } else {\
+                high = guess;\
+            }\
         }\
-    }\
-    out = _low;\
-}
+        return low;\
+    }    \
+    int binarySearch_##name(type* a, int start, int len, type key){\
+        int high = start + len;\
+        int low = start - 1;\
+        while(high - low > 1) {\
+            int guess = (high + low) / 2;\
+            if (a[guess] < key) {\
+                low = guess;\
+            } else {\
+                high = guess;\
+            }\
+        }\
+        if (high == start + len) {\
+            return ~(start + len);\
+        } else if (a[high] == key) {\
+            if(high > start){\
+                return findFirstNeqPos_##name(a, start, high - start, key) + 1;\
+            }\
+            return high;\
+        } else {\
+            return ~high;\
+        }\
+    }
 
+DEF_BINARY_SEARCH_IMPL(char, int8)
+DEF_BINARY_SEARCH_IMPL(unsigned char, uint8)
+
+DEF_BINARY_SEARCH_IMPL(short, int16)
+DEF_BINARY_SEARCH_IMPL(unsigned short, uint16)
+
+DEF_BINARY_SEARCH_IMPL(int, int32)
+DEF_BINARY_SEARCH_IMPL(unsigned int, uint32)
+
+DEF_BINARY_SEARCH_IMPL(long long, int64)
+DEF_BINARY_SEARCH_IMPL(unsigned long long, uint64)
+
+/*
 static int findFirstNeqPos(int* a, int start, int len, int key);
-static int findFirstNeqPos_u(unsigned int* a, int start, int len, unsigned int key);
 
 int binarySearch(int* a, int start, int len, int key) {
 //    for(int i = 0 ; i < len ; i ++){
@@ -50,31 +84,6 @@ int binarySearch(int* a, int start, int len, int key) {
     }
 }
 
-int binarySearch_u(unsigned int* a, int start, int len, unsigned int key){
-    int high = start + len;
-    int low = start - 1;
-
-    while(high - low > 1) {
-        int guess = (high + low) / 2;
-        if (a[guess] < key) {
-            low = guess;
-        } else {
-            high = guess;
-        }
-    }
-
-    if (high == start + len) {
-        return ~(start + len);
-    } else if (a[high] == key) {
-        if(high > start){
-            return findFirstNeqPos_u(a, start, high - start, key) + 1;
-        }
-        return high;
-    } else {
-        return ~high;
-    }
-}
-
 static int findFirstNeqPos(int* a, int start, int len, int key) {
     int high = start + len;
     int low = start - 1;
@@ -89,18 +98,4 @@ static int findFirstNeqPos(int* a, int start, int len, int key) {
     }
     return low;
 }
-
-static int findFirstNeqPos_u(unsigned int* a, int start, int len, unsigned int key) {
-    int high = start + len;
-    int low = start - 1;
-    int guess = -1;
-    while(high - low > 1) {
-        guess = (high + low) / 2;
-        if (a[guess] != key) {
-            low = guess;
-        } else {
-            high = guess;
-        }
-    }
-    return low;
-}
+*/

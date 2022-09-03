@@ -1,4 +1,4 @@
-/*
+﻿/*
  * This file is part of libFirm.
  * Copyright (C) 2012 University of Karlsruhe.
  */
@@ -31,7 +31,7 @@
 		#endif
 	#endif
 #else
-	#define  FIRM_API extern
+    #define FIRM_API extern
 #endif
 
 #endif
