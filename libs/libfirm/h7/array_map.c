@@ -25,7 +25,7 @@ array_map_p array_map_new(struct core_allocator* ca, uint16 key_unit_size,
     return ptr;
 }
 
-void array_map_put(array_map_p ptr, void* key, void* value, void* oldVal){
+void array_map_put(array_map_p ptr, const void* key, const void* value, void* oldVal){
 
     //handle hash.
     uint32 hash = fasthash32(key, ptr->key_ele_size, 0);//TODO need seed?
@@ -67,7 +67,7 @@ void array_map_prepare_size(array_map_p ptr, uint32 size){
     ptr->capacity = size;
 }
 
-int array_map_get(array_map_p ptr, void* key, void* oldVal){
+int array_map_get(array_map_p ptr, const void* key, void* oldVal){
     ASSERT(oldVal != NULL);
     ASSERT(key != NULL);
     //handle hash.
@@ -81,7 +81,7 @@ int array_map_get(array_map_p ptr, void* key, void* oldVal){
     return 0;
 }
 
-void* array_map_rawget(array_map_p ptr, void* key){
+void* array_map_rawget(array_map_p ptr, const void* key){
     ASSERT(key != NULL);
     //handle hash.
     uint32 hash = fasthash32(key, ptr->key_ele_size, 0);//TODO need seed?
@@ -93,7 +93,7 @@ void* array_map_rawget(array_map_p ptr, void* key){
     return NULL;
 }
 
-int array_map_remove(array_map_p ptr, void* key, void* oldVal){
+int array_map_remove(array_map_p ptr, const void* key, void* oldVal){
     ASSERT(key != NULL);
     //handle hash.
     uint32 hash = fasthash32(key, ptr->key_ele_size, 0);//TODO need seed?

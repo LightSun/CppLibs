@@ -54,6 +54,7 @@ set(SRC_COMMON
     h7/array_map_n.h
     h7/array_map_n.c
     h7/h7_common.h
+    h7/numbers.h
     h7/hash.h
     h7/hash.c
     h7/binary_search.h

@@ -17,6 +17,9 @@ DEF_BINARY_SEARCH(unsigned short, uint16)
 DEF_BINARY_SEARCH(long long, int64)
 DEF_BINARY_SEARCH(unsigned long long, uint64)
 
+DEF_BINARY_SEARCH(float, f32)
+DEF_BINARY_SEARCH(double, f64)
+
 #ifdef __cplusplus
 }
 #endif

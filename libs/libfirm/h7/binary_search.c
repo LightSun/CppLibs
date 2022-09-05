@@ -1,5 +1,6 @@
 ﻿#include <stdio.h>
 #include "binary_search.h"
+#include "numbers.h"
 
 #define DEF_BINARY_SEARCH_IMPL(type, name)\
     static int findFirstNeqPos_##name(type* a, int start, int len, type key) {\
@@ -39,6 +40,44 @@
         }\
     }
 
+#define DEF_BINARY_SEARCH_IMPL_F(type, name, func_eq)\
+    static int findFirstNeqPos_##name(type* a, int start, int len, type key) {\
+        int high = start + len;\
+        int low = start - 1;\
+        int guess = -1;\
+        while(high - low > 1) {\
+            guess = (high + low) / 2;\
+            if (!func_eq(a[guess], key)) {\
+                low = guess;\
+            } else {\
+                high = guess;\
+            }\
+        }\
+        return low;\
+    }    \
+    int binarySearch_##name(type* a, int start, int len, type key){\
+        int high = start + len;\
+        int low = start - 1;\
+        while(high - low > 1) {\
+            int guess = (high + low) / 2;\
+            if (a[guess] < key) {\
+                low = guess;\
+            } else {\
+                high = guess;\
+            }\
+        }\
+        if (high == start + len) {\
+            return ~(start + len);\
+        } else if (func_eq(a[high], key)) {\
+            if(high > start){\
+                return findFirstNeqPos_##name(a, start, high - start, key) + 1;\
+            }\
+            return high;\
+        } else {\
+            return ~high;\
+        }\
+    }
+
 DEF_BINARY_SEARCH_IMPL(char, int8)
 DEF_BINARY_SEARCH_IMPL(unsigned char, uint8)
 
@@ -50,6 +89,9 @@ DEF_BINARY_SEARCH_IMPL(unsigned int, uint32)
 
 DEF_BINARY_SEARCH_IMPL(long long, int64)
 DEF_BINARY_SEARCH_IMPL(unsigned long long, uint64)
+
+DEF_BINARY_SEARCH_IMPL_F(float, f32, isFloatEquals)
+DEF_BINARY_SEARCH_IMPL_F(double, f64, isDoubleEquals)
 
 /*
 static int findFirstNeqPos(int* a, int start, int len, int key);

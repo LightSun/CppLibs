@@ -6,6 +6,8 @@
 typedef struct array_map array_map;
 typedef array_map* array_map_p;
 
+//typedef int key_type;
+
 struct array_map{
     uint32 capacity;
     uint32 len_entry;
@@ -23,13 +25,13 @@ array_map_p array_map_new(struct core_allocator* ca, uint16 key_unit_size,
 //
 void array_map_prepare_size(array_map_p ptr, uint32 size);
 
-void array_map_put(array_map_p ptr, void* key, void* value, void* oldVal);
+void array_map_put(array_map_p ptr, const void* key, const void* value, void* oldVal);
 //return 1 if success.
-int array_map_get(array_map_p ptr, void* key, void* oldVal);
+int array_map_get(array_map_p ptr, const void* key, void* oldVal);
 
-void* array_map_rawget(array_map_p ptr, void* key);
+void* array_map_rawget(array_map_p ptr, const void* key);
 
-int array_map_remove(array_map_p ptr, void* key, void* oldVal);
+int array_map_remove(array_map_p ptr, const void* key, void* oldVal);
 
 array_map_p array_map_copy(array_map_p ptr);
 

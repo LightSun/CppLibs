@@ -5,7 +5,7 @@
 CPP_START
 
 void arrays_insert(void* arr, int already_ele_count, unsigned int ele_unit_size,
-                   void* data, unsigned int target_pos);
+                   const void* data, unsigned int target_pos);
 
 void arrays_remove(void* arr, int already_ele_count, unsigned int ele_unit_size,
                    unsigned int target_pos);
