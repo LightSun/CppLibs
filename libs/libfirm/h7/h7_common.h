@@ -1,21 +1,35 @@
 ﻿#ifndef H7_COMMON_H
 #define H7_COMMON_H
 
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 
+#ifndef sint8
+typedef signed char sint8;
+#endif
 #ifndef uint8
 typedef unsigned char uint8;
 #endif
 
+#ifndef sint16
+typedef signed short sint16;
+#endif
 #ifndef uint16
 typedef unsigned short uint16;
 #endif
 
+#ifndef sint32
+typedef signed int sint32;
+#endif
 #ifndef uint32
 typedef unsigned int uint32;
 #endif
 
+#ifndef sint64
+typedef signed long long sint64;
+#endif
 #ifndef uint64
 typedef unsigned long long uint64;
 #endif
@@ -26,6 +40,10 @@ typedef unsigned long long uint64;
 #else
 #define CPP_START
 #define CPP_END
+#endif
+
+#ifndef kroundup32
+#define kroundup32(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, ++(x))
 #endif
 
 #define ASSERT(con) \
@@ -64,10 +82,17 @@ struct core_mem{
     uint32 size;
 };
 
-inline void core_mem_free(struct core_mem* mem){
-    if(mem->data){
-        mem->ca->Free(mem->data);
-    }
+#define core_mem_free(mem)\
+{\
+    if(mem->data){\
+        mem->ca->Free(mem->data);\
+    }\
 }
+
+//inline void core_mem_free(struct core_mem* mem){
+//    if(mem->data){
+//        mem->ca->Free(mem->data);
+//    }
+//}
 
 #endif

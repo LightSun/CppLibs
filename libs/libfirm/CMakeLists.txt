@@ -23,7 +23,7 @@ set(CMAKE_C_VISIBILITY_PRESET hidden)
 
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -DDEBUG_libfirm")
 
-include_directories(/)
+include_directories(.)
 include_directories(include/libfirm/adt)
 include_directories(ir/adt)
 include_directories(ir/common)
@@ -36,9 +36,9 @@ set(SRC_COMMON
     ir/adt/bitset.c
     ir/adt/cpset.c
     ir/adt/deq.c
-   # ir/adt/gaussjordan.c
-   # ir/adt/gaussseidel.c
-   # ir/adt/hungarian.c
+   # ir/adt/gaussjordan.c #高斯消元
+   # ir/adt/gaussseidel.c #Gauss-Seidel迭代求解线性方程组
+   # ir/adt/hungarian.c #Hungarian algorithm(匈牙利算法) 指派问题
     ir/adt/pmap.c
     ir/adt/pqueue.c
     ir/adt/pset.c
@@ -61,6 +61,7 @@ set(SRC_COMMON
     h7/binary_search.c
     h7/mem.h
     h7/mem.c
+    h7/EngineEmitter.h
     )
 
 add_library(basefirm
