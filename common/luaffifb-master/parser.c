@@ -251,11 +251,15 @@ static void check_token_program_pack(lua_State* L, struct parser* P, int type, c
                 //#pragma pack(push,_CRT_PACKING)
                 require_token(L, P, &tok);
                 if(tok.type == TOK_TOKEN){
+#ifdef _CRT_PACKING
                     if(IS_LITERAL(tok, "_CRT_PACKING")){
                         P->align_mask = (unsigned) (_CRT_PACKING - 1);
                     }else {
                         P->align_mask = (unsigned) (tok.integer - 1);
                     }
+#else
+                    P->align_mask = (unsigned) (tok.integer - 1);
+#endif
                     check_token(L, P, TOK_CLOSE_PAREN, "", "check_token_program_pack: invalid pack directive on line %d", P->line);
                 }else{
                     goto error;
@@ -2183,7 +2187,12 @@ static int parse_root(lua_State* L, struct parser* P)
 
             } else {
                 //default pack
+#ifdef _CRT_PACKING
                 P->align_mask = (unsigned) (_CRT_PACKING - 1);
+#else
+                int a;
+                P->align_mask = sizeof(&a) - 1;
+#endif
                 //luaL_error(L, "unknown: invalid pack directive on line %d", P->line);
             }
 

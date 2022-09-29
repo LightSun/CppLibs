@@ -2762,8 +2762,8 @@ static int ffi_load(lua_State* L)
         if(!*lib){
             printf("load lib failed: %s, code = %d\r\n", libname, (int)GetLastError());
         }
-    }
 #endif
+    }
 #endif
 
 #ifdef LIB_FORMAT_2
@@ -2806,7 +2806,8 @@ static void* find_symbol(lua_State* L, int modidx, const char* asmname)
 }
 
 /* pushes the user table */
-static void* lookup_global(lua_State* L, int modidx, int nameidx, const char** pname, struct ctype* ct)
+static void* lookup_global(lua_State* L, int modidx, int nameidx,
+                           const char** pname, struct ctype* ct)
 {
     int top = lua_gettop(L);
     void* sym;
@@ -3503,7 +3504,7 @@ static void setup_mt(lua_State* L, const luaL_Reg* mt, int upvals)
     luaL_setfuncs(L, mt, upvals);
 }
 
-int luaopen_ffi(lua_State* L)
+EXTERN_C EXPORT int luaopen_ffi(lua_State* L)
 {
     lua_settop(L, 0);
 

@@ -36,7 +36,7 @@
       if ((p) == NULL) exit(1); \
       (sz) = _sz; \
     } \
-  } while(0)
+  } while(0);
 #endif
 
 #ifndef DASM_M_FREE

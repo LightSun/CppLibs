@@ -45,7 +45,9 @@ SET(SRC_H
     THAllocator.h
     THHalf.h
     THBlas.h
-    ThLapack.h
+
+    THLapack.h
+
     THDiskFile.h
     THFile.h
     THStorage.h
@@ -66,7 +68,7 @@ SET(SRC_CPP
     THAllocator.c
     THHalf.c
     THBlas.c
-    ThLapack.c
+    THLapack.c
     THDiskFile.c
     THFile.c
     THStorage.c
@@ -178,6 +180,7 @@ add_subdirectory(paths)
 add_subdirectory(sys)
 add_subdirectory(image)
 #add_subdirectory(skia)
+#add_subdirectory(lanes)
 
 include_directories(lua-5.3.6/src)
 include_directories(luaT)
