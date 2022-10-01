@@ -22,6 +22,9 @@ add_library(ffi
     STATIC
     ${LUA_FFI_SRC}
     )
-target_compile_definitions(ffi PRIVATE LUA_FFI_BUILD_AS_DLL)
+
+if( CMAKE_SYSTEM_NAME MATCHES "Windows")
+    target_compile_definitions(ffi PRIVATE LUA_FFI_BUILD_AS_DLL)
+endif()
 
 TARGET_LINK_LIBRARIES(ffi ${LUALIB})

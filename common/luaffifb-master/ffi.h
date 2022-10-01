@@ -60,7 +60,7 @@ struct jit;
 #if defined LUA_FFI_BUILD_AS_DLL
 # define EXPORT __declspec(dllexport)
 #elif defined __GNUC__
-# define EXPORT __attribute__((visibility("default")))
+#define EXPORT __attribute__((visibility("default")))
 #else
 # define EXPORT
 #endif

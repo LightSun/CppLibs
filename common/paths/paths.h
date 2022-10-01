@@ -37,17 +37,18 @@ CPP_START
 
 #else
 
-#cmakedefine HAVE_DIRENT_H 1
-#cmakedefine HAVE_FCNTL_H 1
-#cmakedefine HAVE_UNISTD_H 1
-#cmakedefine HAVE_TIME_H 1
-#cmakedefine HAVE_SYS_TIME_H 1
-#cmakedefine HAVE_SYS_NDIR_H 1
-#cmakedefine HAVE_SYS_DIR_H 1
-#cmakedefine HAVE_SYS_UTSNAME_H 1
-#cmakedefine HAVE_NDIR_H 1
-#cmakedefine HAVE_GETCWD 1
-#cmakedefine HAVE_DLOPEN 1
+//cmakedefine ??
+#define HAVE_DIRENT_H 1
+#define HAVE_FCNTL_H 1
+#define HAVE_UNISTD_H 1
+#define HAVE_TIME_H 1
+#define HAVE_SYS_TIME_H 1
+#define HAVE_SYS_NDIR_H 1
+#define HAVE_SYS_DIR_H 1
+#define HAVE_SYS_UTSNAME_H 1
+#define HAVE_NDIR_H 1
+#define HAVE_GETCWD 1
+#define HAVE_DLOPEN 1
 
 # include <errno.h>
 # include <sys/types.h>
