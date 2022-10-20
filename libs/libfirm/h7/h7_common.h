@@ -31,7 +31,8 @@ typedef unsigned int uint32;
 typedef signed long long sint64;
 #endif
 #ifndef uint64
-typedef unsigned long long uint64;
+//typedef unsigned long long uint64;
+typedef uint64_t uint64;
 #endif
 
 #ifdef __cplusplus
@@ -83,9 +84,9 @@ struct core_mem{
 };
 
 #define core_mem_free(mem)\
-{\
-    if(mem->data){\
-        mem->ca->Free(mem->data);\
+{  struct core_mem* _mem = mem;\
+    if(_mem->data){\
+        _mem->ca->Free(_mem->data);\
     }\
 }
 

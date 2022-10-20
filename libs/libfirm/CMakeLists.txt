@@ -21,7 +21,7 @@ set(PROJECT_DESCRIPTION "library implementing the intermediate representation Fi
 
 set(CMAKE_C_VISIBILITY_PRESET hidden)
 
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -DDEBUG_libfirm")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=c99 -g -DDEBUG_libfirm")
 
 include_directories(.)
 include_directories(include/libfirm/adt)
@@ -61,6 +61,8 @@ set(SRC_COMMON
     h7/binary_search.c
     h7/mem.h
     h7/mem.c
+    h7/sort.h
+    h7/sort.c
     h7/EngineEmitter.h
     )
 
@@ -74,5 +76,6 @@ add_executable(test_basefirm
     demo/test_deq.cpp
     demo/test_map.cpp
     demo/test_array_map_n.cpp
+    demo/test_sort.cpp
     )
 target_link_libraries(test_basefirm basefirm)

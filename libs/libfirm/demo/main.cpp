@@ -6,6 +6,7 @@ extern void test_array();
 extern void test_deq();
 extern void test_map();
 extern void test_array_map_n();
+extern void test_sort();
 
 int main(int argc, char* argv[]){
     test_array();
@@ -21,5 +22,6 @@ int main(int argc, char* argv[]){
     printf("a = %d, b = %d\n", a, b); //a = 10, b = 10
     //
     test_array_map_n();
+    test_sort();
     return 0;
 }

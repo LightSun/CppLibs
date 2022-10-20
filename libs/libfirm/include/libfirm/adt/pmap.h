@@ -39,7 +39,7 @@ typedef struct {
 FIRM_API pmap *pmap_create(void);
 
 /** Creates a new empty map with an initial number of slots. */
-FIRM_API pmap *pmap_create_ex(size_t slots);
+FIRM_API pmap *pmap_create_ex(size_t c);
 
 /** Deletes a map. */
 FIRM_API void pmap_destroy(pmap *map);
