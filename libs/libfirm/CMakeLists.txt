@@ -77,5 +77,6 @@ add_executable(test_basefirm
     demo/test_map.cpp
     demo/test_array_map_n.cpp
     demo/test_sort.cpp
+    demo/test_windows.cpp
     )
 target_link_libraries(test_basefirm basefirm)

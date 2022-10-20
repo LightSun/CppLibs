@@ -7,6 +7,7 @@ extern void test_deq();
 extern void test_map();
 extern void test_array_map_n();
 extern void test_sort();
+extern void test_gen_execute_ins_win();
 
 int main(int argc, char* argv[]){
     test_array();
@@ -23,5 +24,6 @@ int main(int argc, char* argv[]){
     //
     test_array_map_n();
     test_sort();
+    //test_gen_execute_ins_win();
     return 0;
 }
