@@ -66,8 +66,20 @@ set(SRC_COMMON
     h7/EngineEmitter.h
     )
 
+set(SRC_H7
+    h7/common/common.h
+    h7/common/c_common.h
+    h7/common/Column.h
+    h7/common/HashMap.h
+    h7/common/LinkedList.h
+    h7/common/SkRefCnt.h
+    h7/utils/convert.hpp
+    h7/utils/string_utils.hpp
+    )
+
 add_library(basefirm
     ${SRC_COMMON}
+    ${SRC_H7}
     )
 
 add_executable(test_basefirm

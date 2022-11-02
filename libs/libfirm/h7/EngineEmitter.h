@@ -2,6 +2,8 @@
 #define ENGINEEMITTER_H
 
 #include "h7/h7_common.h"
+#include "h7/common/Column.h"
+#include "h7/common/HashMap.h"
 
 #define H7_G_ALLOC_STR(g, size) (g)->ca->Alloc(size + 1)
 #define H7_G_REALLOC_STR(g, size) (g)->ca->Realloc(size + 1)
@@ -10,6 +12,9 @@
 #define H7_G_ALLOC_ARR(g, _struct, count) (g)->ca->Alloc(sizeof(int) + sizeof(_struct) * count)
 #define H7_G_REALLOC_ARR(g, _struct, count) (g)->ca->Realloc(sizeof(int) + sizeof(_struct) * count)
 
+typedef h7::IColumn<> List;
+typedef h7::HashMap<> Map;
+
 typedef struct Data{
     void* d;
     uint32 l; //used length
@@ -17,15 +22,14 @@ typedef struct Data{
 }Data;
 
 struct GContext{
-    struct core_allocator* ca;
-    void* strMap;    //<hash, Data>
-    char** typeDef;
-    void* typedefMap;//<hash, hash>
+    //struct core_allocator* ca;
+    List<String> types;
+    Map<String, List<String> type_generics;//泛型
 };
 
 struct BaseMember{ //base member
-    char* name;
-    char* type;
+    std::string name;
+    std::string type;
 };
 
 enum ValueType{
@@ -39,11 +43,13 @@ enum ValueType{
     UINT64,
     FLOAT,
     DOUBLE,
-    VAR
+    STRING,
+    VAR,
+    STAT
 };
 
 struct ValueDef{
-    //const,string,varable(local, member, global).
+    //const,string,varable(local, member, global). other statement
     typedef union{
        sint8 s8;
        uint8 u8;
@@ -56,6 +62,7 @@ struct ValueDef{
        float f;
        double d;
        char* varName;
+       void* stat;   //StatementDef*
     }RTVal;
     RTVal val;
     uint32 type;
@@ -67,49 +74,69 @@ struct OpDef{
     uint32 op;//+ - * / % ~ ^ ! << >> ++ -- (+= -=...) [] . > < >= <= != is
     //typedef A<int> aa; ?
     //return a;
+    //A a = new A();
+    // a = b[1]
 };
 
 struct StatementDef{ //statement
-    char* name;
-    char* type;
-    OpDef op;
+    ValueDef* left {nullptr};
+    ValueDef* right {nullptr}; // may null. like a++;
+    uint32 op;//+ - * / % ~ ^ ! << >> ++ -- (+= -=...) [] . > < >= <= != is
+    //typedef A<int> aa; ?
+    //return a;
+    ~StatementDef(){
+        if(left){
+            delete left;
+        }
+        if(right){
+            delete right;
+        }
+    }
 };
 
 struct AnnoDef{
-    void* baseMmebers;
-    void* values;
+    List<BaseMember> baseMmebers;
+    List<ValueDef> values;
 };
 
 struct FieldDef{
     struct BaseMember base;
     uint32 flags; //pri,pub, <T> and etc
-    void* annoDef;
+    List<AnnoDef> annos;
 };
 
 struct ClassDef;
 struct FuncDef{
-    char* name;
-    struct ClassDef* classPtr;//may null, null means global function
-    BaseMember** paramBMs;
-    char* retType;
-    StatementDef** statements;
-    AnnoDef** annoDefs;
+    std::string name;
+    struct ClassDef* owner {nullptr}; //may null, null means global function
+    List<BaseMember> paramBMs;
+    std::string retType;
+    List<StatementDef> statements;
+    List<AnnoDef> annoDefs;
     uint32 flags;
 };
 
 struct ClassDef{
     struct FuncDef init;
-    struct FuncDef* dinit;
-    struct FuncDef* sinit;
-    char* pkg;
-    char* name;
-    FieldDef** fields;
-    FuncDef** funcs;
-    char** genericTypes;
+    struct FuncDef* dinit{nullptr};
+    struct FuncDef* sinit{nullptr};
+    std::string pkg;
+    std::string name;
+    List<FieldDef> fields;
+    List<FuncDef> funcs;
+   // char** genericTypes; //to global
+    ~ClassDef(){
+        if(dinit){
+            delete dinit;
+        }
+        if(sinit){
+            delete sinit;
+        }
+    }
 };
 
 struct ModuleEmitter{
-    void defineClass(char* pkg);
+    List<ClassDef> classes;
 };
 
 #endif // ENGINEEMITTER_H
