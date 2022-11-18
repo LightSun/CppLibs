@@ -32,7 +32,7 @@ struct BaseMember{ //base member
     std::string type;
 };
 
-enum ValueType{
+typedef enum{
     SINT8 = 0,
     UINT8,
     SINT16,
@@ -46,7 +46,7 @@ enum ValueType{
     STRING,
     VAR,
     STAT
-};
+}ValueType;
 
 struct ValueDef{
     //const,string,varable(local, member, global). other statement
@@ -65,8 +65,22 @@ struct ValueDef{
        void* stat;   //StatementDef*
     }RTVal;
     RTVal val;
-    uint32 type;
+    ValueType type;
 };
+
+typedef enum{
+    ADD = 1, DEC, MUL, DIV, MOD,
+    OPN, // -10
+    NOT, AND_AND, EQ_EQ, NEQ, OR_OR,  //!, &&,==, !=, ||
+    GT,GE,LT,LE,
+    AS,IS,NIS,      //as, is, not is
+    AND, OR, NOR, BRE,LSHIFT,RSHIFT, // &,|,^,~,<<, >>
+    EQ,               //equal
+    ADD_EQ, DEC_EQ, MUL_EQ, DIV_EQ, MOD_EQ,
+    LSHIFT_EQ, RSHIFT_EQ,
+    OR_EQ,   // |=,
+    AND_EQ,  // &=
+}OP;
 
 struct OpDef{
     ValueDef* left;
@@ -81,7 +95,7 @@ struct OpDef{
 struct StatementDef{ //statement
     ValueDef* left {nullptr};
     ValueDef* right {nullptr}; // may null. like a++;
-    uint32 op;//+ - * / % ~ ^ ! << >> ++ -- (+= -=...) [] . > < >= <= != is
+    OP op;//+ - * / % ~ ^ ! << >> ++ -- (+= -=...) [] . > < >= <= != is
     //typedef A<int> aa; ?
     //return a;
     ~StatementDef(){
@@ -108,6 +122,7 @@ struct FieldDef{
 struct ClassDef;
 struct FuncDef{
     std::string name;
+    std::string pkg;
     struct ClassDef* owner {nullptr}; //may null, null means global function
     List<BaseMember> paramBMs;
     std::string retType;
@@ -117,6 +132,7 @@ struct FuncDef{
 };
 
 struct ClassDef{
+    uint32 flags {0};//private?
     struct FuncDef init;
     struct FuncDef* dinit{nullptr};
     struct FuncDef* sinit{nullptr};
@@ -135,8 +151,10 @@ struct ClassDef{
     }
 };
 
-struct ModuleEmitter{
+struct Module{
+    std::string pkg;
     List<ClassDef> classes;
+    List<FuncDef> funcs;
 };
 
 #endif // ENGINEEMITTER_H

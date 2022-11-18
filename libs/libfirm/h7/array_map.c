@@ -5,9 +5,13 @@
 #include "binary_search.h"
 #include "mem.h"
 
+#define HASH_SEED 11
+
 static inline void growUpIfNeed(array_map_p ptr, uint32 delta){
     if(ptr->len_entry >= ptr->capacity - delta){
-        array_map_prepare_size(ptr, HMAX(ptr->capacity << 1, ptr->len_entry + delta));
+        int c1 = ptr->capacity << 1;
+        int c2 = ptr->len_entry + delta;
+        array_map_prepare_size(ptr, HMAX(c1, c2));
     }
 }
 
@@ -28,7 +32,7 @@ array_map_p array_map_new(struct core_allocator* ca, uint16 key_unit_size,
 void array_map_put(array_map_p ptr, const void* key, const void* value, void* oldVal){
 
     //handle hash.
-    uint32 hash = fasthash32(key, ptr->key_ele_size, 0);//TODO need seed?
+    uint32 hash = fasthash32(key, ptr->key_ele_size, HASH_SEED);
     if(ptr->len_entry == 0){
         growUpIfNeed(ptr, 1);
         arrays_insert(ptr->keys, 0, ptr->key_ele_size, key, 0);
@@ -71,7 +75,7 @@ int array_map_get(array_map_p ptr, const void* key, void* oldVal){
     ASSERT(oldVal != NULL);
     ASSERT(key != NULL);
     //handle hash.
-    uint32 hash = fasthash32(key, ptr->key_ele_size, 0);//TODO need seed?
+    uint32 hash = fasthash32(key, ptr->key_ele_size, HASH_SEED);
     int pos = binarySearch_uint32(ptr->hashes, 0, ptr->len_entry, hash);
     if(pos >= 0){
         void* val_dst = (char*)ptr->values + ptr->val_ele_size * pos;
@@ -84,7 +88,7 @@ int array_map_get(array_map_p ptr, const void* key, void* oldVal){
 void* array_map_rawget(array_map_p ptr, const void* key){
     ASSERT(key != NULL);
     //handle hash.
-    uint32 hash = fasthash32(key, ptr->key_ele_size, 0);//TODO need seed?
+    uint32 hash = fasthash32(key, ptr->key_ele_size, HASH_SEED);
     int pos = binarySearch_uint32(ptr->hashes, 0, ptr->len_entry, hash);
     if(pos >= 0){
         //void* val_dst = (char*)ptr->values + ptr->val_ele_size * ptr->len_entry;
@@ -96,7 +100,7 @@ void* array_map_rawget(array_map_p ptr, const void* key){
 int array_map_remove(array_map_p ptr, const void* key, void* oldVal){
     ASSERT(key != NULL);
     //handle hash.
-    uint32 hash = fasthash32(key, ptr->key_ele_size, 0);//TODO need seed?
+    uint32 hash = fasthash32(key, ptr->key_ele_size, HASH_SEED);
     int pos = binarySearch_uint32(ptr->hashes, 0, ptr->len_entry, hash);
     if(pos >= 0){
         if(oldVal){

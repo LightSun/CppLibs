@@ -76,8 +76,8 @@ typedef uint64_t uint64;
         abort();\
     }
 
-#define HMIN(a, b) (a > b ? b : a)
-#define HMAX(a, b) (a > b ? a : b)
+#define HMIN(a, b) ((a) > (b) ? (b) : (a))
+#define HMAX(a, b) ((a) > (b) ? (a) : (b))
 #define GROWUP_HALF(c) (c % 4 == 0 ? (c * 3 / 2) : (c * 3 / 2 + 1))
 
 typedef void* (*Alloc1)(uint32 size);
