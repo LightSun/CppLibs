@@ -1,7 +1,7 @@
 ﻿#ifndef H7_ARRAY_MAP_H
 #define H7_ARRAY_MAP_H
 
-#include "h7_common.h"
+#include "h7/common/h7_alloc.h"
 
 typedef struct array_map array_map;
 typedef array_map* array_map_p;

@@ -5,21 +5,8 @@
 #include "h7/common/Column.h"
 #include "h7/common/HashMap.h"
 
-#define H7_G_ALLOC_STR(g, size) (g)->ca->Alloc(size + 1)
-#define H7_G_REALLOC_STR(g, size) (g)->ca->Realloc(size + 1)
-#define H7_G_FREE_DATA(g, data) (g)->ca->Free(data)
-
-#define H7_G_ALLOC_ARR(g, _struct, count) (g)->ca->Alloc(sizeof(int) + sizeof(_struct) * count)
-#define H7_G_REALLOC_ARR(g, _struct, count) (g)->ca->Realloc(sizeof(int) + sizeof(_struct) * count)
-
 typedef h7::IColumn<> List;
 typedef h7::HashMap<> Map;
-
-typedef struct Data{
-    void* d;
-    uint32 l; //used length
-    uint32 m; //malloc
-}Data;
 
 struct GContext{
     //struct core_allocator* ca;
@@ -49,7 +36,7 @@ typedef enum{
 }ValueType;
 
 struct ValueDef{
-    //const,string,varable(local, member, global). other statement
+    //bool,const,string,varable(local, member, global). other statement
     typedef union{
        sint8 s8;
        uint8 u8;
@@ -92,20 +79,52 @@ struct OpDef{
     // a = b[1]
 };
 
-struct StatementDef{ //statement
-    ValueDef* left {nullptr};
-    ValueDef* right {nullptr}; // may null. like a++;
-    OP op;//+ - * / % ~ ^ ! << >> ++ -- (+= -=...) [] . > < >= <= != is
-    //typedef A<int> aa; ?
-    //return a;
-    ~StatementDef(){
-        if(left){
-            delete left;
-        }
+struct SimplStatDef{ //statement
+    OpDef opd;
+    OpDef* right {nullptr};
+    ~SimplStatDef(){
         if(right){
             delete right;
         }
     }
+};
+
+struct IfDef0{
+    SimplStatDef if1;
+    List<SimplStatDef> if1_run;
+};
+
+struct IfDef{
+    IfDef0 if1;
+    List<IfDef0> else_if1;
+    IfDef0* else1 {nullptr};
+    ~IfDef(){
+        if(else1){
+            delete else1;
+        }
+    }
+};
+struct ForDef{
+     List<SimplStatDef> init;
+     SimplStatDef judge;
+     List<SimplStatDef> step;
+};
+struct WhileDef{
+     SimplStatDef judge;
+     List<SimplStatDef> body;
+};
+struct SwitchDef{
+     SimplStatDef judge;
+     List<IfDef0> cases;
+};
+
+struct StatementDef{
+    //if/for/while/switch
+    List<SimplStatDef> stats;
+    IfDef* ifdef {nullptr};
+    ForDef* fordef {nullptr};
+    WhileDef* whileDef {nullptr};
+    SwitchDef* switchDef {nullptr};
 };
 
 struct AnnoDef{

@@ -73,8 +73,15 @@ set(SRC_H7
     h7/common/HashMap.h
     h7/common/LinkedList.h
     h7/common/SkRefCnt.h
+    h7/common/h7_alloc.h
+    h7/common/h7_alloc.c
+
     h7/utils/convert.hpp
     h7/utils/string_utils.hpp
+    h7/utils/TextBuffer.h
+    h7/utils/TextBuffer.cpp
+    h7/utils/text_buffer.h
+    h7/utils/text_buffer.c
     )
 
 add_library(basefirm

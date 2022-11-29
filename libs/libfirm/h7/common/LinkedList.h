@@ -19,21 +19,47 @@ public:
     void addLast(const T& t){
         list.push_back(t);
     }
-    T& getFirst(){
-        return list.front();
+    template<typename... _Args>
+    void insToFirst(_Args&&... __args){
+        list.emplace_front(std::forward<_Args>(__args)...);
     }
-    T& getLast(){
-        return list.back();
+    template<typename... _Args>
+    void insToLast(_Args&&... __args){
+        list.emplace_back(std::forward<_Args>(__args)...);
     }
-    T pollFirst(){
+    bool getFirst(T& out){
         auto it = list.front();
-        list.pop_front();
-        return it;
+        if(it == list.end()){
+            return false;
+        }
+        out = *it;
+        return true;
     }
-    T pollLast(){
+    bool getLast(T& out){
         auto it = list.back();
+        if(it == list.end()){
+            return false;
+        }
+        out = *it;
+        return true;
+    }
+    bool pollFirst(T& out){
+        auto it = list.front();
+        if(it == list.end()){
+            return false;
+        }
+        out = *it;
+        list.pop_front();
+        return true;
+    }
+    bool pollLast(T& out){
+        auto it = list.back();
+        if(it == list.end()){
+            return false;
+        }
+        out = *it;
         list.pop_back();
-        return it;
+        return true;
     }
     int size(){
         return list.size();

@@ -80,35 +80,11 @@ typedef uint64_t uint64;
 #define HMAX(a, b) ((a) > (b) ? (a) : (b))
 #define GROWUP_HALF(c) (c % 4 == 0 ? (c * 3 / 2) : (c * 3 / 2 + 1))
 
-typedef void* (*Alloc1)(uint32 size);
-typedef void* (*Realloc1)(void* ptr, uint32 oldSize, uint32 newSize);
-typedef void (*Free1)(void* ptr);
-struct core_allocator{
-    Alloc1 Alloc;
-    Realloc1 Realloc;
-    Free1 Free;
-};
-
-//extern struct core_allocator* Allocator_Default;
-
-struct core_mem{
-    struct core_allocator* ca;
-    void* data;
-    uint32 size;
-};
-
-#define core_mem_free(mem)\
-{  struct core_mem* _mem = mem;\
-    if(_mem->data){\
-        _mem->ca->Free(_mem->data);\
-    }\
-}
-
-//inline void core_mem_free(struct core_mem* mem){
-//    if(mem->data){
-//        mem->ca->Free(mem->data);
-//    }
-//}
+#ifdef __GNUC__
+#define FORMAT_ATTR(pos) __attribute__((__format__(__printf__, pos, pos + 1)))
+#else
+#define FORMAT_ATTR(pos)
+#endif
 
 #endif
 

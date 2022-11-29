@@ -4,6 +4,7 @@
 #include "hash.h"
 #include "binary_search.h"
 #include "mem.h"
+#include "h7/common/h7_alloc.h"
 
 #define HASH_SEED 11
 

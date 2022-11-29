@@ -2,7 +2,7 @@
 #define H7_ARRAY_MAP_N_H
 
 
-#include "h7_common.h"
+#include "h7/common/h7_alloc.h"
 
 CPP_START
 
