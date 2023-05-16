@@ -21,7 +21,7 @@ public:
     bool isCurrentThread(){
         return std::this_thread::get_id() == mTid;
     }
-    MessageQueue* getQueue() {
+    const MessageQueue* getQueue() {
         return mQueue;
     };
 
@@ -35,7 +35,7 @@ public:
     static void prepareMainLooper();
     static std::shared_ptr<Looper> getMainLooper();
     static std::shared_ptr<Looper> myLooper();
-    static MessageQueue* myQueue(){
+    static const MessageQueue* myQueue(){
         return myLooper()->mQueue;
     }
 

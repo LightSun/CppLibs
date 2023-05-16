@@ -107,7 +107,7 @@ public:
      *
      * @return A token that uniquely identifies the barrier. This token must be
      *         passed to {@link #removeSyncBarrier} to release the barrier.
-     *
+     * //when have a barrier in the head. only the async msg will be dispatch.
      * @hide
      */
     int postSyncBarrier();
@@ -156,7 +156,7 @@ private:
     std::vector<std::shared_ptr<IdleHandler>> mPendingIdleHandlers;
     bool mQuitAllowed {false};
     std::atomic_bool mQuitting {false};
-    bool mBlocked {false};
+    std::atomic_bool mBlocked {false};
     int mNextBarrierToken {0};
     Message* mMessages {nullptr};
     std::mutex mMutex;

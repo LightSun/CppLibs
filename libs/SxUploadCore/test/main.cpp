@@ -18,6 +18,7 @@ static void test_select_file();
 static void test_logger();
 
 extern void test_FilesSync();
+extern void test_CountDownLatch();
 
 using namespace h7;
 

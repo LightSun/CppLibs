@@ -11,9 +11,10 @@ namespace h7_handler_os{
 using String = Message::String;
 
 bool MessageQueue::isIdle(){
-    std::unique_lock<std::mutex> lck(mMutex);
-    auto now = getCurTime();
-    return mMessages == nullptr || now < mMessages->when;
+    synchronized(this) {
+        auto now = getCurTime();
+        return mMessages == nullptr || now < mMessages->when;
+    }
 }
 
 Message* MessageQueue::next(){
@@ -24,6 +25,7 @@ Message* MessageQueue::next(){
 //            Binder.flushPendingCommands();
 //        }
 //        nativePollOnce(ptr, nextPollTimeoutMillis);
+        {
         synchronized(this) {
             auto now = getCurTime();
             MsgPtr prevMsg = nullptr;
@@ -31,6 +33,7 @@ Message* MessageQueue::next(){
             if(msg != nullptr && msg->target == nullptr){
                 // Stalled by a barrier. Find the next asynchronous message
                 // in the queue.
+                // when have a barrier, only the async msg will be run,
                 do {
                     prevMsg = msg;
                     msg = msg->next;
@@ -59,7 +62,7 @@ Message* MessageQueue::next(){
             // Process the quit message now that all pending messages have
             // been handled.
             if (mQuitting) {
-                //dispose();
+                //dispose(); //dispose native.
                 return nullptr;
             }
             // If first time idle, then get the number of idlers to run.
@@ -80,6 +83,7 @@ Message* MessageQueue::next(){
             mPendingIdleHandlers.insert(mPendingIdleHandlers.end(),
                                         mIdleHandlers.begin(),mIdleHandlers.end());
         }
+        }//release lock
 
         for(int i = 0 ; i < pendingIdleHandlerCount ; i ++){
             auto& idler = mPendingIdleHandlers[i];
@@ -396,6 +400,8 @@ bool MessageQueue::enqueueMessage(Message* msg, long long when){
             // the queue
             // and the message is the earliest asynchronous message in the
             // queue.
+            //mBlocked: means no idea handler to call.
+            //p->target == nullptr: means is a barrier.
             needWake = mBlocked && p->target == nullptr
                     && msg->isAsynchronous();
             MsgPtr prev;

@@ -11,8 +11,8 @@
 
 #define _DEBUG 1
 #ifdef _DEBUG
-static unsigned int _C_CREATE = 0;
-static unsigned int _C_DELETE = 0;
+static std::atomic_uint _C_CREATE = 0;
+static std::atomic_uint _C_DELETE = 0;
 #endif
 
 //for friend class. must be the same namespace.
@@ -199,11 +199,19 @@ Message::String Message::toString(){
 }
 
 void Message::logDebugInfo(){
+    unsigned int create;
+    unsigned int del;
+    unsigned int poolSize;
+    {
+        std::unique_lock<std::mutex> lck(sOBJ.mutex);
+        create = _C_CREATE;
+        del = _C_DELETE;
+        poolSize = sOBJ.sPoolSize;
+    }
 #ifdef _DEBUG
-    std::unique_lock<std::mutex> lck(sOBJ.mutex);
     char buf[1024];
     snprintf(buf, 1024, "Message >> size: (create, delete, pool) = (%d, %d, %d)",
-             _C_CREATE, _C_DELETE, sOBJ.sPoolSize);
+             create, del, poolSize);
     _LOG_INFO(String(buf));
 #else
     _LOG_INFO("logDebugInfo >> debug is not opened.");

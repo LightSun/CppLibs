@@ -9,7 +9,7 @@
 #define synchronized_main(a) std::unique_lock<std::mutex> lck(sOBJ.mutex_main);
 
 namespace h7_handler_os{
-
+//c: __thread is like 'thread_local'
 thread_local std::shared_ptr<Looper> sThreadLocal;
 
 struct StaticObj0{

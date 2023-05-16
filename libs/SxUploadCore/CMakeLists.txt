@@ -72,6 +72,7 @@ file(GLOB_RECURSE SRC_CORE core/*.h core/*.hpp core/*.cpp core/*.c)
 set(SRC_TEST
     test/test_asyncs.cpp
     test/test_FilesSync.cpp
+    test/test_CountDownLatch.cpp
     test/main.cpp
     )
 

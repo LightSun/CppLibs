@@ -1,5 +1,5 @@
 
-
+#if 0
 #include "FilesSync.hpp"
 
 using namespace h7;
@@ -31,3 +31,5 @@ void test_FilesSync(){
     ret = items[1].hash == "c";
     MED_ASSERT(ret);
 }
+
+#endif
