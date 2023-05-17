@@ -45,8 +45,8 @@ namespace h7 {
                 std::unique_lock<std::mutex> lck(m_mutex);
                 auto msec = std::chrono::duration_cast<_Msec>(
                             _Clock::now().time_since_epoch()).count();
-                auto dura = std::chrono::duration<_Msec>(msec + (TimeT)timeout);
-                auto tp1 = std::chrono::time_point<_Clock,_Msec>(dura);
+                auto dst_msec = std::chrono::milliseconds(msec + (TimeT)timeout);
+                auto tp1 = std::chrono::time_point<_Clock,_Msec>(dst_msec);
                 // wait_until
                 return m_cv.wait_until(lck, tp1, [this](){
                     return m_reached;
@@ -55,7 +55,7 @@ namespace h7 {
         }
 
     private:
-        mutable std::mutex m_mutex;
+        std::mutex m_mutex;
         std::condition_variable m_cv;
         volatile int m_leftCount;
         bool m_reached {false};

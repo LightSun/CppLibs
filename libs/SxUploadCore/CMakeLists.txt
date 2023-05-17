@@ -73,6 +73,8 @@ set(SRC_TEST
     test/test_asyncs.cpp
     test/test_FilesSync.cpp
     test/test_CountDownLatch.cpp
+    test/test_Barrier.cpp
+    test/test_SortedList.cpp
     test/main.cpp
     )
 
