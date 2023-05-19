@@ -80,6 +80,14 @@ namespace h7 {
             }
             return str.length() != 0;
         }
+        std::vector<String> readLines(){
+            std::vector<String> ret;
+            String line;
+            while (readline(line)) {
+                ret.push_back(line);
+            }
+            return ret;
+        }
         bool readLastLine(String& str){
            bool ret = readline(str);
            while (readline(str)) {
@@ -135,6 +143,13 @@ namespace h7 {
                 m_file = nullptr;
             }
         }
+        bool writeLine(CString line){
+            if(write(line.data(), line.size())){
+                newLine();
+                return true;
+            }
+            return false;
+        }
         bool write(const void* data, size_t size){
             if(m_file == nullptr){
                 return false;
@@ -177,6 +192,13 @@ namespace h7 {
                 m_file = nullptr;
             }
         }
+        bool writeLine(CString line){
+            if(write(line.data(), line.size())){
+                newLine();
+                return true;
+            }
+            return false;
+        }
         bool write(CString data){
             return write(data.data(), data.length());
         }
@@ -190,6 +212,13 @@ namespace h7 {
                 return flush();
             }
             return true;
+        }
+        bool fwriteLine(CString line){
+            if(fwrite(line.data(), line.size())){
+                fnewLine();
+                return true;
+            }
+            return false;
         }
         bool fwrite(CString data){
             return fwrite(data.data(), data.length());

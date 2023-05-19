@@ -1,5 +1,4 @@
-#ifndef LOGGER_HPP
-#define LOGGER_HPP
+#pragma once
 
 #include <string>
 #include <string.h>
@@ -61,6 +60,3 @@ do{\
 #define h7_logw(fmt, ...) med_logger_print(H7_LOG_LEVEL_WARN, fmt, ##__VA_ARGS__)
 #define h7_loge(fmt, ...) med_logger_print(H7_LOG_LEVEL_ERROR, fmt, ##__VA_ARGS__)
 #define h7_logf(fmt, ...) med_logger_print(H7_LOG_LEVEL_FATAL, fmt, ##__VA_ARGS__)
-
-
-#endif // LOGGER_HPP

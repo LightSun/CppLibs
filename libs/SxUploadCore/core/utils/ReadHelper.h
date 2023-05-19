@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <memory.h>
 #include "common/c_common.h"
 
 namespace h7 {

@@ -5,8 +5,8 @@ project(SxUploadCore LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fPIC -g -O0")
-set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fPIC -std=c11 -g -O0")
+set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fPIC -g -O0 -ldl")
+set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fPIC -std=c11 -g -O0 -ldl")
 
 #-DCMAKE_BUILD_TYPE=MinSizeRel
 option(BUILD_MINGW64 "build for windows by mingw64" OFF)
@@ -66,6 +66,19 @@ include_directories(core/)
 include_directories(${UPLOAD_UI_DIR}/include)
 add_compile_definitions(USE_C11_ATOMICS)
 
+#platform
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    message(STATUS "Configuring on/for Linux")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    message(STATUS "Configuring on/for macOS")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    message(STATUS "Configuring on/for Windows")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "AIX")
+    message(STATUS "Configuring on/for IBM AIX")
+else()
+    message(STATUS "Configuring on/for ${CMAKE_SYSTEM_NAME}")
+endif()
+
 
 ## core lib
 file(GLOB_RECURSE SRC_CORE core/*.h core/*.hpp core/*.cpp core/*.c)
@@ -75,6 +88,7 @@ set(SRC_TEST
     test/test_CountDownLatch.cpp
     test/test_Barrier.cpp
     test/test_SortedList.cpp
+    test/test_XBacktrace.cpp
     test/main.cpp
     )
 

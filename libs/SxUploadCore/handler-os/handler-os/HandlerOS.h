@@ -1,6 +1,7 @@
 #pragma once
 
 #include "handler-os/Handler.h"
+#include "handler-os/Looper.h"
 #include "handler-os/HandlerThread.h"
 
 namespace h7_handler_os{
@@ -8,6 +9,11 @@ namespace h7_handler_os{
 class HandlerOS{
 
 public:
+    static void loopMain(){
+        Looper::prepareMainLooper();
+        Looper::getMainLooper()->loop();
+    }
+
     void start(std::shared_ptr<HandlerCallback> cb){
         m_ht = std::shared_ptr<HandlerThread>(new HandlerThread());
         m_ht->setAfterQuitCallback([this](){

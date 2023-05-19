@@ -21,6 +21,7 @@ extern void test_FilesSync();
 extern void test_CountDownLatch();
 extern void test_Barrier();
 extern void test_SortedList();
+extern void test_XBacktrace();
 
 using namespace h7;
 
@@ -42,7 +43,8 @@ int main(int argc, char* argv[]){
     }
     //test_CountDownLatch();
     //test_Barrier();
-    test_SortedList();
+    //test_SortedList();
+    test_XBacktrace();
 
     //test_url_encode(); //ok
     //std::string str = "我爱祖国";

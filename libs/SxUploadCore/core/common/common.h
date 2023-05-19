@@ -1,11 +1,17 @@
-#ifndef COMMON_H
-#define COMMON_H
+#pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <math.h>
-#include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef __cplusplus
+}
+#endif
+
+#include <algorithm>
 #include <functional>
 #include <iostream>
 #include <vector>
@@ -16,10 +22,6 @@
 using CString = const std::string&;
 #define HMIN(a, b) (a < b ? a : b)
 #define HMAX(a, b) (a > b ? a : b)
-
-//#ifndef byte
-//typedef unsigned char byte;
-//#endif
 
 #if defined(_WIN32) || defined(WIN32)
 #define CMD_LINE "\r\n"
@@ -145,6 +147,10 @@ do{\
 #define PRINTLN(fmt, ...) h7_logi(fmt, ##__VA_ARGS__)
 #define PRINT_W(fmt, ...) h7_logw(fmt, ##__VA_ARGS__)
 
+#define LOGE(fmt, ...) h7_loge(fmt, ##__VA_ARGS__)
+#define LOGI(fmt, ...) h7_logi(fmt, ##__VA_ARGS__)
+#define LOGW(fmt, ...) h7_logw(fmt, ##__VA_ARGS__)
+
 #define CMP_AESC(x, y) (x > y ? 1: (x != y ? -1 : 0))
 #define CMP_DESC(x, y) (x > y ? -1: (x != y ? 1 : 0))
 
@@ -176,6 +182,7 @@ namespace h7 {
 
 template<bool B, class T = void>
     struct user_enable_if {};
+
 template<class T>
 struct user_enable_if<true, T> { typedef T type; };
 
@@ -202,4 +209,3 @@ struct Traits{
 //    cout<<"a class type"<<endl;
 //    return a;
 //}
-#endif // COMMON_H

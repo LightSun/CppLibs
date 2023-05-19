@@ -38,6 +38,16 @@ public:
     }
     SortedList(){}
 
+    void prepare(U32 size)const{
+        m_items.reserve(size);
+    }
+    void resize(U32 size)const{
+        m_items.resize(size);
+    }
+    size_t size()const{
+        return m_items.size();
+    }
+
     void addAll(const std::vector<T>& vec, bool _sort = true){
         for(auto& t : vec){
             add(t, false);
@@ -112,7 +122,7 @@ public:
         return m_items[index].t;
     }
 
-    int indexOf(const T& t){
+    int indexOf(const T& t)const{
         U32 _hash;
         if(m_func_hash){
             _hash = m_func_hash(t);
@@ -124,10 +134,6 @@ public:
         return binarySearchOffset_u(m_items.data(), sizeof(Item), offset,
                              0, m_items.size(), _hash);
     }
-    size_t size(){
-        return m_items.size();
-    }
-
 private:
     std::vector<Item, _Alloc> m_items;
     Func_hash m_func_hash;

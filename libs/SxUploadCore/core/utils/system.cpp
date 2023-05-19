@@ -33,11 +33,11 @@ unsigned long long getAvailablePhysMemBytes(){
     FILE *fd;
     fd = fopen("/proc/meminfo", "r");
     fgets(buff, sizeof(buff), fd);
-    sscanf(buff, "%s %lu ", name1, &MemTotal);
+    sscanf(buff, "%s %llu ", name1, &MemTotal);
     fgets(buff, sizeof(buff), fd);
-    sscanf(buff, "%s %lu ", name2, &MemFree);
+    sscanf(buff, "%s %llu ", name2, &MemFree);
     fgets(buff, sizeof(buff), fd);
-    sscanf(buff, "%s %lu ", name3, &MemAvailable); //kb
+    sscanf(buff, "%s %llu ", name3, &MemAvailable); //kb
     fgets(buff, sizeof(buff), fd);
     fclose(fd);
     return MemAvailable*1024;
