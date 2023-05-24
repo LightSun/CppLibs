@@ -38,6 +38,10 @@ public:
     }
     SortedList(){}
 
+    void setHashFunction(Func_hash hash){
+        m_func_hash = hash;
+    }
+
     void prepare(U32 size)const{
         m_items.reserve(size);
     }
@@ -121,7 +125,12 @@ public:
     T& get(U32 index){
         return m_items[index].t;
     }
-
+    int indexOfHash(U32 _hash){
+        int offset = offsetof(Item, hash);
+        //may be -2... -n
+        return binarySearchOffset_u(m_items.data(), sizeof(Item), offset,
+                             0, m_items.size(), _hash);
+    }
     int indexOf(const T& t)const{
         U32 _hash;
         if(m_func_hash){
