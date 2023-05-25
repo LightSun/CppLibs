@@ -2,6 +2,7 @@
 #include "utils/ConfigUtils.h"
 #include "utils/string_utils.hpp"
 #include "utils/FileUtils.h"
+#include "utils/StringBuffer.h"
 
 #ifdef _WIN32
 #include <direct.h>
@@ -108,6 +109,34 @@ static void resolveInclude(const std::vector<String>& dirs,
     //include may nested
     if(config_changed){
         resolveInclude(dirs, m_map);
+    }
+}
+
+void ConfigUtils::loadPropertiesFromBuffer(CString buffer,
+                                           std::map<String, String>& prop){
+    h7::StringBuffer sb(buffer);
+    String str;
+    int index;
+    while (sb.readLine(str)) {
+        //utils::trimLastR(str);
+        h7::utils::trim(str);
+        if(str.empty()){
+            continue;
+        }
+        //anno
+        if(str.c_str()[0] == '#' || h7::utils::startsWith(str, "//")){
+            continue;
+        }
+        //printf("prop_line: %s\n", str.c_str());
+        index = str.find("=");
+        MED_ASSERT(index >= 0);
+        String _s = str.substr(0, index);
+        h7::utils::trim(_s);
+        if(index == (int)str.length() - 1){
+            prop[_s] = "";
+        }else{// abc=1235 : 3
+            prop[_s] = str.substr(index + 1, str.length() - index - 1);
+        }
     }
 }
 

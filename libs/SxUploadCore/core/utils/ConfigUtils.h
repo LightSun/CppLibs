@@ -9,6 +9,7 @@ namespace h7 {
 class ConfigUtils
 {
 public:
+    static void loadPropertiesFromBuffer(CString buffer, std::map<String, String>& out);
     static void loadProperties(CString prop_file, std::map<String, String>& out);
     static void resolveProperties(const std::vector<String>& in_dirs,
                                   std::map<String, String>& out);

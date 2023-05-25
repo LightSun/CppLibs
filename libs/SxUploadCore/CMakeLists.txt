@@ -89,6 +89,7 @@ set(SRC_TEST
     test/test_Barrier.cpp
     test/test_SortedList.cpp
     test/test_XBacktrace.cpp
+    test/test_ConfigUtils.cpp
     test/main.cpp
     )
 

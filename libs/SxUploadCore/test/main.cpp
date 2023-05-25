@@ -22,6 +22,7 @@ extern void test_CountDownLatch();
 extern void test_Barrier();
 extern void test_SortedList();
 extern void test_XBacktrace();
+extern void test_ConfigUtils();
 
 using namespace h7;
 
@@ -44,7 +45,8 @@ int main(int argc, char* argv[]){
     //test_CountDownLatch();
     //test_Barrier();
     //test_SortedList();
-    test_XBacktrace();
+    //test_XBacktrace();
+    test_ConfigUtils();
 
     //test_url_encode(); //ok
     //std::string str = "我爱祖国";
