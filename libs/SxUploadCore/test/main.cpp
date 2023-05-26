@@ -24,6 +24,8 @@ extern void test_SortedList();
 extern void test_XBacktrace();
 extern void test_ConfigUtils();
 
+extern void test_Platforms();
+
 using namespace h7;
 
 int main(int argc, char* argv[]){
@@ -46,7 +48,8 @@ int main(int argc, char* argv[]){
     //test_Barrier();
     //test_SortedList();
     //test_XBacktrace();
-    test_ConfigUtils();
+    //test_ConfigUtils();
+    test_Platforms();
 
     //test_url_encode(); //ok
     //std::string str = "我爱祖国";
