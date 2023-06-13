@@ -82,16 +82,41 @@ public:
         return v.getDouble(defVal);
     }
     void getVector(CString key,std::vector<String>& out){
-        String str = m_map[key];
+        String& str = m_map[key];
         if(!str.empty()){
             out = h7::utils::split(",", str);
         }else{
+            //check assign array len
             int len = getInt(key+ "-arr-len", 0);
             if(len > 0){
                 out.reserve(len);
                 for(int i = 0 ; i < len ; ++i){
                     out.push_back(getProperty(key + "[" + std::to_string(i) + "]"));
                 }
+                return;
+            }
+            //check sub arr
+            String subs = getProperty(key + "-sub-arrs");
+            if(!subs.empty()){
+                 auto list = h7::utils::split(",", subs);
+                 for(String& str: list){
+                    getVector(str, out);
+                 }
+                 return;
+            }
+            //check format
+            String fmt = getProperty(key + "-FORMAT");
+            if(!fmt.empty()){
+                handle_vector(fmt, out);
+                return;
+            }
+            //handle index format
+            for(int i = 0 ; ; ++i){
+                String prop = getProperty(key + "[" + std::to_string(i) + "]");
+                if(prop.empty()){
+                    break;
+                }
+                out.push_back(prop);
             }
         }
     }
@@ -118,6 +143,60 @@ public:
     }
     void getVectorBool(CString key,std::vector<bool>& out){
         __H7_Properties_G_LIST0(getBool)
+    }
+
+private:
+    /*
+children_dirs-FORMAT=${MI_NUO_WA_DIR}/7月/15日/<<_names>>/<<_category>>
+_names-FORMAT=<<names>>
+names=01-梁彰,02-杨晓慧
+_category-FORMAT=<<category>>
+category=AI诊断,甲状腺
+*/
+    void handle_vector(CString fmt, std::vector<String>& out){
+#define __H7_PROP_FMT_START "<<"
+#define __H7_PROP_FMT_END ">>"
+        std::map<String, std::vector<String>> repMap;
+        int start_pos = 0;
+        while (true) {
+            int id1 = fmt.find(__H7_PROP_FMT_START, start_pos);
+            if(id1 < 0){
+                break;
+            }
+            int id2 = fmt.find(__H7_PROP_FMT_END,
+                               id1 + strlen(__H7_PROP_FMT_START));
+            if(id2 < 0){
+                break;
+            }
+            String name = fmt.substr(id1 + strlen(__H7_PROP_FMT_START),
+                     id2 - (id1 + strlen(__H7_PROP_FMT_START)));
+            std::vector<String> _names;
+            getVector(name, _names);
+            if(_names.size() > 0){
+                String rep_name = __H7_PROP_FMT_START + name + __H7_PROP_FMT_END;
+                repMap[rep_name] = _names;
+            }
+            start_pos = id2 + strlen(__H7_PROP_FMT_END);
+        }
+        //replace
+        std::vector<String> fmts = {fmt};
+        auto it = repMap.begin();
+        for(;it != repMap.end(); it ++){
+            fmts = do_replace(fmts, it->first, it->second);
+        }
+        //add to ret
+        out.insert(out.end(), fmts.begin(), fmts.end());
+    }
+    std::vector<String> do_replace(std::vector<String>& fmts,
+                                        CString rep_name,
+                                        std::vector<String>& _names){
+        std::vector<String> newFmts;
+        for(String& fmt: fmts){
+            for(String& str: _names){
+                newFmts.push_back(utils::replace(rep_name, str, fmt));
+            }
+        }
+        return newFmts;
     }
 public:
     std::map<String,String> m_map;
