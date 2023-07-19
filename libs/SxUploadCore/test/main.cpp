@@ -44,12 +44,12 @@ int main(int argc, char* argv[]){
         auto ret = h7::FileUtils::isFileExists(argv[1]);
         printf("file exists: %s\n", ret ? "true" : "false");
     }
-    //test_CountDownLatch();
-    //test_Barrier();
+    test_CountDownLatch();
+    test_Barrier();
     //test_SortedList();
     //test_XBacktrace();
     //test_ConfigUtils();
-    test_Platforms();
+    //test_Platforms();
 
     //test_url_encode(); //ok
     //std::string str = "我爱祖国";

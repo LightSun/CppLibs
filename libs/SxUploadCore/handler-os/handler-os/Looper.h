@@ -25,9 +25,9 @@ public:
         return mQueue;
     };
 
-    void quit();
+    virtual void quit();
 
-    void quitSafely();
+    virtual void quitSafely();
 
     static void prepare(){
         prepare(true);
@@ -62,6 +62,7 @@ private:
     static std::shared_ptr<Trace> sTrace;
 
     friend class Handler;
+    friend class QtLooper;
 };
 
 }

@@ -217,5 +217,6 @@ void Message::logDebugInfo(){
     _LOG_INFO("logDebugInfo >> debug is not opened.");
 #endif
 }
+//--------------------------
 
 }

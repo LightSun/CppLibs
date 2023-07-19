@@ -93,6 +93,16 @@ public:
     void sort(){
         std::sort(m_items.begin(), m_items.end());
     }
+    void trimToMaxSize(bool tail = true){
+        if(m_maxCount > 0){
+            //20, 10
+            int rc = m_items.size() - m_maxCount;
+            int start_idx = tail ? m_maxCount : 0;
+            for(int i = rc - 1; i >=0 ; i --){
+                m_items.erase(m_items.begin() + start_idx + i);
+            }
+        }
+    }
     bool remove(const T& t){
         int idx = indexOf(t);
         if(idx < 0){
@@ -146,6 +156,7 @@ public:
 private:
     std::vector<Item, _Alloc> m_items;
     Func_hash m_func_hash;
+    size_t m_maxCount {0};
 };
 
 }
