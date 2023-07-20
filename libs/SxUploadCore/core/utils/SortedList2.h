@@ -11,10 +11,10 @@
 namespace h7 {
 
 template<typename E>
-struct SortedList_Item{
-    using IT = SortedList_Item<E>;
+struct SortedList_Item2{
+    using IT = SortedList_Item2<E>;
     E t;
-    unsigned int hash;
+    uint64 hash;
 
     friend bool operator < (IT const &a, IT const &b){
         return a.hash < b.hash;
@@ -27,16 +27,17 @@ struct SortedList_Item{
     }
 };
 
-template<typename T, typename _Alloc = std::allocator<SortedList_Item<T>>>
-class SortedList
+template<typename T, typename _Alloc = std::allocator<SortedList_Item2<T>>>
+class SortedList2
 {
 public:
     using U32 = unsigned int;
-    using Item = struct SortedList_Item<T>;
-    using Func_hash = std::function<unsigned int(const T& t)>;
-    SortedList(Func_hash hash): m_func_hash(hash){
+    using HashType = uint64;
+    using Item = struct SortedList_Item2<T>;
+    using Func_hash = std::function<HashType(const T& t)>;
+    SortedList2(Func_hash hash): m_func_hash(hash){
     }
-    SortedList(){}
+    SortedList2(){}
 
     void setHashFunction(Func_hash hash){
         m_func_hash = hash;
@@ -76,7 +77,7 @@ public:
         if(m_func_hash){
             item.hash = m_func_hash(t);
         }else{
-            item.hash = fasthash32(&t, sizeof(T), _FastList_HASH_SEED);
+            item.hash = fasthash64(&t, sizeof(T), _FastList_HASH_SEED);
         }
         m_items.push_back(std::move(item));
         if(_sort){
@@ -92,7 +93,7 @@ public:
         if(m_func_hash){
             item.hash = m_func_hash(t);
         }else{
-            item.hash = fasthash32(&t, sizeof(T), _FastList_HASH_SEED);
+            item.hash = fasthash64(&t, sizeof(T), _FastList_HASH_SEED);
         }
         m_items.insert(m_items.begin() + idx, std::move(item));
         if(_sort){
@@ -133,7 +134,7 @@ public:
         if(m_func_hash){
             item.hash = m_func_hash(t);
         }else{
-            item.hash = fasthash32(&t, sizeof(T), _FastList_HASH_SEED);
+            item.hash = fasthash64(&t, sizeof(T), _FastList_HASH_SEED);
         }
         m_items[index] = std::move(item);
         if(_sort){
@@ -144,22 +145,22 @@ public:
     T& get(U32 index){
         return m_items[index].t;
     }
-    int indexOfHash(U32 _hash){
+    int indexOfHash(HashType _hash){
         int offset = offsetof(Item, hash);
         //may be -2... -n
-        return binarySearchOffset_u(m_items.data(), sizeof(Item), offset,
+        return binarySearchOffset_u64(m_items.data(), sizeof(Item), offset,
                              0, m_items.size(), _hash);
     }
     int indexOf(const T& t)const{
-        U32 _hash;
+        HashType _hash;
         if(m_func_hash){
             _hash = m_func_hash(t);
         }else{
-            _hash = fasthash32(&t, sizeof(T), _FastList_HASH_SEED);
+            _hash = fasthash64(&t, sizeof(T), _FastList_HASH_SEED);
         }
         int offset = offsetof(Item, hash);
         //may be -2... -n
-        return binarySearchOffset_u(m_items.data(), sizeof(Item), offset,
+        return binarySearchOffset_u64(m_items.data(), sizeof(Item), offset,
                              0, m_items.size(), _hash);
     }
 private:

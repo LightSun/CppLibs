@@ -82,6 +82,7 @@ int binarySearch_u(unsigned int* a, int start, int len, unsigned int key){
 }
 
 #define _BSOU(guess) (*(unsigned int*)(ptr + ev_size * guess + hash_offset))
+#define _BSOU64(guess) (*(unsigned long long*)(ptr + ev_size * guess + hash_offset))
 
 int binarySearchOffset_u(const void* a, int ev_size,int hash_offset,
                          int start, int len, unsigned int key){
@@ -103,6 +104,38 @@ int binarySearchOffset_u(const void* a, int ev_size,int hash_offset,
     if (high == start + len) {
         return ~(start + len);
     } else if (_BSOU(high) == key) {
+        if(high > start){
+            return findFirstNeqPos_offset_u(a, ev_size, hash_offset,
+                                            start, high - start, key) + 1;
+        }
+        return high;
+    } else {
+        return ~high;
+    }
+}
+
+//binarySearchOffset_u(m_items.data(), sizeof(Item), offset,
+//                              0, m_items.size(), _hash);
+int binarySearchOffset_u64(const void* a, int ev_size,int hash_offset,
+                         int start, int len, unsigned long long key){
+    unsigned char * ptr = (unsigned char*)a;
+
+    int high = start + len;
+    int low = start - 1;
+
+    while(high - low > 1) {
+        int guess = (high + low) / 2;
+        if (_BSOU64(guess) < key) {
+           // if (a[guess] < key) {
+            low = guess;
+        } else {
+            high = guess;
+        }
+    }
+
+    if (high == start + len) {
+        return ~(start + len);
+    } else if (_BSOU64(high) == key) {
         if(high > start){
             return findFirstNeqPos_offset_u(a, ev_size, hash_offset,
                                             start, high - start, key) + 1;
@@ -154,6 +187,23 @@ int findFirstNeqPos_offset_u(const void* a, int ev_size,int hash_offset,
     while(high - low > 1) {
         guess = (high + low) / 2;
         if (_BSOU(guess) != key) {
+            low = guess;
+        } else {
+            high = guess;
+        }
+    }
+    return low;
+}
+
+int findFirstNeqPos_offset_u64(const void* a, int ev_size,int hash_offset,
+                             int start,int len, unsigned long long key){
+    unsigned char * ptr = (unsigned char*)a;
+    int high = start + len;
+    int low = start - 1;
+    int guess = -1;
+    while(high - low > 1) {
+        guess = (high + low) / 2;
+        if (_BSOU64(guess) != key) {
             low = guess;
         } else {
             high = guess;
