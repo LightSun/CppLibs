@@ -9,6 +9,7 @@ namespace h7 {
 
 int binarySearch(int* a, int start, int len, int key);
 int binarySearch_u(unsigned int* a, int start, int len, unsigned int key);
+int binarySearch_ll(long long * a, int start, int len, long long key);
 
 /**
  * @brief binarySearchOffset_u

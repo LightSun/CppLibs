@@ -23,8 +23,10 @@ namespace h7 {
 static int findFirstNeqPos(int* a, int start, int len, int key);
 static int findFirstNeqPos_u(unsigned int* a, int start,
                              int len, unsigned int key);
+static int findFirstNeqPos_ll(long long* a, int start, int len, long long key);
 static int findFirstNeqPos_offset_u(const void* a, int ev_size,int hash_offset,
                              int start,int len, unsigned int key);
+//-----------------------------------------
 
 int binarySearch(int* a, int start, int len, int key) {
 //    for(int i = 0 ; i < len ; i ++){
@@ -80,6 +82,32 @@ int binarySearch_u(unsigned int* a, int start, int len, unsigned int key){
         return ~high;
     }
 }
+int binarySearch_ll(long long * a, int start, int len, long long key){
+    int high = start + len;
+    int low = start - 1;
+
+    while(high - low > 1) {
+        int guess = (high + low) / 2;
+        if (a[guess] < key) {
+            low = guess;
+        } else {
+            high = guess;
+        }
+    }
+
+    if (high == start + len) {
+        return ~(start + len);
+    } else if (a[high] == key) {
+        if(high > start){
+            return findFirstNeqPos_ll(a, start, high - start, key) + 1;
+        }
+        return high;
+    } else {
+        return ~high;
+    }
+}
+
+//--------------------------------------------------------
 
 #define _BSOU(guess) (*(unsigned int*)(ptr + ev_size * guess + hash_offset))
 #define _BSOU64(guess) (*(unsigned long long*)(ptr + ev_size * guess + hash_offset))
@@ -164,6 +192,21 @@ static int findFirstNeqPos(int* a, int start, int len, int key) {
 }
 
 static int findFirstNeqPos_u(unsigned int* a, int start, int len, unsigned int key) {
+    int high = start + len;
+    int low = start - 1;
+    int guess = -1;
+    while(high - low > 1) {
+        guess = (high + low) / 2;
+        if (a[guess] != key) {
+            low = guess;
+        } else {
+            high = guess;
+        }
+    }
+    return low;
+}
+
+static int findFirstNeqPos_ll(long long* a, int start, int len, long long key) {
     int high = start + len;
     int low = start - 1;
     int guess = -1;

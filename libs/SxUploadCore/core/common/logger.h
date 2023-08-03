@@ -21,6 +21,7 @@ enum{
 typedef struct logger_s logger_t;
 
 extern "C" int logger_print(logger_t* logger, int level, const char* fmt, ...);
+extern "C" void logger_fsync(logger_t* logger);
 
 namespace h7 {
 
@@ -53,6 +54,7 @@ do{\
     printf(fmt, ## __VA_ARGS__);\
     logger_print(h7::getLogger()->m_log, level, fmt " [%s:%d:%s]\n", \
         ##__VA_ARGS__, __FILENAME__, __LINE__, __FUNCTION__);\
+    logger_fsync(h7::getLogger()->m_log);\
 }while(0);
 
 #define h7_logd(fmt, ...) med_logger_print(H7_LOG_LEVEL_DEBUG, fmt, ##__VA_ARGS__)

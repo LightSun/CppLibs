@@ -13,6 +13,7 @@ void Logger::init(const LoggerParam& p){
     logger_set_file(m_log, p.name.data());
     logger_set_max_filesize_by_str(m_log, p.max_fsize.data());
     logger_set_level_by_str(m_log, p.level.data());
+    logger_enable_fsync(m_log, 1);
 }
 Logger::~Logger(){
     if(m_log){
