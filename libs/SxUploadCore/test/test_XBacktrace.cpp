@@ -3,13 +3,13 @@
 #include "common/logger.h"
 #include "utils/Backtrace.h"
 
-void crash2() {
+void crash2(const std::string& str) {
     int *s = 0;
     *s = 100;
 }
 
 void crash1() {
-    crash2();
+    crash2("");
 }
 
 void test_XBacktrace(){

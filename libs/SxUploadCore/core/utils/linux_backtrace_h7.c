@@ -113,6 +113,7 @@ static char* addr2line_format(void* addr, char* symbol,
 #endif
 
 #ifdef __linux__
+extern void _backtrace_transform(const char* src, char* dst);
 void _get_backtrace2(const char* exe_name)
 {
     void* addresses[64];
@@ -128,14 +129,16 @@ void _get_backtrace2(const char* exe_name)
         fprintf(stderr, "%s\n", symbols[i]);
     }
 
-    char buffer[512];
+    char buffer[1024] = {0};
+    char dst[1024] = {0};
     fprintf(stderr, "\nframes:\n");
     for (int i = 0; i < nn_addresses; i++) {
         void* frame = parse_symbol_offset(symbols[i]);
         char* fmt = addr2line_format(frame, symbols[i],
                                      buffer, sizeof(buffer), exe_name);
         int parsed = (fmt == buffer);
-        fprintf(stderr, "%p %d %s\n", frame, parsed, fmt);
+        _backtrace_transform(fmt, dst);
+        fprintf(stderr, "%p %d %s\n", frame, parsed, dst);
     }
 
     free(symbols);

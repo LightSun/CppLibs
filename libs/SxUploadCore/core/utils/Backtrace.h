@@ -1,5 +1,4 @@
-#ifndef _XBACKTRACE_H
-#define _XBACKTRACE_H
+#pragma once
 //support win/linux/mac
 
 namespace h7 {
@@ -14,7 +13,3 @@ static void attachConsole();
 };
 
 }
-
-
-
-#endif // XBACKTRACE_H
