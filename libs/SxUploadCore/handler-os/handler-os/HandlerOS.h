@@ -14,6 +14,10 @@ public:
         Looper::getMainLooper()->loop();
     }
 
+    void start(std::function<bool(Message*)> func){
+        start(std::make_shared<HandlerCallback>(func));
+    }
+
     void start(std::shared_ptr<HandlerCallback> cb){
         m_ht = std::shared_ptr<HandlerThread>(new HandlerThread());
         m_ht->setAfterQuitCallback([this](){

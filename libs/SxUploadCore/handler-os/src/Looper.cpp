@@ -66,9 +66,8 @@ void Looper::prepare(bool quitAllowed){
                 return;
             }
         }
-#else
-        sThreadLocal = std::shared_ptr<Looper>(new Looper(quitAllowed));
 #endif
+        sThreadLocal = std::shared_ptr<Looper>(new Looper(quitAllowed));
     }
 }
 void Looper::prepareMainLooper(){
