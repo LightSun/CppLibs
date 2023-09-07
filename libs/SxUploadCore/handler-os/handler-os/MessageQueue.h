@@ -9,6 +9,10 @@
 
 namespace h7_handler_os{
 
+#ifdef BUILD_WITH_QT
+class _QTApplication_ctx;
+#endif
+
 class Message;
 class Handler;
 class Object;
@@ -61,6 +65,11 @@ public:
 
     MessageQueue(bool quitAllowed):mQuitAllowed(quitAllowed){
     }
+#ifdef BUILD_WITH_QT
+    MessageQueue(_QTApplication_ctx* ctx):
+        mQuitAllowed(true), m_qt_ctx(ctx){
+    }
+#endif
 
     bool isIdle();
 
@@ -110,7 +119,9 @@ public:
      * //when have a barrier in the head. only the async msg will be dispatch.
      * @hide
      */
-    int postSyncBarrier();
+    int postSyncBarrier(){
+        return postSyncBarrier(0);
+    }
     /**
      * Removes a synchronization barrier.
      *
@@ -123,9 +134,8 @@ public:
     bool removeSyncBarrier(int token);
 
 private:
-    bool isPollingLocked(){
-        return !mQuitting;
-    }
+    bool isPollingLocked();
+
     void removeMessages(Handler* h, int what, Object* obj){
         removeMessages(h, what, obj, false);
     }
@@ -160,6 +170,10 @@ private:
     int mNextBarrierToken {0};
     Message* mMessages {nullptr};
     std::mutex mMutex;
+    //
+#ifdef BUILD_WITH_QT
+    _QTApplication_ctx* m_qt_ctx {nullptr};
+#endif
 
     friend class Looper;
     friend class Handler;

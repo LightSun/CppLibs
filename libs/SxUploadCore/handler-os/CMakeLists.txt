@@ -39,3 +39,8 @@ add_executable(test_handler_os
 target_link_libraries(test_handler_os PUBLIC
     handler_os
     )
+if(BUILD_WITH_QT)
+    set_target_properties(test_handler_os PROPERTIES AUTOMOC ON)
+    set_target_properties(test_handler_os PROPERTIES AUTOUIC ON)
+    set_target_properties(test_handler_os PROPERTIES AUTORCC ON)
+endif()

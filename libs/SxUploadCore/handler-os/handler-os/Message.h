@@ -101,6 +101,7 @@ public:
     Arg2Type arg2 {0};
     Object obj;
 
+
 private:
     int flags;
     long long when;
@@ -110,10 +111,12 @@ private:
     Callback callback;
 
     Message* next {nullptr};
+    friend class _QTApplication_ctx;
     friend class StaticObj;
     friend class MessageQueue;
     friend class Looper;
     friend class RAIIMsg;
+    friend class Handler;
     friend class Handler;
 };
 

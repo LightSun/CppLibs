@@ -7,6 +7,8 @@ namespace h7_handler_os{
 
 typedef std::function<void(const std::string& tag, void* ptr)> Func_free;
 typedef std::function<void*(const std::string& tag, void* ptr,std::string* out_tag)> Func_copy;
+struct Object;
+typedef std::function<bool(const Object* o1, const Object* o2)> Func_EQ;
 
 struct Object{
     using String = std::string;
@@ -17,7 +19,6 @@ struct Object{
     Func_free func_free {nullptr};
     Func_copy func_cpy {nullptr};
 
-    typedef std::function<bool(const Object* o1, const Object* o2)> Func_EQ;
     Func_EQ func_eq {nullptr};
 
     ~Object(){

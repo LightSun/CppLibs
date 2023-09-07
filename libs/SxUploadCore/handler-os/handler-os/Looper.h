@@ -4,6 +4,10 @@
 
 namespace h7_handler_os{
 
+#ifdef BUILD_WITH_QT
+class _QTApplication_ctx;
+#endif
+
 class Trace;
 class MessageQueue;
 
@@ -49,6 +53,9 @@ public:
     }
 private:
     Looper(bool quitAllowed);
+#ifdef BUILD_WITH_QT
+    Looper(_QTApplication_ctx* ctx);
+#endif
 
     void dump(std::stringstream& ss, CString prefix);
 

@@ -1,8 +1,10 @@
 #include "handler-os/MessageQueue.h"
 #include "handler-os/Message.h"
+#include "handler-os/Object.h"
 #include "_common_pri.h"
 #include "_time.h"
-#include "handler-os/Object.h"
+
+#include "handler-os/qt_pri.h"
 
 #define synchronized(a) std::unique_lock<std::mutex> lck(mMutex);
 
@@ -11,6 +13,11 @@ namespace h7_handler_os{
 using String = Message::String;
 
 bool MessageQueue::isIdle(){
+#ifdef BUILD_WITH_QT
+    if(m_qt_ctx != nullptr){
+        return m_qt_ctx->isIdle();
+    }
+#endif
     synchronized(this) {
         auto now = getCurTime();
         return mMessages == nullptr || now < mMessages->when;
@@ -18,6 +25,12 @@ bool MessageQueue::isIdle(){
 }
 
 Message* MessageQueue::next(){
+    //for qt main thread. we can't do anything in here.
+#ifdef BUILD_WITH_QT
+    if(m_qt_ctx != nullptr){
+        return nullptr;
+    }
+#endif
     int pendingIdleHandlerCount = -1; // -1 only during first iteration
     long long nextPollTimeoutMillis = 0; //TODO current not used.
     for(;;){
@@ -103,11 +116,26 @@ Message* MessageQueue::next(){
     }
 }
 
+bool MessageQueue::isPollingLocked(){
+#ifdef BUILD_WITH_QT
+    if(m_qt_ctx != nullptr){
+        return m_qt_ctx->isPollingLocked();
+    }
+#endif
+    return !mQuitting;
+}
+
 void MessageQueue::removeMessages(Handler* h, int what,
                                   Object* object, bool allowEquals){
     if(h == nullptr){
         return;
     }
+#ifdef BUILD_WITH_QT
+    if(m_qt_ctx != nullptr){
+        m_qt_ctx->removeMessages(h, what, object, allowEquals);
+        return;
+    }
+#endif
     synchronized(this){
         MsgPtr p = mMessages;
         while (p != nullptr && p->target == h && p->what == what
@@ -143,6 +171,12 @@ void MessageQueue::removeMessages(Handler* h, Message* target,
     if (h == nullptr) {
         return;
     }
+#ifdef BUILD_WITH_QT
+    if(m_qt_ctx != nullptr){
+        m_qt_ctx->removeMessages(h, target, comparator);
+        return;
+    }
+#endif
     synchronized(this){
         MsgPtr p = mMessages;
 
@@ -176,6 +210,12 @@ void MessageQueue::removeMessages(Handler* h, Func_Callback r,
     if (h == nullptr || !r) {
         return;
     }
+#ifdef BUILD_WITH_QT
+    if(m_qt_ctx != nullptr){
+        m_qt_ctx->removeMessages(h, r, object);
+        return;
+    }
+#endif
 
     synchronized(this){
         MsgPtr p = mMessages;
@@ -211,6 +251,12 @@ void MessageQueue::removeCallbacksAndMessages(Handler* h, Object* object){
     if (h == nullptr) {
         return;
     }
+#ifdef BUILD_WITH_QT
+    if(m_qt_ctx != nullptr){
+        m_qt_ctx->removeCallbacksAndMessages(h, object);
+        return;
+    }
+#endif
 
     synchronized(this){
         MsgPtr p = mMessages;
@@ -241,6 +287,12 @@ void MessageQueue::removeCallbacksAndMessages(Handler* h, Object* object){
 }
 
 int MessageQueue::postSyncBarrier(long long when){
+
+#ifdef BUILD_WITH_QT
+    if(m_qt_ctx != nullptr){
+        return m_qt_ctx->postSyncBarrier(when);
+    }
+#endif
     // Enqueue a new sync barrier token.
     // We don't need to wake the queue because the purpose of a barrier is
     // to stall it.
@@ -269,10 +321,13 @@ int MessageQueue::postSyncBarrier(long long when){
         return token;
     }
 }
-int MessageQueue::postSyncBarrier(){
-    return postSyncBarrier(0);
-}
 bool MessageQueue::removeSyncBarrier(int token){
+#ifdef BUILD_WITH_QT
+    if(m_qt_ctx != nullptr){
+        return m_qt_ctx->removeSyncBarrier(token);
+    }
+#endif
+
     // Remove a sync barrier token from the queue.
     // If the queue is no longer stalled by a barrier then wake it.
     synchronized (this) {
@@ -311,7 +366,12 @@ void MessageQueue::quit(bool safe){
         _LOG_ERR("Main thread not allowed to quit.");
         return;
     }
-
+#ifdef BUILD_WITH_QT
+    if(m_qt_ctx != nullptr){
+        m_qt_ctx->quit(safe);
+        return;
+    }
+#endif
     synchronized (this) {
         if (mQuitting) {
             return;
@@ -373,6 +433,13 @@ bool MessageQueue::enqueueMessage(Message* msg, long long when){
         _LOG_ERR(_m);
         return false;
     }
+
+#ifdef BUILD_WITH_QT
+    if(m_qt_ctx != nullptr){
+        return m_qt_ctx->enqueueMessage(msg, when);
+    }
+#endif
+
     synchronized (this) {
         if (mQuitting) {
             char buf[128];
@@ -431,6 +498,12 @@ bool MessageQueue::hasMessages(Handler* h, int what, Object* object){
         return false;
     }
 
+#ifdef BUILD_WITH_QT
+    if(m_qt_ctx != nullptr){
+        return m_qt_ctx->hasMessages(h, what, object);
+    }
+#endif
+
     synchronized (this) {
         MsgPtr p = mMessages;
         while (p != nullptr) {
@@ -447,6 +520,11 @@ bool MessageQueue::hasMessages(Handler* h, Func_Callback r, Object* object){
     if (h == nullptr) {
         return false;
     }
+#ifdef BUILD_WITH_QT
+    if(m_qt_ctx != nullptr){
+        return m_qt_ctx->hasMessages(h, r, object);
+    }
+#endif
 
     synchronized (this) {
         MsgPtr p = mMessages;

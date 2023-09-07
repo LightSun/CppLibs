@@ -41,5 +41,9 @@ static inline std::string formatTime(long long timeMs){
     return std::string(buff);
 }
 
+static inline std::string getCurTimeStr(){
+    return formatTime(getCurTime());
+}
+
 
 }

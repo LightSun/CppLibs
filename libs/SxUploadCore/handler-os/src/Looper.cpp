@@ -5,21 +5,15 @@
 #include "handler-os/Trace.h"
 #include "handler-os/Handler.h"
 
+#ifdef BUILD_WITH_QT
+#include "handler-os/QTApplication.h"
+#include "handler-os/qt_pri.h"
+#endif
+
 #define synchronized(a) std::unique_lock<std::mutex> lck(sOBJ.mutex_local);
 #define synchronized_main(a) std::unique_lock<std::mutex> lck(sOBJ.mutex_main);
 
 namespace h7_handler_os{
-
-#ifdef BUILD_WITH_QT
-    class QtLooper: public Looper{
-    public:
-        QtLooper():Looper(false){}
-        void quit() override{
-        }
-        void quitSafely() override{
-        }
-    };
-#endif
 
 //c: __thread is like 'thread_local'
 thread_local std::shared_ptr<Looper> sThreadLocal;
@@ -28,9 +22,6 @@ struct StaticObj0{
     std::mutex mutex_local;
     std::mutex mutex_main;
     std::shared_ptr<Looper> mainLooper;
-#ifdef BUILD_WITH_QT
-    std::shared_ptr<QtLooper> qtMainLooper;
-#endif
 };
 static StaticObj0 sOBJ;
 
@@ -48,6 +39,12 @@ Looper::Looper(bool quitAllowed){
     mQueue = new MessageQueue(quitAllowed);
     mTid = std::this_thread::get_id();
 }
+#ifdef BUILD_WITH_QT
+Looper::Looper(_QTApplication_ctx* ctx){
+    mQueue = new MessageQueue(ctx);
+    mTid = std::this_thread::get_id();
+}
+#endif
 Looper::~Looper(){
    if(mQueue){
        delete mQueue;
@@ -61,15 +58,23 @@ void Looper::prepare(bool quitAllowed){
             _LOG_ERR("Looper::prepare: already prepared.");
             return;
         }
+#ifdef BUILD_WITH_QT
+        auto app = QTApplication::get();
+        if(app != nullptr){
+            if(app->getAppCtx()->isCurrentThread()){
+                sThreadLocal = std::shared_ptr<Looper>(new Looper(app->getAppCtx()));
+                return;
+            }
+        }
+#else
         sThreadLocal = std::shared_ptr<Looper>(new Looper(quitAllowed));
+#endif
     }
 }
 void Looper::prepareMainLooper(){
 #ifdef BUILD_WITH_QT
-    synchronized_main(this){
-        sOBJ.qtMainLooper = std::shared_ptr<QtLooper>(new QtLooper());
-    }
-#else
+    _HANDLER_ASSERT(QTApplication::get() != nullptr);
+#endif
     prepare(false);
     synchronized_main(this){
         if(sOBJ.mainLooper != nullptr){
@@ -78,32 +83,16 @@ void Looper::prepareMainLooper(){
         }
         sOBJ.mainLooper = myLooper();
     }
-#endif
 }
 std::shared_ptr<Looper> Looper::myLooper(){
-#ifdef BUILD_WITH_QT
-    {
-    synchronized_main(this){
-        if(sOBJ.qtMainLooper->isCurrentThread()){
-            return sOBJ.qtMainLooper;
-        }
-    }
-    }
-#endif
     synchronized(this){
         return sThreadLocal;
     }
 }
 std::shared_ptr<Looper> Looper::getMainLooper(){
-#ifdef BUILD_WITH_QT
-    synchronized_main(this){
-        return sOBJ.qtMainLooper;
-    }
-#else
     synchronized_main(this){
         return sOBJ.mainLooper;
     }
-#endif
 }
 void Looper::loop(){
     auto me = myLooper();
@@ -112,7 +101,9 @@ void Looper::loop(){
         return;
     }
 #ifdef BUILD_WITH_QT
-    if(me.get() == sOBJ.qtMainLooper.get()){
+    auto app = QTApplication::get();
+    if(app && me->mTid == app->getAppCtx()->mTid){
+        //qt already loop internal
         return;
     }
 #endif
@@ -187,6 +178,9 @@ void handler_os_delete_msg(h7_handler_os::Message* msg){
 }
 void handler_os_dispatch_msg(Message* m){
     m->getTarget()->dispatchMessage(m);
+}
+void handler_os_prepare_qtLooper(){
+    Looper::prepareMainLooper();
 }
 #endif
 

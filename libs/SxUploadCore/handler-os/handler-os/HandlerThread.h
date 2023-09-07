@@ -28,7 +28,7 @@ public:
         mOnPrepared = ptr;
     }
     void setAfterQuitCallback(std::function<void()> func){
-        mAfterQuit = std::make_shared<PkgTask>(func);
+        setAfterQuitCallback(std::make_shared<PkgTask>(func));
     }
     void setAfterQuitCallback(std::shared_ptr<PkgTask> ptr){
         mAfterQuit = ptr;
