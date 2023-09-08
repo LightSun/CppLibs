@@ -72,14 +72,14 @@ struct _RAII{
 //----------------------------------------
 
 Handler::Handler(std::shared_ptr<HandlerCallback> cb, bool async){
-    mLooper = Looper::myLooper();
+    mLooper = Looper::myLooper().get();
     _HANDLER_ASSERT(mLooper != nullptr);
     mQueue = mLooper->mQueue;
     mCallback = cb;
     mAsynchronous = async;
 }
 
-Handler::Handler(std::shared_ptr<Looper> looper,
+Handler::Handler(Looper* looper,
                  std::shared_ptr<HandlerCallback> cb,
                  bool async){
     mLooper = looper;
@@ -214,7 +214,7 @@ Handler::boolean Handler::runWithScissors(Func_Callback r, long long timeout,
     if(timeout < 0){
         timeout = 0;
     }
-    if(Looper::myLooper() == mLooper){
+    if(Looper::myLooper().get() == mLooper){
         (*r)();
         return true;
     }

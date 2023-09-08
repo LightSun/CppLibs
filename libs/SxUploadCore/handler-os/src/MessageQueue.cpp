@@ -286,6 +286,10 @@ void MessageQueue::removeCallbacksAndMessages(Handler* h, Object* object){
     }
 }
 
+int MessageQueue::postSyncBarrier(){
+    return postSyncBarrier(getCurTime());
+}
+
 int MessageQueue::postSyncBarrier(long long when){
 
 #ifdef BUILD_WITH_QT
@@ -384,6 +388,7 @@ void MessageQueue::quit(bool safe){
             removeAllMessagesLocked();
         }
     }
+    //nativeWake(mPtr);
 }
 void MessageQueue::removeAllMessagesLocked(){
     MsgPtr p = mMessages;
@@ -549,6 +554,34 @@ void MessageQueue::dump(std::stringstream& ss, CString prefix){
         ss << prefix << "(Total messages: " << n
            <<  ", polling=" << isPollingLocked()
             << ", quitting=" << mQuitting << ")" << _NEW_LINE;
+    }
+}
+void MessageQueue::runIdleTasks(){
+    int pendingIdleHandlerCount = -1;
+    auto now = getCurTime();
+    {
+    synchronized (this) {
+        if (pendingIdleHandlerCount < 0 &&
+                (mMessages == nullptr || now < mMessages->getWhen())) {
+            pendingIdleHandlerCount = mIdleHandlers.size();
+        }
+        if (pendingIdleHandlerCount <= 0) {
+            // No idle handlers to run. Loop and wait some more.
+            mBlocked = true;
+            return;
+        }
+        mPendingIdleHandlers.clear();
+        mPendingIdleHandlers.insert(mPendingIdleHandlers.end(),
+                                    mIdleHandlers.begin(),mIdleHandlers.end());
+    }
+    }
+    for(int i = 0 ; i < pendingIdleHandlerCount ; i ++){
+        auto& idler = mPendingIdleHandlers[i];
+        if(idler){
+            if(!idler->queueIdle()){
+                removeIdleHandler(idler);
+            }
+        }
     }
 }
 

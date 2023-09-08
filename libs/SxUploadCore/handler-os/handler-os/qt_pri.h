@@ -7,10 +7,11 @@
 #include <future>
 #include <map>
 
+//max 65535
 #define QTH_EVENT_TYPE(name, offset)\
 static const QEvent::Type name = static_cast<QEvent::Type>(QEvent::User + offset);
-QTH_EVENT_TYPE(TYPE_HANDLER_OS_MSG, 70567)
-QTH_EVENT_TYPE(TYPE_HANDLER_OS_INTERNAL, 70568)
+QTH_EVENT_TYPE(TYPE_HANDLER_OS_MSG, 30567)
+QTH_EVENT_TYPE(TYPE_HANDLER_OS_INTERNAL, 30568)
 
 namespace h7_handler_os{
 class Message;
@@ -20,7 +21,7 @@ extern void handler_os_dispatch_msg(Message* m);
 
 extern void handler_os_prepare_qtLooper();
 extern void handler_qt_post_func(std::function<void()> func, int delayMs);
-extern void handler_qt_post_msg(h7_handler_os::Message* ptr, int delayMs);
+extern void handler_qt_post_msg(h7_handler_os::Message* ptr);
 }
 
 namespace h7_handler_os {
@@ -32,6 +33,7 @@ namespace h7_handler_os {
 
     class __Event: public QEvent{
     public:
+        void* rec {nullptr};
         HHMsg* msg {nullptr};
         ShareFunc0 ptr;
         inline __Event(HHMsg* msg):
@@ -46,42 +48,107 @@ namespace h7_handler_os {
             }
         }
     };
-    struct _QTApplication_ctx{
-        struct Item{
-            void* msgPtr;
-            long long time;
+    struct __Events{
+        using Func_Callback = std::shared_ptr<std::packaged_task<void()>>;
+        using MsgPtr = Message*;
+        using CString = const std::string&;
 
-            friend bool operator==(const Item& i1, const Item& i2){
-                return i1.msgPtr == i2.msgPtr;
+        std::vector<QEvent*> events;
+        std::mutex mtx;
+
+        ~__Events();
+
+        int size(){
+            std::unique_lock<std::mutex> lck(mtx);
+            return events.size();
+        }
+        void add(QEvent* e){
+            std::unique_lock<std::mutex> lck(mtx);
+            events.push_back(e);
+        }
+        ///return left size.
+        int removeByMsg(Message* e){
+            std::unique_lock<std::mutex> lck(mtx);
+            for(auto it = events.begin() ; it != events.end() ; ++it){
+                __Event* le = (__Event*)(*it);
+                if(le->msg == e){
+                    events.erase(it);
+                    break;
+                }
             }
-        };
-        struct ItemCmp{
-            bool operator()(const Item& it1, const Item& it2)const{
-                return it1.time < it2.time;
+            return events.size();
+        }
+        __Event* findEvent(Message* e){
+            std::unique_lock<std::mutex> lck(mtx);
+            for(auto it = events.begin() ; it != events.end() ; ++it){
+                __Event* le = (__Event*)(*it);
+                if(le->msg == e){
+                    return le;
+                }
             }
-        };
+            return nullptr;
+        }
+        int removeMessages(Handler* h, int what,
+                                          Object* object, bool allowEquals);
+        int removeMessages(Handler* h, Message* target,
+                            std::function<int(MsgPtr, MsgPtr)> comparator);
+        int removeMessages(Handler* h, Func_Callback r,
+                                          Object* object);
+        int removeCallbacksAndMessages(Handler* h, Object* object);
+
+        bool hasMessages(Handler* h, int what, Object* object);
+
+        bool hasMessages(Handler* h, Func_Callback cb, Object* object);
+
+        int removeSyncBarrier(int token);
+
+        void dump(std::stringstream& ss, CString prefix, int& n);
+
+    private:
+        void removeAt(int i){
+            events.erase(events.begin() + i);
+        }
+    };
+    struct _QTApplication_ctx{
+        using ShareEvents = std::shared_ptr<__Events>;
+        using LL = long long;
+        //using ShareItem = std::shared_ptr<Item>;
+//        struct ItemCmp{
+//            bool operator()(const ShareItem& it1, const ShareItem& it2)const{
+//                return it1->time < it2->time;
+//            }
+//        };
         using MsgPtr = Message*;
         using Func_Callback = std::shared_ptr<std::packaged_task<void()>>;
         using String = std::string;
         using CString = const String&;
 
         std::mutex mtx;
-        std::map<Item, QEvent*, ItemCmp> events;
+        std::map<LL, ShareEvents> events;
         std::atomic_bool mQuitting {false};
         int mNextBarrierToken {0};
+        int mIdleThreshold {50};
         std::thread::id mTid;
 
         //
         _QTApplication_ctx(){
             mTid = std::this_thread::get_id();
         }
-
+        static ShareEvents makeShareEvents(){
+            return std::make_shared<__Events>();
+        }
         bool isCurrentThread(){
             return std::this_thread::get_id()== mTid;
         }
+        void setIdleTimeThreshold(int msec){
+            mIdleThreshold = msec;
+        }
+        bool isPollingLocked(){
+            return !mQuitting;
+        }
 
         bool hasEventThenRemove(QEvent* event);
-        void addEvent(QEvent* event);
+        void addEvent(QObject* receiver, QEvent* event);
         //void removeEvent(void* msgPtr);
         bool isIdle();
         void removeMessages(Handler* h, int what,
@@ -103,9 +170,8 @@ namespace h7_handler_os {
         void quit(bool safe);
         void dump(std::stringstream& ss, CString prefix);
 
-        bool isPollingLocked(){
-            return !mQuitting;
-        }
+    private:
+        void _removeFutureMessages(long long now);
     };
 }
 #endif

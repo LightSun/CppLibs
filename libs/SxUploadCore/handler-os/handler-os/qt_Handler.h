@@ -34,15 +34,15 @@ namespace h7_handler_os {
         inline void post(FUNC_SHARED_PTR(void()) ptr){
             APP::get()->postEvent2(this, new __Event(ptr));
         }
-        inline void postDelay(HHMsg* ptr, int delayMs){
-            if(delayMs > 0){
-                QTimer::singleShot(delayMs, this, [this, ptr]() {
-                    post(ptr);
-                });
-            }else{
-                post(ptr);
-            }
-        }
+//        inline void postDelay(HHMsg* ptr, int delayMs){
+//            if(delayMs > 0){
+//                QTimer::singleShot(delayMs, this, [this, ptr]() {
+//                    post(ptr);
+//                });
+//            }else{
+//                post(ptr);
+//            }
+//        }
         inline void postDelay(std::function<void()> func, int delayMs){
             auto ptr = FUNC_MAKE_SHARED_PTR_0(void(), func);
             if(delayMs > 0){

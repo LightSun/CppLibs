@@ -8,10 +8,9 @@ namespace h7_handler_os {
 
 typedef struct _QTApplication_ctx _QTApplication_ctx;
 
-}
-
 class QTApplication: public QApplication
 {
+    Q_OBJECT
 public:
     //must use &
     QTApplication(int& argc, char** argv);
@@ -19,6 +18,8 @@ public:
 
     static QTApplication* get();
     void postEvent2(QObject *receiver, QEvent *event);
+
+    void setIdleTimeThreshold(int msec);
 
     h7_handler_os::_QTApplication_ctx* getAppCtx(){
         return m_ctx;
@@ -29,5 +30,5 @@ protected:
 private:
     h7_handler_os::_QTApplication_ctx* m_ctx{nullptr};
 };
-
+}
 #endif

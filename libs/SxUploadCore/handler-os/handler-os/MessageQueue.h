@@ -24,12 +24,13 @@ public:
 
 class IdleHandler{
 private:
+    IdleHandlerI* handler_ptr {nullptr};
     std::shared_ptr<IdleHandlerI> handler;
     std::shared_ptr<std::packaged_task<bool()>> task;
     std::mutex mutex;
 public:
-    IdleHandler(std::shared_ptr<IdleHandlerI> ptr):handler(ptr){
-    }
+    IdleHandler(IdleHandlerI* ptr):handler_ptr(ptr){}
+    IdleHandler(std::shared_ptr<IdleHandlerI> ptr):handler(ptr){}
     IdleHandler(std::function<bool()> func){
         task = std::make_shared<std::packaged_task<bool()>>(func);
     }
@@ -43,6 +44,9 @@ public:
     bool queueIdle(){
         if(handler){
             return handler->queueIdle();
+        }
+        if(handler_ptr){
+            return handler_ptr->queueIdle();
         }
         std::unique_lock<std::mutex> lck(mutex);
         if(task){
@@ -119,9 +123,7 @@ public:
      * //when have a barrier in the head. only the async msg will be dispatch.
      * @hide
      */
-    int postSyncBarrier(){
-        return postSyncBarrier(0);
-    }
+    int postSyncBarrier();
     /**
      * Removes a synchronization barrier.
      *
@@ -160,6 +162,8 @@ private:
     bool hasMessages(Handler* h, Func_Callback cb, Object* object);
 
     void dump(std::stringstream& ss, CString prefix);
+    ///often called by QTApp
+    void runIdleTasks();
 
 private:
     std::vector<std::shared_ptr<IdleHandler>> mIdleHandlers;
@@ -177,6 +181,7 @@ private:
 
     friend class Looper;
     friend class Handler;
+    friend class _QTApplication_ctx;
 };
 
 }

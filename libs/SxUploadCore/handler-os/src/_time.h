@@ -28,6 +28,12 @@ static inline LLong getCurTime(){
 //#endif
 }
 
+static inline LLong getCurMicroTime(){
+    auto now = std::chrono::system_clock::now();
+    return std::chrono::duration_cast<std::chrono::microseconds>(
+                now.time_since_epoch()).count();
+}
+
 //
 static inline std::string formatTime(long long timeMs){
     //printf("formatTime >> timeMs + %llu\n", timeMs);

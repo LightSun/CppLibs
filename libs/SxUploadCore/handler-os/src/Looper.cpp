@@ -60,11 +60,9 @@ void Looper::prepare(bool quitAllowed){
         }
 #ifdef BUILD_WITH_QT
         auto app = QTApplication::get();
-        if(app != nullptr){
-            if(app->getAppCtx()->isCurrentThread()){
-                sThreadLocal = std::shared_ptr<Looper>(new Looper(app->getAppCtx()));
-                return;
-            }
+        if(app != nullptr && app->getAppCtx()->isCurrentThread()){
+            sThreadLocal = std::shared_ptr<Looper>(new Looper(app->getAppCtx()));
+            return;
         }
 #endif
         sThreadLocal = std::shared_ptr<Looper>(new Looper(quitAllowed));

@@ -1,4 +1,6 @@
 #include <map>
+#include <QApplication>
+#include <QTimer>
 #include "handler-os/qt_pri.h"
 #include "handler-os/MessageQueue.h"
 #include "handler-os/Message.h"
@@ -6,56 +8,237 @@
 #include "_time.h"
 
 #include "_common_pri.h"
+#include "Locker.h"
 
 #ifdef BUILD_WITH_QT
 
 #define G_CUR_TIME() h7_handler_os::getCurTime()
-#define synchronized() std::unique_lock<std::mutex> lck(mtx);
+//#define synchronized(tag) \
+//    std::unique_lock<std::mutex> lck(mtx);
+
+#define synchronized(tag) \
+    Locker lck(tag, &mtx);
+
+#define _PRINTF(fmt,...) printf(fmt, ##__VA_ARGS__)
 
 namespace h7_handler_os {
 
-bool _QTApplication_ctx::hasEventThenRemove(QEvent* event){
-    synchronized(){
-        __Event* le = (__Event*)event;
-        Item item = {le->msg, 0};
-        auto it = events.find(item);
-        if(it != events.end()){
-            events.erase(it);
-            return true;
+__Events::~__Events(){
+    synchronized("EVS_~__Events"){
+        for(int i = events.size() - 1; i >= 0 ; i--){
+            __Event* le = (__Event*)(events[i]);
+            MsgPtr p = le->msg;
+            if (p != nullptr && p->target == nullptr){
+                //delete barrier events.
+                delete le;
+            }
         }
-    }
-    return false;
-}
-void _QTApplication_ctx::addEvent(QEvent* event){
-    synchronized(){
-        __Event* le = (__Event*)event;
-        Item item = {le->msg, G_CUR_TIME()};
-        //events[item] = le;
-        events.insert(std::make_pair<>(std::move(item), le));
+        events.clear();
     }
 }
-
-bool _QTApplication_ctx::isIdle(){
-    synchronized(){
-        auto it = events.begin();
-        if(it == events.end()){
-            return true;
-        }
-        __Event* le = (__Event*)(it->second);
-        return G_CUR_TIME() < le->msg->when;
-    }
-}
-
-void _QTApplication_ctx::removeMessages(Handler* h, int what,
-                    Object* object, bool allowEquals){
-    synchronized(){
-        for( auto it = events.begin(); it != events.end(); ){
-            __Event* le = (__Event*)(it->second);
+int __Events::removeMessages(Handler* h, int what,
+                   Object* object, bool allowEquals){
+    synchronized("EVS_removeMessages_what"){
+        for(int i = events.size() - 1; i >= 0 ; i--){
+            __Event* le = (__Event*)(events[i]);
             MsgPtr p = le->msg;
             if (p != nullptr && p->target == h && p->what == what
                    && (object == nullptr ||
                        p->obj.equals(object, allowEquals)
                                 )) {
+                events.erase(events.begin() + i);
+            }
+        }
+        return events.size();
+    }
+}
+int __Events::removeMessages(Handler* h, Message* target,
+                   std::function<int(MsgPtr, MsgPtr)> comparator){
+    synchronized("EVS_removeMessages_cmp"){
+        for(int i = events.size() - 1; i >= 0 ; i--){
+            __Event* le = (__Event*)(events[i]);
+            MsgPtr p = le->msg;
+            if (p != nullptr && p->target == h
+                    && comparator(p, target) == 0) {
+                events.erase(events.begin() + i);
+            }
+        }
+        return events.size();
+    }
+}
+int __Events::removeMessages(Handler* h, Func_Callback r,
+                   Object* object){
+    synchronized("EVS_removeMessages_cb"){
+        for(int i = events.size() - 1; i >= 0 ; i--){
+            __Event* le = (__Event*)(events[i]);
+            MsgPtr p = le->msg;
+            if (p != nullptr && p->target == h
+                    && p->callback.cb == r &&
+                    (object == nullptr || p->obj == *object)
+                    ){
+                events.erase(events.begin() + i);
+            }
+        }
+        return events.size();
+    }
+}
+int __Events::removeCallbacksAndMessages(Handler* h, Object* object){
+    synchronized("EVS_removeCallbacksAndMessages"){
+        for(int i = events.size() - 1; i >= 0 ; i--){
+            __Event* le = (__Event*)(events[i]);
+            MsgPtr p = le->msg;
+            if (p != nullptr && p->target == h
+                    && (object == nullptr || p->obj == *object)
+                    ){
+                events.erase(events.begin() + i);
+            }
+        }
+        return events.size();
+    }
+}
+bool __Events::hasMessages(Handler* h, int what, Object* object){
+    synchronized("EVS_hasMessages_what"){
+        for(int i = events.size() - 1; i >= 0 ; i--){
+            __Event* le = (__Event*)(events[i]);
+            MsgPtr p = le->msg;
+            if (p != nullptr && p->target == h && p->what == what
+                    && (object == nullptr || p->obj == *object)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool __Events::hasMessages(Handler* h, Func_Callback r, Object* object){
+    synchronized("EVS_hasMessages_cb"){
+        for(int i = events.size() - 1; i >= 0 ; i--){
+            __Event* le = (__Event*)(events[i]);
+            MsgPtr p = le->msg;
+            if (p != nullptr && p->target == h && p->callback.cb == r
+                    && (object == nullptr || p->obj == *object)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+int __Events::removeSyncBarrier(int token){
+    __Event* le_rm = nullptr;
+    int ret;
+    {
+    synchronized("EVS_removeSyncBarrier"){
+        for(int i = events.size() - 1; i >= 0 ; i--){
+            __Event* le = (__Event*)(events[i]);
+            MsgPtr p = le->msg;
+            if (p != nullptr && p->target == nullptr
+                    && p->arg1 == token){
+                le_rm = le;
+                removeAt(i);
+                break;
+            }
+        }
+        ret = events.size();
+    }
+    }
+    //for barrier we need delete event.
+    if(le_rm != nullptr){
+        delete le_rm;
+    }
+    return ret;
+}
+
+void __Events::dump(std::stringstream& ss, CString prefix, int& n){
+    synchronized("EVS_dump"){
+        for( auto it = events.begin(); it != events.end(); ){
+            __Event* le = (__Event*)(*it);
+            MsgPtr msg = le->msg;
+            ss << prefix << "Message " << n << ": " << msg->toString()
+               << _NEW_LINE;
+            n ++;
+        }
+    }
+}
+
+//------------------------------------------
+bool _QTApplication_ctx::hasEventThenRemove(QEvent* event){
+    synchronized("hasEventThenRemove"){
+        __Event* le = (__Event*)event;
+        auto it = events.find(le->msg->when);
+        if(it != events.end()){
+            //_PRINTF("QTApp >> hasEvent = true, when = %lld\n", le->msg->when);
+            if(it->second->removeByMsg(le->msg) == 0){
+                events.erase(it);
+            }
+            return true;
+        }
+    }
+    return false;
+}
+void _QTApplication_ctx::addEvent(QObject* receiver, QEvent* event){
+    __Event* le = (__Event*)event;
+    le->rec = receiver;
+    ShareEvents evs;
+    {
+    synchronized("addEvent")
+        {
+        auto it = events.find(le->msg->when);
+        if(it != events.end()){
+            evs = it->second;
+        }else{
+            evs = makeShareEvents();
+            events.insert(std::make_pair<>(le->msg->when, evs));
+        }
+    }
+    }
+    evs->add(event);
+    //barrier no need send to qt.
+    if(receiver == nullptr){
+        return;
+    }
+    //printf("le.time = %lld\n", le->time);
+    int delay = le->msg->when - G_CUR_TIME();
+    if(delay > 0){
+        Message* msg = le->msg;
+        //printf("addEvent >> delay_time = %d, when = %lld\n", delay, le->msg->when);
+        QTimer::singleShot(delay, receiver, [this, msg]() {
+            ShareEvents _evs;
+            {
+            synchronized("addEvent_delay"){
+                auto it = events.find(msg->when);
+                if(it != events.end()){
+                    _evs = it->second;
+                }
+            }
+            }
+            if(_evs){
+                auto ev = _evs->findEvent(msg);
+                if(ev != nullptr){
+                    QApplication::postEvent((QObject*)ev->rec, ev);
+                }
+            }
+        });
+    }else{
+        //printf("addEvent >> when = %lld\n", le->msg->when);
+        QApplication::postEvent(receiver, event);
+    }
+}
+
+bool _QTApplication_ctx::isIdle(){
+    synchronized("isIdle"){
+        auto it = events.begin();
+        if(it == events.end()){
+            return true;
+        }
+        return G_CUR_TIME() < it->first - mIdleThreshold;
+    }
+}
+
+void _QTApplication_ctx::removeMessages(Handler* h, int what,
+                    Object* object, bool allowEquals){
+    synchronized("removeMessages_what"){
+        for( auto it = events.begin(); it != events.end(); ){
+            if(it->second->removeMessages(h, what, object, allowEquals) == 0){
                 events.erase(it++);
             }else{
                 it++;
@@ -66,12 +249,9 @@ void _QTApplication_ctx::removeMessages(Handler* h, int what,
 
 void _QTApplication_ctx::removeMessages(Handler* h, Message* target,
                     std::function<int(MsgPtr, MsgPtr)> comparator){
-    synchronized(){
+    synchronized("removeMessages_cmp"){
         for( auto it = events.begin(); it != events.end(); ){
-            __Event* le = (__Event*)(it->second);
-            MsgPtr p = le->msg;
-            if (p != nullptr && p->target == h
-                    && comparator(p, target) == 0) {
+            if(it->second->removeMessages(h, target, comparator) == 0){
                 events.erase(it++);
             }else{
                 it++;
@@ -82,14 +262,10 @@ void _QTApplication_ctx::removeMessages(Handler* h, Message* target,
 
 void _QTApplication_ctx::removeMessages(Handler* h, Func_Callback r,
                     Object* object){
-    synchronized(){
+    synchronized("removeMessages_func_CB")
+    {
         for( auto it = events.begin(); it != events.end(); ){
-            __Event* le = (__Event*)(it->second);
-            MsgPtr p = le->msg;
-            if (p != nullptr && p->target == h
-                    && p->callback.cb == r &&
-                    (object == nullptr || p->obj == *object)
-                    ){
+            if(it->second->removeMessages(h, r, object) == 0){
                 events.erase(it++);
             }else{
                 it++;
@@ -99,13 +275,9 @@ void _QTApplication_ctx::removeMessages(Handler* h, Func_Callback r,
 }
 
 void _QTApplication_ctx::removeCallbacksAndMessages(Handler* h, Object* object){
-    synchronized(){
+    synchronized("removeCallbacksAndMessages"){
         for( auto it = events.begin(); it != events.end(); ){
-            __Event* le = (__Event*)(it->second);
-            MsgPtr p = le->msg;
-            if (p != nullptr && p->target == h
-                    && (object == nullptr || p->obj == *object)
-                    ){
+            if(it->second->removeCallbacksAndMessages(h, object) == 0){
                 events.erase(it++);
             }else{
                 it++;
@@ -114,12 +286,9 @@ void _QTApplication_ctx::removeCallbacksAndMessages(Handler* h, Object* object){
     }
 }
 bool _QTApplication_ctx::hasMessages(Handler* h, int what, Object* object){
-    synchronized(){
+    synchronized("hasMessages_what"){
         for( auto it = events.begin(); it != events.end(); it++){
-            __Event* le = (__Event*)(it->second);
-            MsgPtr p = le->msg;
-            if (p != nullptr && p->target == h && p->what == what
-                    && (object == nullptr || p->obj == *object)) {
+            if (it->second->hasMessages(h, what, object)) {
                 return true;
             }
         }
@@ -127,12 +296,9 @@ bool _QTApplication_ctx::hasMessages(Handler* h, int what, Object* object){
     return false;
 }
 bool _QTApplication_ctx::hasMessages(Handler* h, Func_Callback r, Object* object){
-    synchronized(){
+    synchronized("hasMessages_func_CB"){
         for( auto it = events.begin(); it != events.end(); it++){
-            __Event* le = (__Event*)(it->second);
-            MsgPtr p = le->msg;
-            if (p != nullptr && p->target == h && p->callback.cb == r
-                    && (object == nullptr || p->obj == *object)) {
+            if (it->second->hasMessages(h, r, object)) {
                 return true;
             }
         }
@@ -140,7 +306,9 @@ bool _QTApplication_ctx::hasMessages(Handler* h, Func_Callback r, Object* object
     return false;
 }
 bool _QTApplication_ctx::enqueueMessage(Message* msg, long long when){
-    synchronized () {
+    {
+    synchronized ("enqueueMessage")
+    {
         if (mQuitting) {
             char buf[128];
             snprintf(buf, 128, "%p sending message to a Handler on a dead thread",
@@ -149,43 +317,36 @@ bool _QTApplication_ctx::enqueueMessage(Message* msg, long long when){
             _LOG_INFO(str);
             msg->recycle();
             return false;
+        }else{
+            msg->markInUse();
+            msg->when = when;
+            //
         }
-        msg->markInUse();
-        msg->when = when;
-        //
-        auto delay = when - G_CUR_TIME();
-        handler_qt_post_msg(msg, delay);
-        return true;
     }
+    }
+    handler_qt_post_msg(msg);
+    return true;
 }
 
 int _QTApplication_ctx::postSyncBarrier(long long when){
-    synchronized(){
+    MsgPtr msg = Message::obtain();
+    {
+    synchronized("postSyncBarrier"){
         int token = mNextBarrierToken++;
-        MsgPtr msg = Message::obtain();
         msg->markInUse();
         msg->when = when;
         msg->arg1 = token;
-        auto le = new __Event(msg);
-        Item item = {le->msg, G_CUR_TIME()};
-        //events[item] = le;
-        events.insert(std::make_pair<>(std::move(item), le));
-
-        return token;
     }
+    }
+    addEvent(nullptr, new __Event(msg));
+    return msg->arg1;
 }
 
 bool _QTApplication_ctx::removeSyncBarrier(int token){
-    synchronized(){
+    synchronized("removeSyncBarrier"){
         for( auto it = events.begin(); it != events.end(); ){
-            __Event* le = (__Event*)(it->second);
-            MsgPtr p = le->msg;
-            if (p != nullptr && p->target == nullptr
-                    && p->arg1 == token
-                    ){
+            if (it->second->removeSyncBarrier(token) == 0 ){
                 events.erase(it++);
-                //for barrier is post by internal, we need manual delete it.
-                delete le;
                 return true;
             }else{
                 it++;
@@ -203,58 +364,44 @@ void _QTApplication_ctx::quit(bool safe){
     }
     mQuitting = true;
     if(safe){
-        auto now = G_CUR_TIME();
         //remove future messages.
-        synchronized(){
-            for( auto it = events.begin(); it != events.end(); ){
-                __Event* le = (__Event*)(it->second);
-                MsgPtr p = le->msg;
-                if (p != nullptr && p->getWhen() > now
-                        ){
-                    if(p->target == nullptr){
-                        //barrier
-                        delete le;
-                    }
-                    events.erase(it++);
-                }else{
-                    it++;
-                }
-            }
-        }
+        _removeFutureMessages(G_CUR_TIME());
     }else{
         //may have barrier
-        synchronized(){
-            for( auto it = events.begin(); it != events.end(); ){
-                __Event* le = (__Event*)(it->second);
-                MsgPtr p = le->msg;
-                if (p != nullptr){
-                    if(p->target == nullptr){
-                        //barrier
-                        delete le;
-                    }
-                    events.erase(it++);
-                }else{
-                    it++;
-                }
+        synchronized("clear_event"){
+            events.clear();
+        }
+    }
+}
+
+void _QTApplication_ctx::_removeFutureMessages(long long now){
+    synchronized("_removeBarrierEvent"){
+        bool reached = false;
+        for(auto it = events.begin(); it != events.end(); ){
+            if(reached){
+                events.erase(it++);
+            }else if (it->first > now){
+                events.erase(it++);
+                reached = true;
+            }else{
+                it++;
             }
         }
     }
 }
 
 void _QTApplication_ctx::dump(std::stringstream& ss, CString prefix){
-    synchronized () {
-        int n= 0 ;
+    int n = 0 ;
+    {
+    synchronized ("dump") {
         for( auto it = events.begin(); it != events.end(); ){
-            __Event* le = (__Event*)(it->second);
-            MsgPtr msg = le->msg;
-            ss << prefix << "Message " << n << ": " << msg->toString()
-               << _NEW_LINE;
-            n ++;
+            it->second->dump(ss, prefix, n);
         }
-        ss << prefix << "(Total messages: " << n
-           <<  ", polling=" << isPollingLocked()
-            << ", quitting=" << mQuitting << ")" << _NEW_LINE;
     }
+    }
+    ss << prefix << "(Total messages: " << n
+       <<  ", polling=" << isPollingLocked()
+        << ", quitting=" << mQuitting << ")" << _NEW_LINE;
 }
 
 }
