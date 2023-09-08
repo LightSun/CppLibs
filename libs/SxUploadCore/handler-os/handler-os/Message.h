@@ -113,6 +113,7 @@ private:
     Message* next {nullptr};
     friend class _QTApplication_ctx;
     friend class __Events;
+    friend class HEvent;
     friend class StaticObj;
     friend class MessageQueue;
     friend class Looper;

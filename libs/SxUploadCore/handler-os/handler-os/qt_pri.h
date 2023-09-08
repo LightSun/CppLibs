@@ -48,69 +48,23 @@ namespace h7_handler_os {
             }
         }
     };
-    struct __Events{
+    struct HEvent{
+        QEvent* event {nullptr};
+        HEvent* next {nullptr};
+
         using Func_Callback = std::shared_ptr<std::packaged_task<void()>>;
         using MsgPtr = Message*;
         using CString = const std::string&;
 
-        std::vector<QEvent*> events;
-        std::mutex mtx;
-
-        ~__Events();
-
-        int size(){
-            std::unique_lock<std::mutex> lck(mtx);
-            return events.size();
+        ~HEvent(){
+            recyleMsg();
         }
-        void add(QEvent* e){
-            std::unique_lock<std::mutex> lck(mtx);
-            events.push_back(e);
-        }
-        ///return left size.
-        int removeByMsg(Message* e){
-            std::unique_lock<std::mutex> lck(mtx);
-            for(auto it = events.begin() ; it != events.end() ; ++it){
-                __Event* le = (__Event*)(*it);
-                if(le->msg == e){
-                    events.erase(it);
-                    break;
-                }
-            }
-            return events.size();
-        }
-        __Event* findEvent(Message* e){
-            std::unique_lock<std::mutex> lck(mtx);
-            for(auto it = events.begin() ; it != events.end() ; ++it){
-                __Event* le = (__Event*)(*it);
-                if(le->msg == e){
-                    return le;
-                }
-            }
-            return nullptr;
-        }
-        int removeMessages(Handler* h, int what,
-                                          Object* object, bool allowEquals);
-        int removeMessages(Handler* h, Message* target,
-                            std::function<int(MsgPtr, MsgPtr)> comparator);
-        int removeMessages(Handler* h, Func_Callback r,
-                                          Object* object);
-        int removeCallbacksAndMessages(Handler* h, Object* object);
-
-        bool hasMessages(Handler* h, int what, Object* object);
-
-        bool hasMessages(Handler* h, Func_Callback cb, Object* object);
-
-        int removeSyncBarrier(int token);
-
-        void dump(std::stringstream& ss, CString prefix, int& n);
-
-    private:
-        void removeAt(int i){
-            events.erase(events.begin() + i);
-        }
+        void recyleMsg();
+        Message* msgPtr();
+        void recycleUnchecked();
     };
+
     struct _QTApplication_ctx{
-        using ShareEvents = std::shared_ptr<__Events>;
         using LL = long long;
         //using ShareItem = std::shared_ptr<Item>;
 //        struct ItemCmp{
@@ -122,20 +76,18 @@ namespace h7_handler_os {
         using Func_Callback = std::shared_ptr<std::packaged_task<void()>>;
         using String = std::string;
         using CString = const String&;
+        using HEPtr = HEvent*;
 
         std::mutex mtx;
-        std::map<LL, ShareEvents> events;
+        HEvent* mMessages {nullptr};
         std::atomic_bool mQuitting {false};
         int mNextBarrierToken {0};
-        int mIdleThreshold {50};
+        int mIdleThreshold {10};
         std::thread::id mTid;
 
         //
         _QTApplication_ctx(){
             mTid = std::this_thread::get_id();
-        }
-        static ShareEvents makeShareEvents(){
-            return std::make_shared<__Events>();
         }
         bool isCurrentThread(){
             return std::this_thread::get_id()== mTid;
@@ -171,7 +123,9 @@ namespace h7_handler_os {
         void dump(std::stringstream& ss, CString prefix);
 
     private:
-        void _removeFutureMessages(long long now);
+        void removeAllMessagesLocked();
+        void removeAllFutureMessagesLocked();
+        __Event* findEvent(MsgPtr ptr);
     };
 }
 #endif
