@@ -89,6 +89,8 @@ void HEvent::recycleUnchecked(){
 
 //------------------------------------------
 bool _QTApplication_ctx::hasEventThenRemove(QEvent* event){
+    bool ret = false;
+    {
     synchronized("hasEventThenRemove"){
         __Event* le = (__Event*)event;
         auto p = mMessages;
@@ -98,13 +100,15 @@ bool _QTApplication_ctx::hasEventThenRemove(QEvent* event){
                 mMessages = n;
                 p->recycleUnchecked();
                 p = n;
-                return true;
+                ret = true;
+                break;
             }else{
                 p = p->next;
             }
         }
     }
-    return false;
+    }
+    return ret;
 }
 void _QTApplication_ctx::addEvent(QObject* receiver, QEvent* event){
     __Event* le = (__Event*)event;
@@ -157,10 +161,10 @@ void _QTApplication_ctx::addEvent(QObject* receiver, QEvent* event){
     }
 }
 
-bool _QTApplication_ctx::isIdle(){
+bool _QTApplication_ctx::isIdle(int deltaMs){
     synchronized("isIdle"){
         auto now = getCurTime();
-        return mMessages == nullptr || now < mMessages->msgPtr()->when - mIdleThreshold;
+        return mMessages == nullptr || now < mMessages->msgPtr()->when - deltaMs;
     }
 }
 
@@ -432,6 +436,25 @@ __Event* _QTApplication_ctx::findEvent(MsgPtr ptr){
         p = p->next;
     }
     return nullptr;
+}
+void _QTApplication_ctx::checkIdle(){
+    if(mIdleChecking){
+       return;
+    }
+    mIdleChecking = true;
+    if(isIdle(mIdleThreshold)){
+        handler_qt_post_func_async([this](){
+            if(!mQuitting && isIdle(0)){
+                //run in qt main thread.
+                handler_qt_post_func([this](){
+                    mIdleExe->runIdleTasks();
+                }, 0);
+            }
+            mIdleChecking = false;
+        }, mIdleThreshold);
+    }else{
+        mIdleChecking = false;
+    }
 }
 
 void _QTApplication_ctx::dump(std::stringstream& ss, CString prefix){

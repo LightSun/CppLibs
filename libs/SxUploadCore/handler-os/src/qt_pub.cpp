@@ -13,6 +13,10 @@ void handler_qt_post_msg(h7_handler_os::Message* ptr){
     QtHandler::get()->post(ptr);
 }
 
+void handler_qt_post_func_async(std::function<void()> func, int delayMs){
+    QtHandler::get()->postAsync(func, delayMs);
+}
+
 }
 
 #endif

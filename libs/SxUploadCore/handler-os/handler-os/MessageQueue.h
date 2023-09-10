@@ -7,6 +7,8 @@
 #include <sstream>
 #include <atomic>
 
+#include "handler-os/qt_pub.h"
+
 namespace h7_handler_os{
 
 #ifdef BUILD_WITH_QT
@@ -61,6 +63,9 @@ public:
 };
 
 class MessageQueue
+    #ifdef BUILD_WITH_QT
+        :public _IdleExecutor
+    #endif
 {
 public:
     using MsgPtr = Message*;
@@ -70,9 +75,7 @@ public:
     MessageQueue(bool quitAllowed):mQuitAllowed(quitAllowed){
     }
 #ifdef BUILD_WITH_QT
-    MessageQueue(_QTApplication_ctx* ctx):
-        mQuitAllowed(true), m_qt_ctx(ctx){
-    }
+    MessageQueue(_QTApplication_ctx* ctx);
 #endif
 
     bool isIdle();
@@ -135,6 +138,11 @@ public:
      */
     bool removeSyncBarrier(int token);
 
+#ifdef BUILD_WITH_QT
+    ///often called by QTApp
+    void runIdleTasks() override;
+#endif
+
 private:
     bool isPollingLocked();
 
@@ -162,8 +170,6 @@ private:
     bool hasMessages(Handler* h, Func_Callback cb, Object* object);
 
     void dump(std::stringstream& ss, CString prefix);
-    ///often called by QTApp
-    void runIdleTasks();
 
 private:
     std::vector<std::shared_ptr<IdleHandler>> mIdleHandlers;

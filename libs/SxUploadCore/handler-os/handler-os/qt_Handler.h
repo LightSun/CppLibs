@@ -53,6 +53,12 @@ namespace h7_handler_os {
                 post(ptr);
             }
         }
+        void postAsync(std::function<void()> func, int delayMs){
+            auto ptr = FUNC_MAKE_SHARED_PTR_0(void(), func);
+            QTimer::singleShot(delayMs, this, [ptr]() {
+                (*ptr)();
+            });
+        }
     protected:
         inline void customEvent(QEvent * e)override{
             //qDebug() << "---Handler::customEvent";

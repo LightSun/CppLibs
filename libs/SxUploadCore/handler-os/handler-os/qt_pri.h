@@ -7,6 +7,8 @@
 #include <future>
 #include <map>
 
+#include "handler-os/qt_pub.h"
+
 //max 65535
 #define QTH_EVENT_TYPE(name, offset)\
 static const QEvent::Type name = static_cast<QEvent::Type>(QEvent::User + offset);
@@ -20,8 +22,6 @@ extern void handler_os_delete_msg(h7_handler_os::Message*);
 extern void handler_os_dispatch_msg(Message* m);
 
 extern void handler_os_prepare_qtLooper();
-extern void handler_qt_post_func(std::function<void()> func, int delayMs);
-extern void handler_qt_post_msg(h7_handler_os::Message* ptr);
 }
 
 namespace h7_handler_os {
@@ -78,9 +78,11 @@ namespace h7_handler_os {
         using CString = const String&;
         using HEPtr = HEvent*;
 
+        _IdleExecutor* mIdleExe {nullptr};
         std::mutex mtx;
         HEvent* mMessages {nullptr};
         std::atomic_bool mQuitting {false};
+        std::atomic_bool mIdleChecking {false};
         int mNextBarrierToken {0};
         int mIdleThreshold {10};
         std::thread::id mTid;
@@ -99,10 +101,11 @@ namespace h7_handler_os {
             return !mQuitting;
         }
 
+        void checkIdle();
         bool hasEventThenRemove(QEvent* event);
         void addEvent(QObject* receiver, QEvent* event);
         //void removeEvent(void* msgPtr);
-        bool isIdle();
+        bool isIdle(int deltaMs);
         void removeMessages(Handler* h, int what,
                                           Object* object, bool allowEquals);
         void removeMessages(Handler* h, Message* target,

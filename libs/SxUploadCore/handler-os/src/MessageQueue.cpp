@@ -12,10 +12,17 @@ namespace h7_handler_os{
 
 using String = Message::String;
 
+#ifdef BUILD_WITH_QT
+    MessageQueue::MessageQueue(_QTApplication_ctx* ctx):
+        mQuitAllowed(true), m_qt_ctx(ctx){
+        ctx->mIdleExe = this;
+    }
+#endif
+
 bool MessageQueue::isIdle(){
 #ifdef BUILD_WITH_QT
     if(m_qt_ctx != nullptr){
-        return m_qt_ctx->isIdle();
+        return m_qt_ctx->isIdle(0);
     }
 #endif
     synchronized(this) {
@@ -556,6 +563,8 @@ void MessageQueue::dump(std::stringstream& ss, CString prefix){
             << ", quitting=" << mQuitting << ")" << _NEW_LINE;
     }
 }
+
+#ifdef BUILD_WITH_QT
 void MessageQueue::runIdleTasks(){
     int pendingIdleHandlerCount = -1;
     auto now = getCurTime();
@@ -584,6 +593,6 @@ void MessageQueue::runIdleTasks(){
         }
     }
 }
-
+#endif
 
 }

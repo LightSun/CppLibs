@@ -1,6 +1,7 @@
 #pragma once
 
 #include <thread>
+#include <memory>
 
 namespace h7_handler_os{
 

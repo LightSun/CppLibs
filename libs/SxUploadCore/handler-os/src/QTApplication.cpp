@@ -41,16 +41,20 @@ void QTApplication::postEvent2(QObject *receiver, QEvent *event){
 }
 bool QTApplication::notify(QObject *obj, QEvent *event){
     //barrier, idle
+    bool ret;
     if(event->type() == TYPE_HANDLER_OS_MSG){
         //printf("start notify: TYPE_HANDLER_OS_MSG.\n");
         if(m_ctx->hasEventThenRemove(event)){
-            return QApplication::notify(obj, event);
+            ret = QApplication::notify(obj, event);
         }else{
             event->ignore();
+            ret = true;
         }
-        return true;
+    }else{
+        ret = QApplication::notify(obj, event);
     }
-    return QApplication::notify(obj, event);
+    m_ctx->checkIdle();
+    return ret;
 }
 
 #endif

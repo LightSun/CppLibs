@@ -8,7 +8,7 @@
 #include "utils/Properties.hpp"
 #include "utils/ConfigUtils.h"
 
-#include "ui_upload/pub_api.h"
+//#include "ui_upload/pub_api.h"
 #include "common/logger.h"
 
 extern int test_main0(int argc, char* argv[]);
@@ -98,36 +98,36 @@ int main(int argc, char* argv[]){
    // return test_main0(argc, argv);
     return 0;
 }
-void test_select_file(){
-    med_api::ShowUploadHelper helper;
-    helper.init();
-    med_api::SelectFileContext ctx;
-    {
-        bool single = true;
-        String fmt = "*.*";
-        ctx.multi = !single;
-        ctx.fmts = h7::utils::split(",", fmt);
-    }
-    helper.showGtkDlg(&ctx);
-    //std::locale::global(std::locale(""));
-    if( ctx.files.size() > 0){
-        String _file = ctx.files[0];
+//void test_select_file(){
+//    med_api::ShowUploadHelper helper;
+//    helper.init();
+//    med_api::SelectFileContext ctx;
+//    {
+//        bool single = true;
+//        String fmt = "*.*";
+//        ctx.multi = !single;
+//        ctx.fmts = h7::utils::split(",", fmt);
+//    }
+//    helper.showGtkDlg(&ctx);
+//    //std::locale::global(std::locale(""));
+//    if( ctx.files.size() > 0){
+//        String _file = ctx.files[0];
 
-        String __file = utils::replace2("\\\\", "/", _file);
-        __file = utils::replace2("\\", "/", __file);
-        __file = url_encode2(__file);
+//        String __file = utils::replace2("\\\\", "/", _file);
+//        __file = utils::replace2("\\", "/", __file);
+//        __file = url_encode2(__file);
 
-        auto file = str_to_GBEX(__file);
-        auto hash = FileUtils::sha256(file);
-        printf("file: %s\n", file.data());
-        printf("hash: %s\n", hash.data());
-        printf("url encode: %s\n", __file.data());
+//        auto file = str_to_GBEX(__file);
+//        auto hash = FileUtils::sha256(file);
+//        printf("file: %s\n", file.data());
+//        printf("hash: %s\n", hash.data());
+//        printf("url encode: %s\n", __file.data());
 
-        auto _data = url_decode2(__file);
-        printf("url decode: %s\n", _data.data());
-    }
-    //::locale::global(std::locale("C"));
-}
+//        auto _data = url_decode2(__file);
+//        printf("url decode: %s\n", _data.data());
+//    }
+//    //::locale::global(std::locale("C"));
+//}
 void test_url_encode(){
     String str = "C:\\a\\b\\c.txt";
     printf("raw ret: %s\n", str.data());
