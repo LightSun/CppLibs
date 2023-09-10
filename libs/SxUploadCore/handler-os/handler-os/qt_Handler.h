@@ -6,7 +6,9 @@
 #include <QTimer>
 #include <QDebug>
 #include <QEvent>
-#include "common/common.h"
+//#include "common/common.h"
+
+#include "src/_common_pri.h"
 //#include "../events.h"
 #include "handler-os/qt_pri.h"
 #include "handler-os/QTApplication.h"
