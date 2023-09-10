@@ -67,6 +67,7 @@ set(DEP_RSA_LIBS ${OPEN_SSL_DIR}/lib/libcrypto.a
 
 #libhv
 
+SET(HV_LIB)
 IF(BUILD_ON_WIN)
     add_subdirectory(libhv-1.3.0)
     include_directories(libhv-1.3.0/include)
