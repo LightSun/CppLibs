@@ -448,9 +448,11 @@ void _QTApplication_ctx::checkIdle(){
                 //run in qt main thread.
                 handler_qt_post_func([this](){
                     mIdleExe->runIdleTasks();
+                    mIdleChecking = false;
                 }, 0);
+            }else{
+                mIdleChecking = false;
             }
-            mIdleChecking = false;
         }, mIdleThreshold);
     }else{
         mIdleChecking = false;

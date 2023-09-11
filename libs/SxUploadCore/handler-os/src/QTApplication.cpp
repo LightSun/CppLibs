@@ -31,14 +31,16 @@ void QTApplication::setIdleTimeThreshold(int msec){
     m_ctx->setIdleTimeThreshold(msec);
 }
 void QTApplication::postEvent2(QObject *receiver, QEvent *event){
-    //int type = event->type();
-    //printf("postEvent2 >> type = %d\n", type);
     if(event->type() == TYPE_HANDLER_OS_MSG){
         m_ctx->addEvent(receiver, event);
     }else{
         postEvent(receiver, event);
     }
 }
+//bool QTApplication::event(QEvent * e){
+//    printf("event >> \n");
+//    return QApplication::event(e);
+//}
 bool QTApplication::notify(QObject *obj, QEvent *event){
     //barrier, idle
     bool ret;
@@ -50,10 +52,10 @@ bool QTApplication::notify(QObject *obj, QEvent *event){
             event->ignore();
             ret = true;
         }
+        m_ctx->checkIdle();
     }else{
         ret = QApplication::notify(obj, event);
     }
-    m_ctx->checkIdle();
     return ret;
 }
 

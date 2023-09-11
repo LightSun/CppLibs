@@ -26,7 +26,7 @@ public:
     bool isCurrentThread(){
         return std::this_thread::get_id() == mTid;
     }
-    const MessageQueue* getQueue() {
+    MessageQueue* getQueue() {
         return mQueue;
     };
 

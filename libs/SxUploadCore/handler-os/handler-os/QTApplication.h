@@ -25,7 +25,8 @@ public:
         return m_ctx;
     }
 protected:
-    virtual bool notify(QObject *obj, QEvent *event) override;
+    bool notify(QObject *obj, QEvent *event) override;
+    //bool event(QEvent *) override;
 
 private:
     h7_handler_os::_QTApplication_ctx* m_ctx{nullptr};

@@ -4,6 +4,7 @@
 #include "handler-os/Looper.h"
 #include "handler-os/HandlerOS.h"
 #include "handler-os/Message.h"
+#include "handler-os/MessageQueue.h"
 
 #include "src/_common_pri.h"
 #include "src/Locker.h"
@@ -32,6 +33,10 @@ public:
         m_cb = Handler::makeCallback([](){
             printf("TestReceiver >> m_cb callback is called.\n");
         });
+        m_idHandler = std::make_shared<IdleHandler>([](){
+            printf("TestReceiver >> IdleHandler callback is run.\n");
+            return true;
+        });
     }
     void testSendDelayOnMain(){
         m_qtMain->sendEmptyMessageDelayed(1, 1000);
@@ -45,6 +50,15 @@ public:
         }, 1000);
     }
 
+    void testIdleTask(){
+        m_qtMain->getLooper()->getQueue()->addIdleHandler(m_idHandler);
+        m_qtMain->postDelayed([](){
+            printf("TestReceiver >> testIdleTask.\n");
+        }, 1000);
+    }
+
+//---------------------------
+
     bool handleMessage(Message* m) override{
         printf("main thread >> rec msg >> m.what = %d, m.when = %lld\n",
                m->what, m->getWhen());
@@ -55,12 +69,14 @@ public slots:
         printf("TestReceiver >> onClicked...\n");
         //m_os.getHandler()->sendEmptyMessage(0);
         //testSendDelayOnMain();
-        testRemoveMsgOnMain();
+        //testRemoveMsgOnMain();
+        testIdleTask();
     }
 
 private:
     HandlerOS m_os;
     std::shared_ptr<Handler> m_qtMain;
     Handler::Func_Callback m_cb;
+    std::shared_ptr<IdleHandler> m_idHandler;
 };
 #endif
