@@ -3,10 +3,16 @@
 #ifdef BUILD_WITH_QT
 #include <QApplication>
 #include <QObject>
+#include <memory>
 
 namespace h7_handler_os {
 
 typedef struct _QTApplication_ctx _QTApplication_ctx;
+
+class QTEventInterceptor{
+public:
+    virtual bool intercept(QObject *obj, QEvent *event) = 0;
+};
 
 class QTApplication: public QApplication
 {
@@ -21,7 +27,10 @@ public:
 
     void setIdleTimeThreshold(int msec);
 
-    h7_handler_os::_QTApplication_ctx* getAppCtx(){
+    void setEventInterceptor(std::shared_ptr<QTEventInterceptor> inter){
+        m_interceptor = inter;
+    }
+    _QTApplication_ctx* getAppCtx(){
         return m_ctx;
     }
 protected:
@@ -29,7 +38,8 @@ protected:
     //bool event(QEvent *) override;
 
 private:
-    h7_handler_os::_QTApplication_ctx* m_ctx{nullptr};
+    _QTApplication_ctx* m_ctx{nullptr};
+    std::shared_ptr<QTEventInterceptor> m_interceptor;
 };
 }
 #endif

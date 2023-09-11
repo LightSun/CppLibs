@@ -6,10 +6,8 @@
 
 using namespace h7_handler_os;
 
-//static QTApplication* _App = nullptr;
 
 QTApplication::QTApplication(int& argc, char** argv):QApplication(argc, argv){
-   // _App = this;
     m_ctx = new _QTApplication_ctx();
     handler_os_prepare_qtLooper();
     handler_qt_post_func([](){
@@ -49,11 +47,16 @@ bool QTApplication::notify(QObject *obj, QEvent *event){
         if(m_ctx->hasEventThenRemove(event)){
             ret = QApplication::notify(obj, event);
         }else{
-            event->ignore();
+            event->accept();
             ret = true;
         }
         m_ctx->checkIdle();
+    }else if(event->type() == TYPE_HANDLER_OS_INTERNAL){
+        ret = QApplication::notify(obj, event);
     }else{
+        if(m_interceptor && m_interceptor->intercept(obj, event)){
+            return true;
+        }
         ret = QApplication::notify(obj, event);
     }
     return ret;
