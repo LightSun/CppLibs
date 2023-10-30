@@ -77,6 +77,7 @@ public:
 #ifdef BUILD_WITH_QT
     MessageQueue(_QTApplication_ctx* ctx);
 #endif
+    ~MessageQueue(){}
 
     bool isIdle();
 
