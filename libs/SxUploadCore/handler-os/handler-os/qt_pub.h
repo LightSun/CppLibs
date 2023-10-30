@@ -8,6 +8,7 @@ namespace h7_handler_os{
 
 class _IdleExecutor{
 public:
+    virtual ~_IdleExecutor(){}
     virtual void runIdleTasks() = 0;
 };
 

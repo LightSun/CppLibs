@@ -21,6 +21,7 @@ class Object;
 
 class IdleHandlerI{
 public:
+    virtual ~IdleHandlerI(){};
     virtual bool queueIdle() = 0;
 };
 
