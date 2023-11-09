@@ -58,11 +58,13 @@ namespace h7 {
 
         static int getFileLineCount(CString file);
         static void mkdir(CString path);
+        static void mkdirs(CString path);
 
         static unsigned int hash(CString file);
         static std::string sha256(CString file, uint64* out_len = NULL);
         static std::string getFileContent(CString file);
         static std::string getFileContent(CString file, uint64 offset, uint64 size);
+        static uint64 getFileSize(CString file);
     };
 }
 

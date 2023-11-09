@@ -114,6 +114,7 @@ set(SRC_TEST
     test/test_XBacktrace.cpp
     test/test_ConfigUtils.cpp
     test/test_Platforms.cpp
+    test/test_spilit_files.cpp
     test/main.cpp
     )
 

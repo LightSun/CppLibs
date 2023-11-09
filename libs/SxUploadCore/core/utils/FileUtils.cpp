@@ -37,6 +37,7 @@
 #include "utils/hash.h"
 #include "openssl/sha.h"
 #include "utils/FileIO.h"
+#include "_MkdirUtils.h"
 
 //windows: https://blog.csdn.net/siyacaodeai/article/details/112732678
 //linux: https://www.jianshu.com/p/7f79d496b0e2
@@ -190,6 +191,10 @@ void FileUtils::mkdir(CString path){
 #endif // !_WIN32
 }
 
+void FileUtils::mkdirs(CString path){
+    h7::createDirectory(path);
+}
+
 //ifstream
 std::string FileUtils::getFileContent(CString file){
     FileInput fin(file);
@@ -212,6 +217,12 @@ std::string FileUtils::getFileContent(CString file, uint64 offset, uint64 size){
     fin.read(buf.data(), buf.size());
     fin.close();
     return std::string(buf.data(), buf.size());
+}
+
+uint64 FileUtils::getFileSize(CString file){
+    FileInput fin(file);
+    MED_ASSERT_X(fin.is_open(), "open file failed: " + file);
+    return fin.getLength();
 }
 
 unsigned int FileUtils::hash(CString file){
