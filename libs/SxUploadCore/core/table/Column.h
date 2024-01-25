@@ -1,10 +1,10 @@
-#ifndef COLUMN_H
-#define COLUMN_H
+#pragma once
 
 #include <string>
 #include <vector>
 #include <initializer_list>
 #include <set>
+#include <unordered_map>
 #include <unordered_set>
 #include <limits.h>
 #include <sstream>
@@ -61,8 +61,18 @@ public:
         }
     }
     IColumn(IColumn<T>&& c): list(c.list){
+    }
 
-    };
+    template<typename... _Args>
+    static sk_sp<h7::IColumn<T>> New(_Args&&... __args){
+        return sk_make_sp<h7::IColumn<T>>(std::forward<_Args>(__args)...);
+    }
+
+    template<typename... _Args>
+    static sk_sp<h7::IColumn<T>> NewFromVec(_Args&&... __args){
+        std::vector<T> vec = {std::forward<_Args>(__args)...};
+        return sk_make_sp<h7::IColumn<T>>(vec);
+    }
 
     inline std::string getString(int index, const std::string& defVal) const{
         return toStringImpl<T>(list[index], defVal);
@@ -81,6 +91,13 @@ public:
         return list[index];
     }
 
+    inline T get2(int index, const T& def){
+        if(index >=0 && index < (int)list.size()){
+            return list[index];
+        }
+        return def;
+    }
+
     inline T const_get(int index)const{
         MED_ASSERT(index < (int)list.size());
         return list[index];
@@ -96,6 +113,15 @@ public:
     }
     inline void clear(){
         list.clear();
+    }
+    //[start_idx,end_idx)
+    bool removeRange(int start_idx, int end_idx){
+        if(end_idx <= start_idx){
+            return false;
+        }
+        //1, 3 -> 1 , 2
+        list.erase(list.begin() + start_idx, list.begin() + end_idx);
+        return true;
     }
     inline void remove(const T& t, bool once = true){
         size_t size = list.size();
@@ -136,6 +162,9 @@ public:
     }
     inline void addAll(const IColumn<T>& oth){
         list.insert(list.end(), oth.list.begin(), oth.list.end());
+    }
+    inline void addAll(const std::vector<T>& oth){
+        list.insert(list.end(), oth.begin(), oth.end());
     }
     inline void setAll(std::initializer_list<T> oth){
         list.clear();
@@ -213,11 +242,23 @@ public:
     inline void prepareSize(int size){
         list.reserve(size);
     }
+    inline void prepareDiffSize(int size){
+        list.reserve(list.size() + size);
+    }
     inline void swap(int id1, int id2){
 //        T t = list[id1];
 //        list[id1] = list[id2];
 //        list[id2] = t;
         std::iter_swap(list.begin()+id1, list.begin()+id2);
+    }
+    sk_sp<IColumn<char>> asChar(char defVal){
+        sk_sp<IColumn<char>> sp = sk_make_sp<IColumn<char>>();
+        int size = list.size();
+        sp->prepareSize(size);
+        for (int i = 0; i < size; i++) {
+           sp->add((char)getInt(i, defVal));
+        }
+        return sp;
     }
     sk_sp<IColumn<int>> asInt(int defVal){
         sk_sp<IColumn<int>> sp = sk_make_sp<IColumn<int>>();
@@ -262,11 +303,17 @@ public:
         }
         return t;
     }
-
-    inline IColumn<T>& sort(std::function<int(T&,T&)> func){
-        std::sort<T>(list.begin(), list.end(), [func](T& t1, T& t2){
+    inline void sort(){
+        std::sort(list.begin(), list.end());
+    }
+    inline void sort(std::function<int(T&,T&)> func){
+        std::sort(list.begin(), list.end(),
+                     [func](T& t1,T& t2){
              return func(t1, t2) < 0;
         });
+    }
+    void reverseList(){
+        std::reverse(list.begin(), list.end());
     }
 
     sk_sp<IColumn<T>> copy(){
@@ -283,11 +330,23 @@ public:
     //start: include,  end: exclude
     sk_sp<IColumn<T>> sub(int start, int end){
         MED_ASSERT(start >=0 && start < size());
-        MED_ASSERT(end > start && end <= size());
+        end = HMIN(size(), end);
+        if(end <= start){
+            return sk_sp<IColumn<T>>();
+        }
         sk_sp<IColumn<T>> sp = sk_make_sp<IColumn<T>>();
         sp->prepareSize(end - start);
         sp->list.insert(sp->list.end(), list.begin() + start, list.begin() + end);
         return sp;
+    }
+    sk_sp<IColumn<sk_sp<IColumn<T>>>> splitByCount(int c){
+        auto ret = sk_make_sp<IColumn<sk_sp<IColumn<T>>>>();
+        int s = size();
+        int start_i = 0;
+        for( ; start_i < s; start_i += c){
+            ret->add(sub(start_i, start_i + c));
+        }
+        return ret;
     }
     inline int hashCode(int index){
         MED_ASSERT(index >=0 && index < size());
@@ -390,6 +449,21 @@ public:
         }
     }
     //-----------------------
+    void filterSelf(std::function<bool(T&,int)> func){
+        int size = list.size();
+        ListI idxes;
+        idxes.prepareSize(size);
+        for (int i = 0; i < size; ++i) {
+            auto& t = get(i);
+            if(func(t, i)){
+                idxes.add(i);
+            }
+        }
+        size = idxes.size();
+        for(int i = size - 1 ; i >= 0 ; --i){
+            removeAt0(i);
+        }
+    }
     sk_sp<IColumn<T>> filter(std::function<bool(T&,int)> func){
         sk_sp<IColumn<T>> ret = sk_make_sp<IColumn<T>>();
         int size = list.size();
@@ -397,6 +471,20 @@ public:
             auto& t = get(i);
             if(func(t, i)){
                 ret->add(t);
+            }
+        }
+        return ret;
+    }
+    sk_sp<IColumn<T>> filter2(std::function<bool(T&,int)> func,
+                              IColumn<T>* left){
+        sk_sp<IColumn<T>> ret = sk_make_sp<IColumn<T>>();
+        int size = list.size();
+        for (int i = 0; i < size; ++i) {
+            auto& t = get(i);
+            if(func(t, i)){
+                ret->add(t);
+            }else if(left){
+                left->add(t);
             }
         }
         return ret;
@@ -486,6 +574,9 @@ public:
         }
         return sum;
     }
+    void replace(int index, const T& val){
+        set0(index, val);
+    }
     sk_sp<IColumn<T>> shuffle(){
         std::mt19937 g(0); // seed
         std::shuffle(list.begin(), list.end(), g);
@@ -510,6 +601,24 @@ public:
     }
     inline sk_sp<IColumn<sk_sp<IColumn<T>>>> groupByCount(int count){
         return groupByEveryCount(size() / count + (size() % count != 0 ? 1 : 0));
+    }
+    std::unordered_map<String, sk_sp<IColumn<T>>> group(
+            std::function<String(T&, int)> func){
+        std::unordered_map<String, sk_sp<IColumn<T>>> _ret;
+        int _size = size();
+        for(int i = 0; i < _size ; ++i){
+            auto& t = list[i];
+            String g = func(t, i);
+            auto it = _ret.find(g);
+            if(it != _ret.end()){
+                it->second->add(t);
+            }else{
+                auto list = sk_make_sp<IColumn<T>>(8);
+                list->add(t);
+                _ret[g] = list;
+            }
+        }
+        return _ret;
     }
 
     //------------------------
@@ -648,5 +757,3 @@ inline bool operator<(const h7::IColumn<T> &a, const h7::IColumn<T> &b) {
     return true;
 }
 
-
-#endif

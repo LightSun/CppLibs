@@ -24,7 +24,10 @@ else()
     message(STATUS "Configuring on/for ${CMAKE_SYSTEM_NAME}")
 endif()
 
+include_directories(core/)
+include_directories(./)
 
 ## sub dirs
 add_subdirectory(core/)
 add_subdirectory(handler-os/)
+add_subdirectory(table/)

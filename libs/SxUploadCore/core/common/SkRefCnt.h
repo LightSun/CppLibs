@@ -5,8 +5,7 @@
  * found in the LICENSE file.
  */
 
-#ifndef SkRefCnt_DEFINED
-#define SkRefCnt_DEFINED
+#pragma once
 
 #include <atomic>
 #include <cstddef>
@@ -478,5 +477,3 @@ template<typename T>
 sk_sp<T> sk_ref_sp(const T *obj) {
     return sk_sp<T>(const_cast<T *>(SkSafeRef(obj)));
 }
-
-#endif

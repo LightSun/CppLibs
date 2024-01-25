@@ -75,6 +75,7 @@ ENDIF(BUILD_ON_WIN)
 ## dep libs
 SET(DEP_LIBS ${DEP_RSA_LIBS}
     ${HV_LIB}
+    pcre
     )
 IF(BUILD_ON_WIN OR BUILD_MINGW64)
     set(DEP_LIBS ${DEP_LIBS}
@@ -103,7 +104,7 @@ add_compile_definitions(USE_C11_ATOMICS)
 file(GLOB_RECURSE SRC_CORE
     common/*.h common/*.hpp common/*.cpp common/*.c
     table/*.h table/*.hpp table/*.cpp table/*.c
-    utils/*.h utils/*.hpp utils/*.cpp utils/*.c
+    utils/*.h utils/*.hpp utils/*.cpp utils/*.c utils/*.inc
     )
 set(SRC_TEST
     test/test_asyncs.cpp

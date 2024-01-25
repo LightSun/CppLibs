@@ -1,5 +1,5 @@
-#ifndef FILEUTILS_H
-#define FILEUTILS_H
+#ifndef FILEUTILS_HH
+#define FILEUTILS_HH
 
 #include <stdio.h>
 #include <cstdio>
@@ -68,4 +68,4 @@ namespace h7 {
     };
 }
 
-#endif // FILEUTILS_H
+#endif // FILEUTILS_HH

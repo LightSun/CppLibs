@@ -1,5 +1,4 @@
-#ifndef CONVERT_HPP
-#define CONVERT_HPP
+#pragma once
 
 #include <limits.h>
 #include <string>
@@ -154,5 +153,3 @@ inline std::string parseString(const std::string& str){
 #define toFloatImpl getFloatImpl
 #define toHashImpl hashImpl
 }
-
-#endif // CONVERT_HPP

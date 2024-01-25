@@ -1,11 +1,26 @@
-#ifndef NUMBERS_HPP
-#define NUMBERS_HPP
+#pragma once
 
 #include <memory.h>
-#include <limits>
 #include <inttypes.h>
+#include <limits>
+#include <cmath>
+#include <iostream>
+#include <type_traits>
 
 namespace h7 {
+
+// Test whether two float or double numbers are equal.
+// ulp: units in the last place.
+template <typename T>
+typename std::enable_if<!std::numeric_limits<T>::is_integer, bool>::type
+IsAlmostEqual(T x, T y, int ulp = 2)
+{
+    // the machine epsilon has to be scaled to the magnitude of the values used
+    // and multiplied by the desired precision in ULPs (units in the last place)
+    return std::fabs(x - y) < std::numeric_limits<T>::epsilon() * std::fabs(x + y) * ulp
+           // unless the result is subnormal
+           || std::fabs(x - y) < std::numeric_limits<T>::min();
+}
 
 inline void int_reverse_to(int val, const void* _dst){
     char* dst = (char*)_dst;
@@ -91,4 +106,3 @@ inline int32_t unsignedShift(int32_t num, int32_t shift) {
 
 }
 
-#endif // NUMBERS_HPP

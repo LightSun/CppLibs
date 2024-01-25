@@ -6,11 +6,90 @@
 #include <algorithm>
 #include <iostream>
 #include "common/common.h"
-//#include "utils/Regex.h"
+#include "utils/Regex.h"
 //#include "include/ctre.hpp"
 
 namespace h7 {
 namespace utils{
+
+static inline String formatFloat(float v, CString fmt){
+    char buf[64];
+    snprintf(buf, 64, fmt.data(), v);
+    return String(buf);
+}
+
+static inline float getFloat(CString str, float def = 0){
+    if(str.empty() || str == "-"){
+        return def;
+    }
+    try{
+           return std::stof(str);
+       }catch (std::invalid_argument&){
+           //LOGW("sxv4 _getFLoat >> Invalid_argument('%s').\n",str.data());
+       }catch (std::out_of_range&){
+           //LOGW("sxv4 _getFLoat >> Out of range('%s').\n",str.data());
+       }catch (...) {
+           //LOGW("sxv4 _getFLoat >> Something else('%s').\n",str.data());
+       }
+    return def;
+}
+
+static inline int getInt(CString str, int def = 0, bool log = false){
+    if(str.empty() || str == "-"){
+        return def;
+    }
+    try{
+           return std::stoi(str);
+       }catch (std::invalid_argument&){
+        if(log){
+            LOGW("sxv4 getInt >> Invalid_argument('%s').\n",str.data());
+        }
+       }catch (std::out_of_range&){
+        if(log)
+             LOGW("sxv4 getInt >> out_of_range('%s').\n",str.data());
+       }catch (...) {
+        if(log)
+            LOGW("sxv4 getInt >> wrong('%s').\n",str.data());
+       }
+    return def;
+}
+static inline unsigned int getUInt(CString str, unsigned int def = 0){
+    if(str.empty() || str == "-"){
+        return def;
+    }
+    try{
+           return std::stoul(str);
+       }catch (std::invalid_argument&){
+       }catch (std::out_of_range&){
+       }catch (...) {
+       }
+    return def;
+}
+static inline long long getLong(CString str, long long def = 0){
+    if(str.empty() || str == "-"){
+        return def;
+    }
+    try{
+           return std::stoll(str);
+       }catch (std::invalid_argument&){
+       }catch (std::out_of_range&){
+       }catch (...) {
+       }
+    return def;
+}
+
+static inline long long getULong(CString str, long long def = 0){
+    if(str.empty() || str == "-"){
+        return def;
+    }
+    try{
+           return std::stoull(str);
+       }catch (std::invalid_argument&){
+       }catch (std::out_of_range&){
+       }catch (...) {
+       }
+    return def;
+}
 
 inline String newLineStr(){
 #if defined(_WIN32) || defined(WIN32)
@@ -59,19 +138,6 @@ inline String replace(CString pat, CString replace, CString text){
     return std::regex_replace(text.c_str(), reg, replace.c_str());
 }
 
-inline String replace2(CString old,CString new1, CString text){
-    String ret = text;
-    int index;
-    while (true) {
-        index = ret.find(old);
-        if(index < 0){
-            break;
-        }
-        ret = ret.replace(index, old.length(), new1);
-    }
-    return ret;
-}
-
 inline bool matchAll(CString pat, std::vector<String>& vec){
     std::regex reg(pat.c_str());
     int size = vec.size();
@@ -117,6 +183,25 @@ inline std::string& trim(std::string &s) {
     s.erase(s.find_last_not_of(" ") + 1);
     return s;
 }
+inline std::string& removeNewLine(std::string &s) {
+    if (s.empty()) {
+        return s;
+    }
+    int pos;
+    while (true) {
+        pos = s.find("\n");
+        if(pos >= 0){
+            if(pos > 0 && s.data()[pos - 1] =='\r'){
+                s = s.replace(pos - 1, 2, "");
+            }else{
+                s = s.replace(pos, 1, "");
+            }
+        }else{
+            break;
+        }
+    }
+    return s;
+}
 inline std::string& trimTailZero(std::string &s) {
     if (s.empty() || s == "0") {
         return s;
@@ -148,6 +233,54 @@ inline std::vector<char> string2vec(const std::string& str){
     vec.resize(str.length());
     memcpy(vec.data(), str.data(), str.length());
     return vec;
+}
+
+inline void toUpper(std::vector<String>& vec){
+    int size = vec.size() ;
+    for(int i = 0 ; i < size ; ++i){
+        String& str = vec[i];
+        std::transform(str.begin(),str.end(),str.begin(),::toupper);
+    }
+}
+
+inline void toLower(std::vector<String>& vec){
+    int size = vec.size() ;
+    for(int i = 0 ; i < size ; ++i){
+        String& str = vec[i];
+        std::transform(str.begin(),str.end(),str.begin(),::tolower);
+    }
+}
+
+inline String preprocessSpecialChars(CString s){
+    //for linux cmd: we need process the special chars
+    //output-ds\ \(5\)~\!@#\$%\^\&\*_+\=-.vcf.gz
+    std::vector<char> src_strs = {' ','(',')','!','$','^','&','*','=',
+                                  ',' ,'\'',';'
+                                 };
+    std::vector<String> dst_strs = {"\\ ","\\(","\\)","\\!","\\$","\\^","\\&","\\*","\\=",
+                                    "\\,", "\\'", "\\;"
+                                 };
+    MED_ASSERT(src_strs.size() == dst_strs.size());
+    String ret;
+    ret.reserve(256);
+    int ssize = src_strs.size();
+    int size = s.length();
+    char* data = (char*)&s[0];
+    for(int i = 0 ; i < size ; ++i){
+        auto& c = data[i];
+        bool handled = false;
+        for(int j = 0 ; j < ssize; ++j){
+            if(c == src_strs[j]){
+                handled = true;
+                ret += dst_strs[j];
+                break;
+            }
+        }
+        if(!handled){
+            ret += String(1, c);
+        }
+    }
+    return ret;
 }
 
 }
