@@ -1,5 +1,4 @@
-#ifndef H7_PAIR_H
-#define H7_PAIR_H
+#pragma once
 
 namespace h7 {
 template<typename K, typename V>
@@ -33,5 +32,3 @@ template<typename K, typename V>
         return Pair<K,V>(key, value);
     }
 }
-
-#endif // PAIR_H
