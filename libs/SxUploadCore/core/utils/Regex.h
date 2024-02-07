@@ -1,5 +1,4 @@
-#ifndef HREGEX_H
-#define HREGEX_H
+#pragma once
 
 #include "table/Column.h"
 
@@ -52,6 +51,3 @@ namespace h7 {
         return ret;
     }
 }
-
-
-#endif // HREGEX_H

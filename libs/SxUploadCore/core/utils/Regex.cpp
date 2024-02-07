@@ -16,6 +16,7 @@ Regex::Regex(CString pat){
 Regex::~Regex(){
     if(m_pcre_pat){
         pcre_free(m_pcre_pat);
+        m_pcre_pat = nullptr;
     }
 }
 

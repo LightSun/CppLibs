@@ -74,6 +74,13 @@ public:
         return sk_make_sp<h7::IColumn<T>>(vec);
     }
 
+    auto begin(){
+        return list.begin();
+    }
+    auto end(){
+        return list.end();
+    }
+
     inline std::string getString(int index, const std::string& defVal) const{
         return toStringImpl<T>(list[index], defVal);
     }
@@ -672,6 +679,16 @@ inline String toStringImpl(const sk_sp<IColumn<double>>& l, CString){
 template <>
 inline String toStringImpl(const sk_sp<IColumn<char>>& l, CString){
     return l->toStringFullly();
+}
+
+static inline sk_sp<GroupS> GroupS_copy(GroupS& src){
+    auto ins = sk_make_sp<GroupS>();
+    int size = src.size();
+    ins->resize(size);
+    for(int i = 0 ; i < size ; ++i){
+        ins->set0(i, src.get(i)->copy());
+    }
+    return ins;
 }
 }
 

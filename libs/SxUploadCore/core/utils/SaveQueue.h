@@ -11,6 +11,7 @@ template<typename T>
 class SaveQueue
 {
 public:
+    //2 ^ n
   SaveQueue(size_t buffer_size)
     : buffer_(new cell_t [buffer_size])
     , buffer_mask_(buffer_size - 1)

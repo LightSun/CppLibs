@@ -3,7 +3,6 @@
 
 #include <vector>
 #include "table/Column.h"
-#include "common/Function.h"
 
 namespace h7 {
 
@@ -24,7 +23,6 @@ public:
     }
 
     bool readLine(String& out);
-    void readLines(sk_sp<h7::function<void(int, CString)>> func);
     void readLines(std::function<void(int,CString)> func);
     void readLines(std::vector<String>& vec);
 
@@ -77,8 +75,8 @@ public:
         return false;
     }
     String readString(int count);
-
     int readCount(int count, char* outArr, int arrLen);
+
     inline void skip(int count){
         m_curPos += count;
     }

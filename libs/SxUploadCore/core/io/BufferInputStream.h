@@ -4,8 +4,6 @@
 #include <stdlib.h>
 #include <functional>
 #include "common/common.h"
-#include "common/Function.h"
-
 
 namespace h7 {
 
@@ -24,13 +22,6 @@ public:
     void close();
     bool readLine(String& out);
 
-    inline void readLines(sk_sp<h7::function<void(int, CString)>> func){
-        String str;
-        int index = 0;
-        while (readLine(str)) {
-            (*func)(index++, str);
-        }
-    }
     inline void readLines(std::function<void(int,CString)> func){
         String str;
         int index = 0;

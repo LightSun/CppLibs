@@ -21,23 +21,6 @@ bool InputStream::open(CString file){
     return true;
 }
 
-void InputStream::readLines(sk_sp<h7::function<void(int, CString)>> func){
-    const char* data = m_data->list.data();
-    const int len = m_data->size();
-    int start_pos = m_curPos;
-    int cur_pos = start_pos;
-    int lineIndex = 0;
-    for( ; cur_pos < len; ){
-        if(data[cur_pos++] == '\n'){
-            String str(data + start_pos, cur_pos - 1 - start_pos);
-            utils::trimLastR(str);
-            (*func)(lineIndex++, str);
-            start_pos = cur_pos;
-        }
-    }
-    m_curPos = len;
-}
-
 void InputStream::readLines(std::function<void(int,CString)> func){
     const char* data = m_data->list.data();
     const int len = m_data->size();

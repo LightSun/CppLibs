@@ -2,7 +2,6 @@
 #include <thread>
 //#include <omp.h>
 #include "Table.h"
-#include "Table_pri.h"
 #include "table/SetColumn.h"
 #include "utils/collection_utils.h"
 #include "utils/string_utils.hpp"
@@ -12,7 +11,6 @@
 
 #define __BLOCK_MAX_COUNT 100000
 #define INVALID_INT INT_MIN
-
 
 namespace h7 {
 sk_sp<Table> Table::copy(){
@@ -295,10 +293,6 @@ void Table::filterRowSelfByColumnIndexes(sk_sp<ListI> columns,
     }
     removeByFlags(&rm_idxes);
 }
-void Table::filterRowSelfByColumnIndexes_memPerf(sk_sp<ListI> columns,
-                                         std::function<bool(ListS*)> func){
-     filterRowSelfByColumnIndexes(columns, func);
-}
 void Table::filterRowSelf(ListS* columns, std::function<bool(ListS*)> func){
     sk_sp<ListI> cols = sk_make_sp<ListI>();
     requireIndexes(columns, *cols);
@@ -310,11 +304,13 @@ void Table::filterRowSelf_OMP(ListS* columns, std::function<bool(ListS*)> func){
     requireIndexes(columns, *cols);
     filterRowSelfByColumnIndexes_OMP(cols, func);
 }
-
-void Table::filterRowSelf_memPerf(ListS* columns, std::function<bool(ListS*)> func){
-    sk_sp<ListI> cols = sk_make_sp<ListI>();
-    requireIndexes(columns, *cols);
-    filterRowSelfByColumnIndexes_memPerf(cols, func);
+void Table::filterRowSelf(sk_sp<ListS> columns,
+                   std::function<bool(ListS*)> func){
+    return filterRowSelf(columns.get(), func);
+}
+void Table::filterRowSelf_OMP(sk_sp<ListS> columns,
+                   std::function<bool(ListS*)> func){
+    return filterRowSelf_OMP(columns.get(), func);
 }
 
 bool Table::sort(CString name, bool desc){
@@ -352,211 +348,6 @@ bool Table::sortFunc(CString name, std::function<int(String&,String&)> func){
     return true;
 }
 
-void Table::sortRows(LSortItems items){
-    MED_ASSERT(items.size() == 2); //only support two column
-    //add cols for sort.
-    {
-        for(size_t i = 0 ; i < items.size() ; i++){
-            auto& item = items[i];
-            item._index = getColumnIndex(item.name);
-            MED_ASSERT_X(item._index >= 0, "can't find column " + item.name);
-        }
-    }
-    IColumn<Tab_Group> groups;
-    {
-        auto& items1 = items[0];
-        auto func_group = [&items1](sk_sp<ListS> l,String& key){
-            key = l->get(items1._index);
-            if(items1.group){
-                key = items1.group(key);
-            }
-        };
-        //
-        int rc = getRowCount();
-        std::map<String, sk_sp<GroupS>> _map;
-
-        String key;
-        for(int i = 0 ; i < rc ; ++i ){
-           auto sp = getRow(i);
-           func_group(sp, key);
-           auto it = _map.find(key);
-           if(it != _map.end()){
-               it->second->add(sp);
-           }else{
-               auto val = sk_make_sp<GroupS>();
-               val->prepareSize(32);
-               val->add(sp);
-               _map[key] = val;
-               groups.add_cons(key, val);
-           }
-        }
-    }
-    int gc = groups.size();
-    using SPLS = sk_sp<ListS>;
-    //sort every sub rows.
-    {
-    auto& item2 = items[1];
-    switch (item2.type) {
-    case kSortType_STRING:{
-        if(item2.cvtStr){
-            #pragma omp parallel for
-            for(int i = 0 ; i < gc ; ++i){
-                auto& g = groups[i];
-                std::sort(g.data->list.begin(), g.data->list.end(),
-                          [&item2](SPLS& l1, SPLS& l2){
-                    auto& s1 = l1->get(item2._index);
-                    auto& s2 = l2->get(item2._index);
-                    //std sort can't use ">= or <="
-                    String s11 = item2.cvtStr(s1);
-                    String s22 = item2.cvtStr(s2);
-                    return item2.aesc ? s11 < s22 : s11 > s22;
-                });
-            }
-        }else{
-            #pragma omp parallel for
-            for(int i = 0 ; i < gc ; ++i){
-                auto& g = groups[i];
-                std::sort(g.data->list.begin(), g.data->list.end(),
-                          [&item2](SPLS& l1, SPLS& l2){
-                    auto& s1 = l1->get(item2._index);
-                    auto& s2 = l2->get(item2._index);
-                    //std sort can't use ">= or <="
-                    return item2.aesc ? s1 < s2 : s1 > s2;
-                });
-            }
-        }
-    }break;
-
-    case kSortType_UINT:{
-        if(item2.cvtUint){
-            #pragma omp parallel for
-            for(int i = 0 ; i < gc ; ++i){
-                auto& g = groups[i];
-                std::sort(g.data->list.begin(), g.data->list.end(),
-                          [&item2](SPLS& l1, SPLS& l2){
-                    auto& s1 = l1->get(item2._index);
-                    auto& s2 = l2->get(item2._index);
-                    uint32 val1, val2;
-                    val1 = item2.cvtUint(s1);
-                    val2 = item2.cvtUint(s2);
-                    return item2.aesc ? val1 < val2 : val1 > val2;
-                });
-            }
-        }else{
-            #pragma omp parallel for
-            for(int i = 0 ; i < gc ; ++i){
-                auto& g = groups[i];
-                std::sort(g.data->list.begin(), g.data->list.end(),
-                          [&item2](SPLS& l1, SPLS& l2){
-                    auto& s1 = l1->get(item2._index);
-                    auto& s2 = l2->get(item2._index);
-                    uint32 val1, val2;
-                    val1 = (uint32)h7::utils::getLong(s1, 0);
-                    val2 = (uint32)h7::utils::getLong(s2, 0);
-                    return item2.aesc ? val1 < val2 : val1 > val2;
-                });
-            }
-        }
-    }break;
-
-    case kSortType_FLOAT:{
-        if(item2.cvtF){
-            #pragma omp parallel for
-            for(int i = 0 ; i < gc ; ++i){
-                auto& g = groups[i];
-                std::sort(g.data->list.begin(), g.data->list.end(),
-                          [&item2](SPLS l1, SPLS l2){
-                    auto& s1 = l1->get(item2._index);
-                    auto& s2 = l2->get(item2._index);
-                    float val1, val2;
-                    val1 = item2.cvtF(s1);
-                    val2 = item2.cvtF(s2);
-                    return item2.aesc ? val1 < val2 : val1 > val2;
-                });
-            }
-        }else{
-            #pragma omp parallel for
-            for(int i = 0 ; i < gc ; ++i){
-                auto& g = groups[i];
-                std::sort(g.data->list.begin(), g.data->list.end(),
-                          [&item2](SPLS l1, SPLS l2){
-                    auto& s1 = l1->get(item2._index);
-                    auto& s2 = l2->get(item2._index);
-                    float val1, val2;
-                    val1 = h7::utils::getFloat(s1, 0);
-                    val2 = h7::utils::getFloat(s2, 0);
-                    return item2.aesc ? val1 < val2 : val1 > val2;
-                });
-            }
-        }
-    }break;
-
-    default:
-        MED_ASSERT_X(false, "unknown sort type.");
-    }
-    }
-    //sort outter.
-    auto& items1 = items[0];
-    switch (items1.type) {
-    case kSortType_STRING:{
-        std::sort(groups.list.begin(), groups.list.end(),
-                  [&items1](Tab_Group& g1, Tab_Group& g2){
-            auto& s1 = g1.name;
-            auto& s2 = g2.name;
-            if(items1.cvtStr){
-                String s11 = items1.cvtStr(s1);
-                String s22 = items1.cvtStr(s2);
-                return items1.aesc ? s11 < s22 : s11 > s22;
-            }else{
-                return items1.aesc ? s1 < s2 : s1 > s2;
-            }
-        });
-    }break;
-
-    case kSortType_UINT:{
-        std::sort(groups.list.begin(), groups.list.end(),
-                  [&items1](Tab_Group& g1, Tab_Group& g2){
-            auto& s1 = g1.name;
-            auto& s2 = g2.name;
-            uint32 val1, val2;
-            if(items1.cvtUint){
-                val1 = items1.cvtUint(s1);
-                val2 = items1.cvtUint(s2);
-            }else{
-                val1 = (uint32)h7::utils::getLong(s1, 0);
-                val2 = (uint32)h7::utils::getLong(s2, 0);
-            }
-            return items1.aesc ? val1 < val2 : val1 > val2;
-        });
-    }break;
-
-    case kSortType_FLOAT:{
-        std::sort(groups.list.begin(), groups.list.end(),
-                  [&items1](Tab_Group& g1, Tab_Group& g2){
-            auto& s1 = g1.name;
-            auto& s2 = g2.name;
-            float val1, val2;
-            if(items1.cvtF){
-                val1 = items1.cvtF(s1);
-                val2 = items1.cvtF(s2);
-            }else{
-                val1 = h7::utils::getFloat(s1, 0);
-                val2 = h7::utils::getFloat(s2, 0);
-            }
-            return items1.aesc ? val1 < val2 : val1 > val2;
-        });
-    }break;
-
-    default:
-        MED_ASSERT_X(false, "unknown sort type.");
-    }
-    //build result
-    GroupS newRows;
-    for(int i = 0 ; i < gc ; ++i){
-        newRows.addAll(groups[i].data);
-    }
-    m_delegate->setRows(newRows);
-}
 void Table::swapColumn(CString name1, CString name2){
     int id1 = requireColumn(name1);
     int id2 = requireColumn(name2);
@@ -798,6 +589,29 @@ void Table::visitRows2OMP(ListI* indexes, std::function<void(ListS&, int)> visit
     }
     return;
 }
+void Table::visitRows2OMP(ListS* columnNames, std::function<void(ListS&, int)> visitor,
+                          ListI* rowIdxes){
+    ListI idxes;
+    requireIndexes(columnNames, idxes);
+    visitRows2OMP(&idxes, visitor, rowIdxes);
+}
+void Table::visitRows2(sk_sp<ListS> columnNames,
+                       std::function<void(ListS&, int)> visitor){
+    return visitRows2(columnNames.get(), visitor);
+}
+void Table::visitRows2(sk_sp<ListI> colIdxes, std::function<void(ListS&, int)> visitor){
+    return visitRows2(colIdxes.get(), visitor);
+}
+void Table::visitRows2OMP(sk_sp<ListI> colIdxes, std::function<void(ListS&, int)> visitor,
+                          ListI* rowIdxes){
+    return visitRows2OMP(colIdxes.get(), visitor, rowIdxes);
+}
+void Table::visitRows2OMP(sk_sp<ListS> columnNames,
+                       std::function<void(ListS&, int)> visitor,
+                          ListI* rowIdxes){
+    return visitRows2OMP(columnNames.get(), visitor, rowIdxes);
+}
+
 void Table::visitRows2(ListI* indexes, std::function<void(ListS&, int)> visitor){
     ListS list_temp;
     //
@@ -861,6 +675,15 @@ sk_sp<Table> Table::remapTable(ListS* outNames, bool copy){
     return sp;
 }
 
+sk_sp<Table> Table::remapTable(sk_sp<ListS> pNames, sk_sp<ListS> outNames,
+                        std::function<bool(ListS&, int)> visitor){
+    return remapTable(pNames.get(), outNames.get(), visitor);
+}
+sk_sp<Table> Table::remapTable(sk_sp<ListS> pNames, bool copy){
+    return remapTable(pNames.get(), copy);
+}
+
+
 sk_sp<Table> Table::getTableByNonColumnName(SetColumn<String>* unNames, bool copy){
     sk_sp<ListS> sp_head = m_headLine->copy();
     int size = sp_head->size();
@@ -921,24 +744,10 @@ sk_sp<Table> Table::subTable(ListI* row_indexes, bool non_row_id){
     sp->setHeadLine(m_headLine->copy());
     return sp;
 }
-sk_sp<Table> Table::filterRaw(ListS* colNames,
-                              std::function<bool(ListS*)> visitor){
-    ListI in_idxes;
-    requireIndexes(colNames, in_idxes);
-    int rc = getRowCount();
-    sk_sp<Table> sp = sk_make_sp<Table>();
-    //
-    ListS list_tmp;
-    for (int i = 0; i < rc; ++i) {
-        m_delegate->get(i, &in_idxes, list_tmp);
-        if(visitor(&list_tmp)){
-            sp->addRowAsFullDirect(list_tmp.list);
-        }
-        list_tmp.clear();
-    }
-    sp->setHeadLine(m_headLine->copy());
-    return sp;
+sk_sp<Table> Table::subTable(sk_sp<ListI> row_indexes, bool non_row_id){
+    return subTable(row_indexes.get(), non_row_id);
 }
+
 sk_sp<Table> Table::filter(ListS* colNames, std::function<bool(ListS*)> visitor){
     ListI in_idxes;
     requireIndexes(colNames, in_idxes);
@@ -957,9 +766,11 @@ sk_sp<Table> Table::filter(ListS* colNames, std::function<bool(ListS*)> visitor)
                 colNames->copy() : m_headLine->copy());
     return sp;
 }
+sk_sp<Table> Table::filter(sk_sp<ListS> colNames, std::function<bool(ListS*)> visitor){
+    return filter(colNames.get(), visitor);
+}
 
 void Table::unique(){
-    int hash;
     SetColumn<int> set;
     const int rc = getRowCount();
     ListI list_r(rc);
@@ -967,7 +778,7 @@ void Table::unique(){
     GroupS rows;
     m_delegate->getRows(rows);
     for(int i = 0 ; i < rc ; ++i ){
-        hash = rows[i]->hashCode();
+        int hash = rows[i]->hashCode();
         if(set.contains(hash)){
            list_r.add(i);
         }else{
@@ -977,10 +788,7 @@ void Table::unique(){
     if(list_r.size() == 0){
         return;
     }
-    for(int i = list_r.size() - 1; i >=0 ; --i){
-        rows.removeAt0(list_r[i]);
-    }
-    m_delegate->setRows(rows);
+    removeByFlags(&list_r);
 }
 
 sk_sp<ListS> Table::concatColumns(CString seq, ListS* colNames){
@@ -993,6 +801,9 @@ sk_sp<ListS> Table::concatColumns(CString seq, ListS* colNames){
         sp->add(m_delegate->get(i, &in_idxes)->toString(seq));
     }
     return sp;
+}
+sk_sp<ListS> Table::concatColumns(CString seq, sk_sp<ListS> colNames){
+    return concatColumns(seq, colNames.get());
 }
 
 int Table::findFirstIndex(ListS* colNames, std::function<bool(int, ListS*)> func){
@@ -1007,6 +818,11 @@ int Table::findFirstIndex(ListS* colNames, std::function<bool(int, ListS*)> func
         }
     }
     return -1;
+}
+int Table::findFirstIndex(CString colName, std::function<bool(int, ListS*)> func){
+    ListS list;
+    list.add(colName);
+    return findFirstIndex(&list, func);
 }
 
 sk_sp<ListS> Table::findFirst(ListS* in_names, ListS* out_names,
@@ -1024,6 +840,10 @@ sk_sp<ListS> Table::findFirst(ListS* in_names, ListS* out_names,
         }
     }
     return nullptr;
+}
+sk_sp<ListS> Table::findFirst(sk_sp<ListS> in_names, sk_sp<ListS> out_names,
+                       std::function<bool(int, ListS*)> func){
+    return findFirst(in_names.get(), out_names.get(), func);
 }
 
 sk_sp<h7::GRanges> Table::newGranges(CString colName, std::function<void(int, String&,
@@ -1213,6 +1033,19 @@ sk_sp<Table> Table::rMatchResultTable(ListS* outNames, ListI* indexes, CString d
     return ret;
 }
 
+sk_sp<ListS> Table::rMatchResult(CString outName, sk_sp<ListI> indexes,
+                                 CString defVal){
+    return rMatchResult(outName, indexes.get(), defVal);
+}
+sk_sp<GroupS> Table::rMatchResult(ListS* outNames,sk_sp<ListI> indexes,
+                                 CString defVal){
+    return rMatchResult(outNames, indexes.get(), defVal);
+}
+sk_sp<Table> Table::rMatchResultTable(ListS* outNames, sk_sp<ListI> indexes,
+                               CString defVal){
+    return rMatchResultTable(outNames, indexes.get(), defVal);
+}
+
 sk_sp<ListS> Table::rMatch(CString colName, ListS* valueList, CString outColName){
     int col_idx = getColumnIndex(colName);
     if(col_idx < 0){
@@ -1254,6 +1087,15 @@ sk_sp<ListS> Table::rMatchReversed(CString colName, ListS* valueList, CString ou
     return rMatchResult(outColName, indexes.get(), "");
 }
 
+sk_sp<ListS> Table::rMatchReversed(CString colName, sk_sp<ListS> valueList,
+                                  CString outColName){
+    return rMatchReversed(colName, valueList.get(), outColName);
+}
+
+sk_sp<ListS> Table::rMatchReversed0(ListS* valueList){
+    return rMatchReversed(m_headLine->get(0), valueList, m_headLine->get(0));
+}
+
 sk_sp<Table> Table::rStrsplit_rbind(CString colName, CString sep){
     int col_idx = getColumnIndex(colName);
     if(col_idx < 0){
@@ -1285,6 +1127,32 @@ void Table::rCbindRow(ListS* colNames, TabContentDelegate* rowData){
     m_delegate->addContentByColumn(rowData);
     m_headLine->addAll(colNames);
 }
+void Table::rCbindRow(ListS* colNames, sk_sp<TabContentDelegate> rowData){
+    rCbindRow(colNames, rowData.get());
+}
+void Table::rCbindRow(ListS* colNames, Table* rowData){
+    rCbindRow(colNames, rowData->m_delegate.get());
+}
+void Table::rCbindRow(ListS* colNames, sk_sp<Table> rowData){
+    rCbindRow(colNames, rowData.get());
+}
+void Table::rRbindRow(TabContentDelegate* rowData){
+    MED_ASSERT(getColumnCount() == rowData->getColumnCount());
+    m_delegate->addContentByRow(rowData);
+}
+void Table::rRbindRow(sk_sp<TabContentDelegate> rowData){
+    MED_ASSERT(getColumnCount() == rowData->getColumnCount());
+    m_delegate->addContentByRow(rowData);
+}
+void Table::rRbindRow(Table* rowData){
+    MED_ASSERT(getColumnCount() == rowData->getColumnCount());
+    m_delegate->addContentByRow(rowData->m_delegate);
+}
+void Table::rRbindRow(sk_sp<Table> rowData){
+    MED_ASSERT(getColumnCount() == rowData->getColumnCount());
+    m_delegate->addContentByRow(rowData->m_delegate);
+}
+
 
 bool Table::rGreplAny(CString colName, std::regex& reg){
     int col_idx = getColumnIndex(colName);
@@ -1299,6 +1167,10 @@ bool Table::rGreplAny(CString colName, std::regex& reg){
         }
     }
     return false;
+}
+bool Table::rGreplAny(CString colName, CString pat){
+    std::regex reg(pat.c_str());
+    return rGreplAny(colName, reg);
 }
 
 bool Table::rWhichAny(ListS* colNames, std::function<bool(ListS&, int)> which){
@@ -1316,6 +1188,24 @@ bool Table::rWhichAny(ListS* colNames, std::function<bool(ListS&, int)> which){
     }
     return false;
 }
+bool Table::rWhichAny(sk_sp<ListS> colNames, std::function<bool(ListS&, int)> which){
+    return rWhichAny(colNames.get(), which);
+}
+sk_sp<ListI> Table::rWhich(ListS* colNames, std::function<bool(ListS&, int)> which){
+    return visitRows<int>(colNames, [which](ListS& strs, int _index){
+        return which(strs, _index) ? _index : -1;
+    }, [](int& val){
+        return val >= 0;
+    });
+}
+sk_sp<ListI> Table::rWhich(CString colName, std::function<bool(ListS&, int)> which){
+    ListS list;
+    list.add(colName);
+    return rWhich(&list, which);
+}
+sk_sp<ListI> Table::rWhich(sk_sp<ListS> colNames, std::function<bool(ListS&, int)> which){
+    return rWhich(colNames.get(), which);
+}
 
 void Table::rSplit(CString outColName, ListS* combinedColumns,
                    std::map<String, sk_sp<ListS>>& outMap,
@@ -1331,67 +1221,9 @@ void Table::rSplit(CString outColName, ListS* combinedColumns,
         out->at(key)->add(ls.last());
     });
 }
-
-void Table::rSplitOMP(CString outColName, ListS* combinedColumns,
-                   std::unordered_map<String, sk_sp<ListS>>& outMap,
-                   CString sep){
-    sk_sp<ListS> cols = combinedColumns->copy();
-    cols->add(outColName);
-    ListI idxes(cols->size());
-    requireIndexes(cols.get(), idxes);
-
-    auto func = [sep](ListS* ls, String& key){
-        key = ls->sub(0, ls->size() - 1)->toString(sep);
-    };
-    auto func2 = [](const String&, sk_sp<GroupS>& gs){
-        int size = gs->size();
-        sk_sp<ListS> ret = sk_make_sp<ListS>(size);
-        for(int i = 0 ; i < size; ++i){
-            ret->add(gs->get(i)->last());
-        }
-        return ret;
-    };
-    IColumn<sk_sp<GRetItem<sk_sp<ListS>>>> col;
-    getDelegate()->visitGroupOMP<sk_sp<ListS>>(&idxes, 1024, func, func2, col);
-    outMap.reserve(col.size());
-    for(int i = 0 ; i < col.size() ; ++i){
-        auto& item = col.get(i);
-        outMap[item->key] = item->ret;
-    }
-}
-
-IColumn<sk_sp<Table>> Table::rSplit(std::function<void(ListS*,String&)> group,
-                                    ListS* outNames, int init_size){
-    m_headLine->ref();
-    if(outNames == nullptr){
-        outNames = m_headLine.get();
-    }
-    ListI in_idxes;
-    requireIndexes(outNames, in_idxes);
-    m_headLine->unref();
-    //group
-    std::map<String, sk_sp<Table>> outMap;
-    m_delegate->visitGroup2<sk_sp<Table>>(init_size, group,
-    [&in_idxes, outNames](const String& key, sk_sp<GroupS>& g){
-        sk_sp<Table> ret = sk_make_sp<Table>(g)->subTable(nullptr, &in_idxes);
-        ret->setHeadLine(outNames->copy());
-        ret->setName(key);
-        return ret;
-    }, outMap);
-    IColumn<sk_sp<Table>> out;
-    h7::utils::valueList2<String, sk_sp<Table>>(outMap, &out);
-    return out;
-}
-
-IColumn<sk_sp<Table>> Table::rSplit2(CString groupColumnName, ListS* outNames){
-    int col_idx = getColumnIndex(groupColumnName);
-    if(col_idx < 0){
-        PRINTLN("rGreplAny >> column not exists. name = %s\n", groupColumnName.c_str());
-        return IColumn<sk_sp<Table>>();
-    }
-    return rSplit([col_idx](ListS* ls, String& key){
-        key = ls->get(col_idx);
-    }, outNames);
+void Table::rSplit(CString outColName, sk_sp<ListS> combinedColumns,
+            std::map<String,sk_sp<ListS>>& outMap, CString sep){
+    return rSplit(outColName, combinedColumns.get(), outMap, sep);
 }
 
 sk_sp<IColumn<Table::PairSI>> Table::rTable(CString colName,

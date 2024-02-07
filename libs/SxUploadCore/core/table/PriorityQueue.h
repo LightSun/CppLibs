@@ -1,5 +1,4 @@
-#ifndef PRIORITYQUEUE_H
-#define PRIORITYQUEUE_H
+#pragma once
 
 #include <queue>
 
@@ -114,4 +113,3 @@ public:
     }
 };
 */
-#endif // PRIORITYQUEUE_H

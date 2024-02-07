@@ -1,5 +1,4 @@
-#ifndef SETCOLUMN_H
-#define SETCOLUMN_H
+#pragma once
 
 #include <vector>
 #include <unordered_set>
@@ -62,11 +61,6 @@ public:
     }
     bool addAll(SetColumn<T>& oth){
         std::copy(oth.begin(), oth.end(), std::inserter(set, set.end()));
-//        auto it = oth.set.begin();
-//        auto end = oth.set.end();
-//        for( ; it != end ; it++){
-//            set.insert(*it);
-//        }
         return true;
     }
     bool addAll(const SetColumn<T>& oth){
@@ -75,11 +69,6 @@ public:
     }
     bool addAll(const std::vector<T>& oth){
         std::copy(oth.begin(), oth.end(), std::inserter(set, set.end()));
-//        auto it = oth.begin();
-//        auto end = oth.end();
-//        for( ; it != end ; it++){
-//            set.insert(*it);
-//        }
         return true;
     }
     bool addAll(std::vector<T>& oth){
@@ -110,5 +99,3 @@ typedef SetColumn<std::string> SetS;
 typedef SetColumn<int> SetI;
 
 }
-
-#endif // SETCOLUMN_H

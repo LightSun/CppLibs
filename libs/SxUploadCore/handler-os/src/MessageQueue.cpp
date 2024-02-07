@@ -479,7 +479,7 @@ bool MessageQueue::enqueueMessage(Message* msg, long long when){
             // the queue
             // and the message is the earliest asynchronous message in the
             // queue.
-            //mBlocked: means no idea handler to call.
+            //mBlocked: means no idle handler to call.
             //p->target == nullptr: means is a barrier.
             needWake = mBlocked && p->target == nullptr
                     && msg->isAsynchronous();

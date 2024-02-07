@@ -16,14 +16,14 @@ endif()
 
 #-DCMAKE_BUILD_TYPE=MinSizeRel
 option(BUILD_MINGW64 "build for windows by mingw64" OFF)
+option(BUILD_WITH_LIBHV "build with libhv or not" OFF)
+
 if(BUILD_MINGW64)
     set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
     add_compile_definitions(_WIN32_WINNT=0x600 NDEBUG Q_OS_WIN)
     include(cmake/linux_mingw64.cmake)
 else(BUILD_MINGW64)
-
 endif()
-
 
 ## jni
 
@@ -56,20 +56,21 @@ set(DEP_RSA_LIBS ${OPEN_SSL_DIR}/lib/libcrypto.a
     ${OPEN_SSL_DIR}/lib/libssl.a)
 
 #libhv
-
 SET(HV_LIB)
-IF(BUILD_ON_WIN)
-    add_subdirectory(3rd/libhv-1.3.0)
-    include_directories(3rd/libhv-1.3.0/include)
-    set(HV_LIB  hv_static)
-ELSE(BUILD_ON_WIN)
-    SET(LIB_HV_DIR $ENV{LIB_HV_DIR})
-    if(NOT DEFINED ENV{LIB_HV_DIR})
-        SET(LIB_HV_DIR /home/heaven7/heaven7/env/linux/libhv-1.3.0)
-    endif()
-    include_directories(${LIB_HV_DIR}/include)
-    set(HV_LIB  ${LIB_HV_DIR}/lib/libhv.a)
-ENDIF(BUILD_ON_WIN)
+if(BUILD_WITH_LIBHV)
+    IF(BUILD_ON_WIN)
+        add_subdirectory(3rd/libhv-1.3.0)
+        include_directories(3rd/libhv-1.3.0/include)
+        set(HV_LIB  hv_static)
+    ELSE(BUILD_ON_WIN)
+        SET(LIB_HV_DIR $ENV{LIB_HV_DIR})
+        if(NOT DEFINED ENV{LIB_HV_DIR})
+            SET(LIB_HV_DIR /home/heaven7/heaven7/env/linux/libhv-1.3.0)
+        endif()
+        include_directories(${LIB_HV_DIR}/include)
+        set(HV_LIB  ${LIB_HV_DIR}/lib/libhv.a)
+    ENDIF(BUILD_ON_WIN)
+endif(BUILD_WITH_LIBHV)
 
 
 ## dep libs
@@ -98,12 +99,17 @@ ENDIF()
 include_directories(./)
 include_directories(${UPLOAD_UI_DIR}/include)
 add_compile_definitions(USE_C11_ATOMICS)
+add_compile_definitions(SUPPORTS_BACKTRACE)
+add_compile_definitions(HAS_DEMANGLE)
 
 
 ## core lib
 file(GLOB_RECURSE SRC_CORE
     common/*.h common/*.hpp common/*.cpp common/*.c
     table/*.h table/*.hpp table/*.cpp table/*.c
+    io/*.h io/*.cpp
+    lang/*.h lang/*.cpp
+    c10/*.h c10/*.hpp c10/*.cpp
     utils/*.h utils/*.hpp utils/*.cpp utils/*.c utils/*.inc
     )
 set(SRC_TEST
@@ -126,7 +132,10 @@ add_library(h7cpp
 add_library(h7cpp_shared SHARED
     ${SRC_CORE}
     )
-
+if(BUILD_WITH_LIBHV)
+    target_compile_definitions(h7cpp PUBLIC BUILD_WITH_LIBHV)
+    target_compile_definitions(h7cpp_shared PUBLIC BUILD_WITH_LIBHV)
+endif()
 target_link_libraries(h7cpp PUBLIC ${DEP_LIBS})
 target_link_libraries(h7cpp_shared PUBLIC ${DEP_LIBS})
 

@@ -1,4 +1,1 @@
-#ifndef COLUMN_H
-#define COLUMN_H
-
-#endif // COLUMN_H
+#include "table/Column.h"

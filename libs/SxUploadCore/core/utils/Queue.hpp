@@ -1,5 +1,4 @@
-#ifndef QUEUE_HPP
-#define QUEUE_HPP
+#pragma once
 
 #include "common/common.h"
 #include <list>
@@ -49,5 +48,3 @@ namespace h7 {
     };
 
 }
-
-#endif // QUEUE_HPP

@@ -98,7 +98,8 @@ bool MemoryMapped::open(const std::string& filename, size_t mappedBytes, CacheHi
   }
 
   // open file
-  _file = ::CreateFileA(filename.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, winHint, NULL);
+  _file = ::CreateFileA(filename.c_str(), GENERIC_READ, FILE_SHARE_READ,
+                        NULL, OPEN_EXISTING, winHint, NULL);
   if (!_file)
     return false;
 

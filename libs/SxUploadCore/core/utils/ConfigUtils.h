@@ -1,5 +1,4 @@
-#ifndef UTILS_H
-#define UTILS_H
+#pragma once
 
 #include "common/common.h"
 #include <map>
@@ -20,5 +19,3 @@ public:
 };
 
 }
-
-#endif // UTILS_H

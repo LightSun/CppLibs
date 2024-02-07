@@ -45,12 +45,12 @@ int main(int argc, char* argv[]){
         auto ret = h7::FileUtils::isFileExists(argv[1]);
         printf("file exists: %s\n", ret ? "true" : "false");
     }
-    test_splits();
+    //test_splits();
     //test_CountDownLatch();
     //test_Barrier();
     //test_SortedList();
 
-   // test_XBacktrace();
+    test_XBacktrace();
 
     //test_ConfigUtils();
     //test_Platforms();

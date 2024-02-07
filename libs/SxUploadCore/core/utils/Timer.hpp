@@ -58,9 +58,10 @@ public:
     }
 
     static void scheduleDelay(uint32 intervalMs, std::function<void()> task){
-        std::thread([intervalMs, task]() {
+        FUNC_SHARED_PTR(void()) ptr = FUNC_MAKE_SHARED_PTR_0(void(), task);
+        std::thread([intervalMs, ptr]() {
             std::this_thread::sleep_for(std::chrono::milliseconds(intervalMs));
-            task();
+            (*ptr)();
         }).detach();
     }
 private:

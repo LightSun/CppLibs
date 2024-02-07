@@ -34,13 +34,6 @@ String MappedInputStream::readString(int count){
     return String(arr);
 }
 
-void MappedInputStream::readLines(sk_sp<h7::function<void(int, CString)>> func){
-    String str;
-    int index = 0;
-    for(;readLine(str);){
-        (*func)(index++, str);
-    }
-}
 void MappedInputStream::readLines(std::function<void(int,CString)> func){
     String str;
     int index = 0;

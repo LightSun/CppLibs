@@ -3,7 +3,7 @@
 
 #include <functional>
 #include "common/common.h"
-#include "common/Function.h"
+#include "common/SkRefCnt.h"
 #include "io/MemoryMapped.h"
 
 namespace h7 {
@@ -24,7 +24,6 @@ public:
 
     String readString(int count);
 
-    void readLines(sk_sp<h7::function<void(int, CString)>> func);
     void readLines(std::function<void(int,CString)> func);
     void readLines(std::vector<String>& vec);
 

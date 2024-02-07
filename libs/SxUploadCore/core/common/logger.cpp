@@ -1,9 +1,14 @@
 
 #include <stdarg.h>
 #include "logger.h"
-#include "hv/hlog.h"
 
-static h7::Logger logger;
+#ifdef BUILD_WITH_LIBHV
+    #include "hv/hlog.h"
+#else
+    #define HV_EXPORT
+    #include "_hlog.h"
+    #include "_hlog.c"
+#endif
 
 namespace h7 {
 
@@ -30,5 +35,4 @@ h7::Logger* getLogger(){
     static h7::Logger logger;
     return &logger;
 }
-
 }

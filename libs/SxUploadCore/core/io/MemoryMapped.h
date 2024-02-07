@@ -97,5 +97,5 @@ private:
   /// file handle
   FileHandle  _file;
   /// pointer to the file contents mapped into memory
-  void*       _mappedView;
+  void*       _mappedView {nullptr};
 };
