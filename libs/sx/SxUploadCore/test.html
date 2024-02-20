@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+</head>
+<body>
+<script>
+    var wsObj = new WebSocket("ws://127.0.0.1:21353");   //建立连接
+    wsObj.onopen = function(){  //发送请求
+        //alert("open");
+		console.log("onopen");
+    };
+	var hash="";
+    wsObj.onmessage = function(ev){  //获取后端响应
+        //alert(ev.data);
+		console.log(ev.data);
+		var msg = ev.data;
+		var _ms2="ret:upload#hash="
+		var index = msg.indexOf(_ms2);
+		if(index==0){
+			hash = msg.substring(_ms2.length)
+			console.log("js>>hash=" + hash);
+		}
+		_ms2 = "ret:show_upload_dlg#files=";
+		index = msg.indexOf(_ms2);
+		if(index == 0){
+			_files = msg.substring(_ms2.length);
+			wsObj.send("upload::"+_files);
+		}
+    };
+    wsObj.onclose = function(ev){
+		console.log("onclose");
+    };
+    wsObj.onerror = function(ev){
+		console.log("onerror");
+    };
+	function connect(){
+		wsObj.send("connect::token");//token 需要替换为实际的token
+	}
+	function taskDelay(){
+		wsObj.send("task_delay::6000");
+	}
+	function uploadFile(){
+		//var file = "/home/heaven7/heaven7/libs/opencv_contrib-4.x.zip";
+		
+		//var file = "/media/heaven7/Elements/shengxin/refHg19/GATK_bundle/1000G_phase1.snps.high_confidence.b37.vcf.gz"
+		//var file = "/home/heaven7/heaven7/libs/opencv_contrib-4.x.zip";
+		//var file = "/media/heaven7/Elements/shengxin/test/EQA/rawData/202011/Sample202011.R1.fastq.gz"
+		
+		//var file = "D:\\Sample202011.R1.fastq.gz";
+		//wsObj.send("upload::" + file);
+	    //file = "/media/heaven7/Elements/shengxin/R/RData/hg19/clinvarTrans1.txt";
+		//file = "/home/heaven7/heaven7/libs/opencv-4.5.4.zip"
+		file = "D:/shengxin/fq/HG002.novaseq.pcr-free.30x.R1.fastq.gz";
+		//file= "E:/生信/1/non_compressible__001_6868031162464006.file"
+		wsObj.send("upload::" + file);
+		//wsObj.send("show_upload_dlg")
+	}
+	function pause(){
+		if(hash.length==0){
+			console.log("pause called, but no hash.");
+		}else{
+			wsObj.send("pause::" + hash);
+		}
+	}
+	function disconnect(){
+		wsObj.send("disconnect::");
+	}
+	function selectFile(){	
+		wsObj.send("show_upload_dlg::true");
+	}
+</script>
+<button onclick="connect()">connect</button>
+<button onclick="taskDelay()">taskDelay</button>
+<button onclick="uploadFile()">uploadFile</button>
+<button onclick="pause()">pause</button>
+<button onclick="selectFile()">selectFile</button>
+<button onclick="disconnect()">disconnect</button>
+</body>
+</html>
+
+
