@@ -1,4 +1,4 @@
-// Copyright 2004-present Facebook. All Rights Reserved.
+﻿// Copyright 2004-present Facebook. All Rights Reserved.
 
 #pragma once
 
@@ -50,6 +50,44 @@ struct integer_iterator : std::iterator<std::input_iterator_tag, I> {
   I value;
 };
 
+template <
+    typename I,
+    typename std::enable_if<std::is_integral<I>::value, int>::type = 0>
+struct reverse_integer_iterator: std::iterator<std::input_iterator_tag, I> {
+  explicit reverse_integer_iterator(I value, I step) : value(value), step(step){}
+
+  I operator*() const {
+    return value;
+  }
+
+  I const* operator->() const {
+    return &value;
+  }
+
+  reverse_integer_iterator& operator++() {
+    value += step;
+    return *this;
+  }
+
+  reverse_integer_iterator operator++(int) {
+    const auto copy = *this;
+    ++*this;
+    return copy;
+  }
+
+  bool operator==(const reverse_integer_iterator& other) const {
+    return value == other.value;
+  }
+
+  bool operator!=(const reverse_integer_iterator& other) const {
+    return value != other.value;
+  }
+
+ protected:
+  I value;
+  I step {1};
+};
+
 } // namespace detail
 
 template <
@@ -68,6 +106,25 @@ struct integer_range {
  private:
   detail::integer_iterator<I> begin_;
   detail::integer_iterator<I> end_;
+};
+
+template <
+    typename I,
+    typename std::enable_if<std::is_integral<I>::value, bool>::type = true>
+struct reverse_integer_range {
+ public:
+  reverse_integer_range(I begin, I end, I step)
+      : begin_(begin, step), end_(end, step) {}
+  detail::reverse_integer_iterator<I> begin() const {
+    return begin_;
+  }
+  detail::reverse_integer_iterator<I> end() const {
+    return end_;
+  }
+
+ private:
+  detail::reverse_integer_iterator<I> begin_;
+  detail::reverse_integer_iterator<I> end_;
 };
 
 /// Creates an integer range for the half-open interval [begin, end)
@@ -100,6 +157,41 @@ integer_range<Integer> irange(Integer end) {
   // choosing the larger of {0, end} as the loop terminator
   // Handles the case where end<0. irange only works for ranges >=0
   return {Integer(), std::max(Integer(), end)};
+}
+
+template <
+    typename Integer,
+    typename std::enable_if<std::is_integral<Integer>::value, bool>::type =
+        true>
+reverse_integer_range<Integer> irange_reverse(Integer end) {
+  return {std::max(Integer(), end) - 1, Integer() - 1, -1};
+}
+
+template <
+    typename Integer1,
+    typename Integer2,
+    typename std::enable_if<std::is_integral<Integer1>::value, bool>::type =
+        true,
+    typename std::enable_if<std::is_integral<Integer2>::value, bool>::type =
+        true>
+reverse_integer_range<Integer2> irange_reverse(Integer2 end, Integer1 begin) {
+  return {
+      std::max(static_cast<Integer2>(begin), end) - 1,
+              static_cast<Integer2>(begin) - 1, -1};
+}
+
+template <
+    typename Integer1,
+    typename Integer2,
+    typename std::enable_if<std::is_integral<Integer1>::value, bool>::type =
+        true,
+    typename std::enable_if<std::is_integral<Integer2>::value, bool>::type =
+        true>
+reverse_integer_range<Integer2> irange_reverse(Integer2 end, Integer1 begin,
+                                               Integer2 step) {
+  return {
+      std::max(static_cast<Integer2>(begin), end) - 1,
+              static_cast<Integer2>(begin) - 1, step};
 }
 
 } // namespace c10
