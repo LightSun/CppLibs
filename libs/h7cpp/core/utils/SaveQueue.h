@@ -27,7 +27,10 @@ public:
 
   ~SaveQueue()
   {
-    delete [] buffer_;
+      if(buffer_){
+          delete[] buffer_;
+          buffer_ = nullptr;
+      }
   }
 
   void setBufferSize(size_t buffer_size){
