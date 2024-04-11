@@ -4,9 +4,15 @@
 #include <random>
 #include <iostream>
 #include "PerformanceHelper.h"
+#include "FileReader.h"
 
 using namespace med;
 using namespace h7;
+
+static inline String readPemContent(CString file){
+    med::FileReader fr(file);
+    return fr.readPemContent();
+}
 
 enum KeyMode{
     kKey_16 = 2,
@@ -15,6 +21,8 @@ enum KeyMode{
 };
 
 static void test_medRSA0(size_t len);
+static void test_medRSA00(size_t len, CString pubKey, CString priKey);
+static void test_medRSA(size_t len, CString pubFile, CString pemFile);
 static String gen_sequence(size_t len);
 static void test_AES(size_t len, KeyMode keyMode);
 
@@ -33,6 +41,8 @@ void test_medRSA(){
     //auto str = gen_sequence(100 << 20);
     //printf("gen_sequence(%lu): %s\n", str.length(), str.data());
     //test_medRSA0(10 << 20);
+    String dir = "/home/heaven7/heaven7/env/linux/openssl_1.1.1s/bin/";
+    test_medRSA(10 << 20, dir + "rsa_public_key.pem",  dir + "rsa_private_key.pem");
 
     test_AES(10 << 20, KeyMode::kKey_16);
     test_AES(10 << 20, KeyMode::kKey_24);
@@ -92,38 +102,46 @@ test_AES_name(cfb8);
 test_AES_name(cfb128);
 test_AES_name(ofb128);
 
+void test_medRSA(size_t len, CString pubFile, CString priFile){
+    String pubKey = readPemContent(pubFile);
+    String priKey = readPemContent(priFile);
+    test_medRSA00(len, pubKey, priKey);
+}
+
 void test_medRSA0(size_t len){
     //gen the leng of sequence.
     //enc by public key, dec by private key
     //enc by private key, dec by public key
+   test_medRSA00(len, PUBLIC_KEY, PRIVATE_KEY);
+}
+void test_medRSA00(size_t len, CString pubKey, CString priKey){
     h7::PerfHelper ph;
     auto str = gen_sequence(len);
     MedRSA mrsa(1 << 20); // 1M
     printf("max_tc = %d\n", mrsa.getMaxThreadCount());
     {
         ph.begin();
-        auto encRet = mrsa.encByPubKey(PUBLIC_KEY, str);
+        auto encRet = mrsa.encByPubKey(pubKey, str);
         ph.print("encByPubKey");
         MED_ASSERT(!encRet.empty());
         ph.begin();
-        auto decRet = mrsa.decByPriKey(PRIVATE_KEY, encRet);
+        auto decRet = mrsa.decByPriKey(priKey, encRet);
         ph.print("decByPriKey");
         MED_ASSERT(!decRet.empty());
         MED_ASSERT(decRet == str);
     }
     {
         ph.begin();
-        auto encRet = mrsa.encByPriKey(PRIVATE_KEY, str);
+        auto encRet = mrsa.encByPriKey(priKey, str);
         ph.print("encByPriKey");
         MED_ASSERT(!encRet.empty());
         ph.begin();
-        auto decRet = mrsa.decByPubKey(PUBLIC_KEY, encRet);
+        auto decRet = mrsa.decByPubKey(pubKey, encRet);
         ph.print("decByPubKey");
         MED_ASSERT(!decRet.empty());
         MED_ASSERT(decRet == str);
     }
 }
-
 String gen_sequence(size_t len){
     std::random_device rd;
     std::mt19937 gen(rd()); //gen是一个使用rd()作种子初始化的标准梅森旋转算法的随机数发生器

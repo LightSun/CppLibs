@@ -18,6 +18,21 @@
     } while (0)
 #endif
 
+#ifndef MED_ASSERT_X
+#define MED_ASSERT_X(condition, msg)                                                   \
+    do                                                                      \
+    {                                                                       \
+        if (!(condition))                                                   \
+        {                                                                   \
+            std::cout << "Assertion failure: " << __FILE__ << "::" << __FUNCTION__  \
+                                     << __LINE__ \
+                                     << " >> " << #condition << std::endl;  \
+            std::cout << msg << std::endl;                                  \
+            abort();                                                        \
+        }                                                                   \
+    } while (0)
+#endif
+
 namespace med {
 
 using CString = const std::string&;

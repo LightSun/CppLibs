@@ -20,6 +20,9 @@
 #endif
 
 //#include "hexport.h"
+#ifndef HV_EXPORT
+#define HV_EXPORT
+#endif
 
 #ifdef __cplusplus
 extern "C" {

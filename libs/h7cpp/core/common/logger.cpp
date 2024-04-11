@@ -7,7 +7,7 @@
 #else
     #define HV_EXPORT
     #include "_hlog.h"
-    #include "_hlog.c"
+    //#include "_hlog.c"
 #endif
 
 namespace h7 {

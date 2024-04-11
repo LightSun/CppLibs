@@ -13,6 +13,7 @@
 #include "ThreadPool.h"
 #include "hash.h"
 #include "ByteBufferIO.h"
+#include "FileReader.h"
 
 using namespace med;
 
@@ -46,6 +47,15 @@ static inline RSA* create_RSA(const void* key, bool pub){
         return NULL;
     }
     return rsa;
+}
+
+void* MedRSA::createRSA(CString key, bool pub){
+    if(m_keyIsPath){
+        FileReader fr(key);
+        auto content = fr.readPemContent();
+        return create_RSA(content.data(), pub);
+    }
+    return create_RSA(key.data(), pub);
 }
 
 std::string MedRSA::encByPublicKey(CString publicKey,CString data){
@@ -192,7 +202,7 @@ void MedRSA::doDecode(void* rsa, bool pub, DataBlock* out, bool verify){
 }
 //
 String MedRSA::encByPubKey(CString key, CString data){
-    RSA* rsa = create_RSA(key.data(), true);
+    RSA* rsa = (RSA*)createRSA(key, true);
     if(rsa == nullptr) return "";
     RSAHolder rh(rsa);
     DataBlock block;
@@ -200,7 +210,7 @@ String MedRSA::encByPubKey(CString key, CString data){
     return block.toString();
 }
 String MedRSA::decByPriKey(CString key, CString data, bool verify){
-    RSA* rsa = create_RSA(key.data(), false);
+    RSA* rsa = (RSA*)createRSA(key, false);
     if(rsa == nullptr) return "";
     RSAHolder rh(rsa);
     DataBlock block;
@@ -214,7 +224,7 @@ String MedRSA::decByPriKey(CString key, CString data, bool verify){
 }
 
 String MedRSA::decByPubKey(CString key, CString data, bool verify){
-    RSA* rsa = create_RSA(key.data(), true);
+    RSA* rsa = (RSA*)createRSA(key, true);
     if(rsa == nullptr) return "";
     RSAHolder rh(rsa);
     DataBlock block;
@@ -227,7 +237,7 @@ String MedRSA::decByPubKey(CString key, CString data, bool verify){
     return "";
 }
 String MedRSA::encByPriKey(CString key, CString data){
-    RSA* rsa = create_RSA(key.data(), false);
+    RSA* rsa = (RSA*)createRSA(key, false);
     if(rsa == nullptr) return "";
     RSAHolder rh(rsa);
     DataBlock block;
