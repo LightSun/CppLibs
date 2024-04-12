@@ -123,6 +123,7 @@ set(SRC_TEST
     test/test_Platforms.cpp
     test/test_spilit_files.cpp
     test/test_conrrent_hash_map.cpp
+    test/test_stmp.cpp
     test/main.cpp
     )
 
