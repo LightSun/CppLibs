@@ -26,6 +26,7 @@ extern void test_ConfigUtils();
 
 extern void test_Platforms();
 extern void test_splits();
+extern void test_Callbacks();
 
 using namespace h7;
 
@@ -50,7 +51,8 @@ int main(int argc, char* argv[]){
     //test_Barrier();
     //test_SortedList();
 
-    test_XBacktrace();
+    //test_XBacktrace();
+    test_Callbacks();
 
     //test_ConfigUtils();
     //test_Platforms();

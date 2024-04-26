@@ -16,7 +16,7 @@ namespace h7 {
         }
         static String nextStr(int len){
             std::random_device rd;
-            std::mt19937 gen(rd()); //gen是一个使用rd()作种子初始化的标准梅森旋转算法的随机数发生器
+            std::mt19937 gen(rd());
             std::uniform_int_distribution<> distrib(0, 255);
             String str;
             str.resize(len);

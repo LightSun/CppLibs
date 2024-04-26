@@ -124,6 +124,7 @@ set(SRC_TEST
     test/test_spilit_files.cpp
     test/test_conrrent_hash_map.cpp
     test/test_stmp.cpp
+    test/test_callback_wrapper.cpp
     test/main.cpp
     )
 
