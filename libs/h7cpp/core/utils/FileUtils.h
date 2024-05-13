@@ -20,6 +20,8 @@ namespace h7 {
 
         static sk_sp<ListS> getFiles(CString path, bool recursion = true,
                                      CString suffix = "");
+        //remove dir and below-files
+        static bool removeDirectory(CString path);
 
         static inline String getFileDir(CString file){
             int pos;

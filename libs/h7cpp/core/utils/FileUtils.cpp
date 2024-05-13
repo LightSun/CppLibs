@@ -121,6 +121,42 @@ sk_sp<ListS> FileUtils::getFiles(CString path, bool recursion, CString suffix){
     return ret;
 }
 
+bool FileUtils::removeDirectory(CString path) {
+#ifdef __linux__
+    DIR *dir = opendir(path.data());
+    if (dir == nullptr) {
+        return false;
+    }
+
+    dirent *entry;
+    while ((entry = readdir(dir)) != nullptr) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+        std::string fullPath = std::string(path) + "/" + entry->d_name;
+
+        if (entry->d_type == DT_DIR) {
+            if (!removeDirectory(fullPath.c_str())) {
+                closedir(dir);
+                return false;
+            }
+        } else {
+            if (remove(fullPath.c_str()) != 0) {
+                closedir(dir);
+                return false;
+            }
+        }
+    }
+    closedir(dir);
+    if (rmdir(path.data()) != 0) {
+        return false;
+    }
+    return true;
+#endif
+    fprintf(stderr, "removeDirectory >> non-linux, not support now\n");
+    return false;
+}
+
 #ifdef _WIN32
 static char ALPHABET[] = {
     'A','B','C','D','E','F','G',
