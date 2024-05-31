@@ -147,3 +147,6 @@ add_executable(unittest
     ${SRC_TEST}
     )
 target_link_libraries(unittest PUBLIC h7cpp)
+if(CPPAST_BUILD_H7CPP)
+    target_link_libraries(unittest PUBLIC cppast)
+endif()
