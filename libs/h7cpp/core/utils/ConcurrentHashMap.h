@@ -22,20 +22,26 @@ public:
     using ValueDeleter = std::function<void(Value&)>;
 
 private:
+    struct _ParentDelegate{
+        KeyDeleter kd_;
+        ValueDeleter vd_;
+    };
     struct HashNode {
         Key key;
         Value value;
         HashNode* next;
 
-        KeyDeleter kd_;
-        ValueDeleter vd_;
+        _ParentDelegate* pd {nullptr};
+        //
 
         HashNode(const Key& k, const Value& v) : key(k), value(v), next(nullptr) {}
-        HashNode(KeyDeleter kd, ValueDeleter vd, const Key& k, const Value& v)
-            : kd_(kd), vd_(vd),key(k), value(v), next(nullptr) {}
+        HashNode(_ParentDelegate* pd, const Key& k, const Value& v)
+            : pd(pd), key(k), value(v), next(nullptr) {}
         ~HashNode(){
-            if(kd_) kd_(key);
-            if(vd_) vd_(value);
+            if(pd){
+                if(pd->kd_) pd->kd_(key);
+                if(pd->vd_) pd->vd_(value);
+            }
         }
     };
 
@@ -52,24 +58,24 @@ private:
             }
         }
         void clear(){
-            if(impDoing_.compare_exchange_weak(false, true)){
-                HashNode* node = impl.load();
-                HashNode* fn = node;
-                std::vector<HashNode*> delNodes;
-                while(node){
-                    delNodes.push_back(node);
-                    node = node->next;
-                }
-                while(fn != nullptr && !impl.compare_exchange_weak(fn, nullptr)){
-                    fn = impl.load();
-                }
-                impDoing_.store(false);
-                for(HashNode*& n : delNodes){
-                    delete n;
-                }
+            while(!impDoing_.compare_exchange_weak(false, true)){
+            }
+            HashNode* node = impl.load();
+            HashNode* fn = node;
+            std::vector<HashNode*> delNodes;
+            while(node){
+                delNodes.push_back(node);
+                node = node->next;
+            }
+            while(fn != nullptr && !impl.compare_exchange_weak(fn, nullptr)){
+                fn = impl.load();
+            }
+            impDoing_.store(false);
+            for(HashNode*& n : delNodes){
+                delete n;
             }
         }
-
+        //add to head
         void append(HashNode* newNode){
             while (impDoing_.load(std::memory_order_acquire)) {
                 //wait
@@ -119,8 +125,7 @@ private:
     };
 
     std::vector<Node> buckets_;
-    KeyDeleter keyDeleter_;
-    ValueDeleter valueDeleter_;
+    _ParentDelegate parentDel_;
     std::atomic_int size_;
 
     size_t Hash(const Key& key) {
@@ -132,8 +137,8 @@ public:
     ~ConcurrentHashMap(){
     }
 
-    void setKeyDeleter(KeyDeleter kd){this->keyDeleter_ = kd;}
-    void setValueDeleter(ValueDeleter kd){this->valueDeleter_ = kd;}
+    void setKeyDeleter(KeyDeleter kd){parentDel_.keyDeleter_ = kd;}
+    void setValueDeleter(ValueDeleter kd){parentDel_.valueDeleter_ = kd;}
     void clear(){
         for(auto& n: buckets_){
             n.clear();
@@ -142,13 +147,11 @@ public:
     }
     int size()const{return size_.load(std::memory_order_acquire);}
 
-//    bool hasNextEntry(Entry* cur){
-
-//    }
+    //std::vector<>
 
     void insert(const Key& key, const Value& value) {
         size_t index = Hash(key);
-        buckets_[index].append(new HashNode(keyDeleter_, valueDeleter_, key, value));
+        buckets_[index].append(new HashNode(&parentDel_, key, value));
         size_.fetch_add(1);
     }
 
