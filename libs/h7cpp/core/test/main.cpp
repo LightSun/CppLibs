@@ -27,6 +27,7 @@ extern void test_ConfigUtils();
 extern void test_Platforms();
 extern void test_splits();
 extern void test_Callbacks();
+extern void test_LockFreeHashMap();
 
 using namespace h7;
 
@@ -52,7 +53,9 @@ int main(int argc, char* argv[]){
     //test_SortedList();
 
     //test_XBacktrace();
-    test_Callbacks();
+    //test_Callbacks();
+
+    test_LockFreeHashMap();
 
     //test_ConfigUtils();
     //test_Platforms();

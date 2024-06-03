@@ -125,6 +125,7 @@ set(SRC_TEST
     test/test_conrrent_hash_map.cpp
     test/test_stmp.cpp
     test/test_callback_wrapper.cpp
+    test/test_LockFreeHashMap.cpp
     test/main.cpp
     )
 

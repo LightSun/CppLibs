@@ -15,7 +15,7 @@ void test_ConcurrentHashMap(){
     for(int i = 0 ; i < LOOP_C ; ++i){
         const int key = i;
         std::thread thd([&map, &ato_count, &cdt, key](){
-            map.Insert(key, std::to_string(key));
+            map.insert(key, std::to_string(key));
             if(ato_count.fetch_add(1) == LOOP_C - 1){
                 cdt.countDown();
             }
@@ -24,7 +24,7 @@ void test_ConcurrentHashMap(){
     }
     cdt.await();
     std::string value;
-    if (map.Find(2, value)) {
+    if (map.find(2, value)) {
         std::cout << "Found value: " << value << std::endl;
     } else {
         std::cout << "Value not found" << std::endl;

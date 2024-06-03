@@ -58,7 +58,8 @@ private:
             }
         }
         void clear(){
-            while(!impDoing_.compare_exchange_weak(false, true)){
+            bool expect = false;
+            while(!impDoing_.compare_exchange_weak(expect, true)){
             }
             HashNode* node = impl.load();
             HashNode* fn = node;

@@ -8,6 +8,8 @@
 #include <cassert>
 #include <iostream>
 
+#include "common/SkRefCnt.h"
+
 template <typename T>
 class HazardPointer {
     static const int MAX_HAZARD_POINTERS = 100;
@@ -61,15 +63,28 @@ std::atomic<typename HazardPointer<T>::HazardPointerRecord*> HazardPointer<T>::h
 
 template <typename Key, typename Value>
 class LockFreeHashMap {
-private:
-    struct Node {
+public:
+    template<typename T>
+    using SPType = sk_sp<T>; //std::shared_ptr
+
+    struct Node: public SkRefCnt {
         Key key;
         Value value;
-        std::shared_ptr<Node> next;
+        Node* next;
         Node(const Key& k, const Value& v) : key(k), value(v), next(nullptr) {}
-    };
 
-    std::vector<std::atomic<std::shared_ptr<Node>>> table;
+//        Node(const Node& n){
+//            this->key = n.key;
+//            this->value = n.value;
+//        }
+//        Node& operator= (const Node& n){
+//            this->key = n.key;
+//            this->value = n.value;
+//            return *this;
+//        }
+    };
+private:
+    std::vector<std::atomic<Node*>> table;
    // HazardPointer<Node> hazard_pointer;
     std::hash<Key> hashFunction;
     size_t capacity;
@@ -78,14 +93,12 @@ private:
 
 public:
     LockFreeHashMap(size_t cap) : capacity(cap), table(cap) {
-        for (auto& node : table) {
-            node.store(nullptr);
-        }
     }
 
     bool insert(const Key& key, const Value& value) {
         size_t index = hashFunction(key) % capacity;
-        auto newNode = std::make_shared<Node>(key, value);
+        //auto newNode = std::make_shared<Node>(key, value);
+        auto newNode = new Node(key, value);
 
         while (true) {
             auto head = table[index].load();
@@ -95,6 +108,7 @@ public:
                 return true;
             }
         }
+        return false;
     }
 
     bool find(const Key& key, Value& value) {
@@ -115,7 +129,7 @@ public:
 
         while (true) {
             auto head = table[index].load();
-            std::shared_ptr<Node> prev = nullptr;
+            Node* prev = nullptr;
             auto node = head;
 
             while (node != nullptr && node->key != key) {
@@ -128,7 +142,7 @@ public:
             }
 
             auto nextNode = node->next;
-
+            node->unref();
             if (prev == nullptr) { // Node to be removed is the head
                 if (table[index].compare_exchange_weak(head, nextNode)) {
                     element_count.fetch_sub(1, std::memory_order_relaxed);
