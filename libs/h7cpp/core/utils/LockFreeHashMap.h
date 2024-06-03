@@ -10,6 +10,7 @@
 
 #include "common/SkRefCnt.h"
 
+/*
 template <typename T>
 class HazardPointer {
     static const int MAX_HAZARD_POINTERS = 100;
@@ -60,7 +61,7 @@ public:
 
 template <typename T>
 std::atomic<typename HazardPointer<T>::HazardPointerRecord*> HazardPointer<T>::hazard_pointers[MAX_HAZARD_POINTERS];
-
+*/
 template <typename Key, typename Value>
 class LockFreeHashMap {
 public:
@@ -72,16 +73,6 @@ public:
         Value value;
         Node* next;
         Node(const Key& k, const Value& v) : key(k), value(v), next(nullptr) {}
-
-//        Node(const Node& n){
-//            this->key = n.key;
-//            this->value = n.value;
-//        }
-//        Node& operator= (const Node& n){
-//            this->key = n.key;
-//            this->value = n.value;
-//            return *this;
-//        }
     };
 private:
     std::vector<std::atomic<Node*>> table;
@@ -95,6 +86,9 @@ public:
     LockFreeHashMap(size_t cap) : capacity(cap), table(cap) {
     }
 
+    bool put(const Key& key, const Value& value){
+        return insert(key, value);
+    }
     bool insert(const Key& key, const Value& value) {
         size_t index = hashFunction(key) % capacity;
         //auto newNode = std::make_shared<Node>(key, value);
@@ -102,6 +96,16 @@ public:
 
         while (true) {
             auto head = table[index].load();
+            if(head && head->key == key){
+                if(head->value == value){
+                    //already exists.
+                    return false;
+                }else{
+                    //value changed
+                    head->value = value;
+                    return true;
+                }
+            }
             newNode->next = head;
             if (table[index].compare_exchange_weak(head, newNode)) {
                 element_count.fetch_add(1, std::memory_order_relaxed);
@@ -124,7 +128,7 @@ public:
         return false;
     }
 
-    bool remove(const Key& key) {
+    bool remove(const Key& key, Value* outV = nullptr) {
         size_t index = hashFunction(key) % capacity;
 
         while (true) {
@@ -142,6 +146,9 @@ public:
             }
 
             auto nextNode = node->next;
+            if(outV){
+                *outV = node->value;
+            }
             node->unref();
             if (prev == nullptr) { // Node to be removed is the head
                 if (table[index].compare_exchange_weak(head, nextNode)) {
