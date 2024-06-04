@@ -10,9 +10,9 @@ namespace h7 {
     template<typename T>
     class SafeQueue{
     public:
-        using SaveQueuePtr = SaveQueue<T>*;
+        using SQ = SaveQueue<T>;
         SafeQueue(size_t buffer_size){
-            m_queue = new SaveQueue<T>(buffer_size);
+            m_queue = new SQ(buffer_size);
         }
         ~SafeQueue(){
             if(m_queue){
@@ -53,7 +53,7 @@ namespace h7 {
         static size_t const     cacheline_size = 64;
         typedef char            cacheline_pad_t [cacheline_size];
         cacheline_pad_t pad0_;
-        SaveQueuePtr m_queue {nullptr};
+        SQ* m_queue {nullptr};
         cacheline_pad_t pad1_;
         std::atomic_bool m_expanding {false};
         cacheline_pad_t pad2_;
