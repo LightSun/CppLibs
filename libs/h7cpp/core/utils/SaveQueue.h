@@ -6,7 +6,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+
 namespace h7 {
+
+template<typename> class SafeQueue;
+
 template<typename T>
 class SaveQueue
 {
@@ -46,15 +50,19 @@ public:
       dequeue_pos_.store(0, std::memory_order_relaxed);
   }
 
-  size_t size(){
+  size_t size()const{
      size_t push = enqueue_pos_.load(std::memory_order_acquire);
      size_t pop = dequeue_pos_.load(std::memory_order_acquire);
-     printf("push count = %d, pop count = %d\n.", push, pop);
+     //printf("push count = %d, pop count = %d\n.", push, pop);
      return push - pop;
   }
 
-  size_t bufferSize(){
+  size_t bufferSize()const{
       return buffer_mask_ + 1;
+  }
+
+  bool isFull()const{
+      return size() >= bufferSize();
   }
 
   bool enqueue(T const& data)
@@ -114,6 +122,30 @@ public:
   }
 
 private:
+
+  friend class SafeQueue<T>;
+
+  void expand(){
+      size_t nextBufSize = bufferSize() << 1;
+      auto newBuf = new cell_t [nextBufSize];
+      //copy old data
+      size_t curSize = size();
+      for(size_t i = 0 ; i < curSize ; ++i){
+          newBuf[i].data = buffer_[i].data;
+          newBuf[i].sequence_.store(i + 1, std::memory_order_relaxed);
+      }
+      for(size_t i = curSize ; i < nextBufSize ; ++i){
+          newBuf[i].sequence_.store(i, std::memory_order_relaxed);
+      }
+      //set buf to new
+      delete[] buffer_;
+      buffer_ = newBuf;
+      buffer_mask_ = nextBufSize - 1 ;
+      enqueue_pos_.store(curSize, std::memory_order_relaxed);
+      dequeue_pos_.store(0, std::memory_order_relaxed);
+  }
+
+private:
   struct cell_t
   {
     std::atomic<size_t>   sequence_;
@@ -124,8 +156,8 @@ private:
   typedef char            cacheline_pad_t [cacheline_size];
 
   cacheline_pad_t         pad0_;
-  cell_t* const           buffer_;
-  size_t const            buffer_mask_;
+  cell_t*                 buffer_;
+  size_t                  buffer_mask_;
   cacheline_pad_t         pad1_;
   std::atomic<size_t>     enqueue_pos_;
   cacheline_pad_t         pad2_;

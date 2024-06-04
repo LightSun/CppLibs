@@ -15,7 +15,7 @@ class CppLock {
     flag.clear(std::memory_order_release);
   }
  private:
-  std::atomic_flag flag = ATOMIC_FLAG_INIT;
+  std::atomic_flag flag {0};
 };
 
 class MutexLock {
@@ -54,6 +54,19 @@ public:
 
 private:
     MutexLock& m_lock;
+};
+
+class CppLockHolder{
+public:
+    CppLockHolder(CppLock& lock):m_lock(lock){
+        lock.lock();
+    }
+    ~CppLockHolder(){
+        m_lock.unlock();
+    }
+
+private:
+    CppLock& m_lock;
 };
 
 }
