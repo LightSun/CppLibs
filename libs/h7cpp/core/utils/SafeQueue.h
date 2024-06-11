@@ -7,10 +7,14 @@
 #include "utils/locks.h"
 
 namespace h7 {
+/**
+ *relative to SaveQueue. this queue support auto increate buffer_size. by << 1.
+ */
     template<typename T>
     class SafeQueue{
     public:
         using SQ = SaveQueue<T>;
+
         SafeQueue(size_t buffer_size){
             m_queue = new SQ(buffer_size);
         }
@@ -25,6 +29,12 @@ namespace h7 {
                 //wait
             }
             return m_queue->size();
+        }
+        size_t bufferSize(){
+            while (m_expanding.load(std::memory_order_acquire)) {
+                //wait
+            }
+            return m_queue->bufferSize();
         }
 
         bool enqueue(T const& data){

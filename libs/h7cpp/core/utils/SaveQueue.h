@@ -9,8 +9,6 @@
 
 namespace h7 {
 
-template<typename> class SafeQueue;
-
 template<typename T>
 class SaveQueue
 {
@@ -123,15 +121,15 @@ public:
 
 private:
 
-  friend class SafeQueue<T>;
-
+  template<typename X> friend class SafeQueue;
+  //thread not safe.
   void expand(){
       size_t nextBufSize = bufferSize() << 1;
       auto newBuf = new cell_t [nextBufSize];
       //copy old data
       size_t curSize = size();
       for(size_t i = 0 ; i < curSize ; ++i){
-          newBuf[i].data = buffer_[i].data;
+          newBuf[i].data_ = buffer_[i].data_;
           newBuf[i].sequence_.store(i + 1, std::memory_order_relaxed);
       }
       for(size_t i = curSize ; i < nextBufSize ; ++i){
