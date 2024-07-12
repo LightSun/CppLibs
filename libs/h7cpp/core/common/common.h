@@ -18,8 +18,8 @@ extern "C" {
 #include <future>
 #include "logger.h"
 
-#define Cons_Ref(a) const a&
 using CString = const std::string&;
+using String = std::string;
 #define HMIN(a, b) (a < b ? a : b)
 #define HMAX(a, b) (a > b ? a : b)
 
@@ -35,10 +35,6 @@ using CString = const std::string&;
 #else
     #include <unistd.h>
 #define SLEEP(x) usleep(x*1000)
-#endif
-
-#ifndef String
-using String = std::string;
 #endif
 
 #define DEFAULT_SEQ '\t'
@@ -179,6 +175,17 @@ do{\
   TypeName & operator=(TypeName &&) = delete
 
 namespace h7 {
+
+class INoCopy
+{
+protected:
+    INoCopy() = default;
+    virtual ~INoCopy() = default;
+    INoCopy(INoCopy const& other) = delete;
+    INoCopy& operator=(INoCopy const& other) = delete;
+    INoCopy(INoCopy&& other) = delete;
+    INoCopy& operator=(INoCopy&& other) = delete;
+};
 
 template<bool B, class T = void>
     struct user_enable_if {};
