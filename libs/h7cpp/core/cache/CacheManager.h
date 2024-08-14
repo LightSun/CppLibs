@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <functional>
 
 namespace h7 {
 
@@ -15,8 +16,20 @@ using CString = const std::string&;
         enum{
           kFlag_COMPRESSED = 0x1
         };
-       // using CString = const std::string&;
+        using Func_Enc = std::function<size_t(const char* input,
+                    size_t input_length,
+                    std::string* compressed)>;
+        using Func_Dec = std::function<bool(const char* compressed,
+                    size_t compressed_length,
+                    std::string* uncompressed)>;
+       //
         CacheManager(uint64 maxFragSize):m_maxFragSize(maxFragSize){
+        }
+        void setCompressFunc(Func_Enc&& enc){
+            m_funcEnc = enc;
+        }
+        void setDecompressFunc(Func_Dec&& dec){
+            m_funcDec = dec;
         }
         void addItem(const std::string& name, const std::string& data){
             addItem(name, data.data(), data.length());
@@ -75,6 +88,8 @@ using CString = const std::string&;
         uint64 m_maxFragSize;
         std::vector<std::vector<char>> m_data; //Fragmentation
         std::vector<Item> m_items;
+        Func_Enc m_funcEnc;
+        Func_Dec m_funcDec;
 
     private:
         uint64 getLastFragUsedSize(){

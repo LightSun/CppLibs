@@ -5,7 +5,7 @@
 
 using namespace h7;
 
-static inline void readBigFile(CString rfile, std::vector<char>& _buffer){
+static inline void readBigFile$$0(CString rfile, std::vector<char>& _buffer){
     FILE* stream_in = fopen64(rfile.data(), "rb");
     if(stream_in == NULL){
         return;
@@ -21,12 +21,12 @@ static inline void readBigFile(CString rfile, std::vector<char>& _buffer){
 
 void CacheManager::addFileItem(const std::string& name, const std::string& filePath){
     std::vector<char> buf;
-    readBigFile(filePath, buf);
+    readBigFile$$0(filePath, buf);
     addItem(name, buf.data(), buf.size());
 }
 void CacheManager::addFileItemCompressed(const std::string& name, const std::string& filePath){
     std::vector<char> buf;
-    readBigFile(filePath, buf);
+    readBigFile$$0(filePath, buf);
     addItemCompressed(name, buf.data(), buf.size());
 }
 void CacheManager::addItem(const std::string& name, const char* data, uint64 len,
@@ -89,8 +89,9 @@ void CacheManager::addItem(const std::string& name, const char* data, uint64 len
 }
 void CacheManager::addItemCompressed(const std::string& name, const char* data,
                                      uint64 len){
+    MED_ASSERT(m_funcEnc);
     std::string str;
-    snappy::Compress((const char*)data, len, &str);
+    m_funcEnc((const char*)data, len, &str);
     addItem(name, str.data(), str.length(), kFlag_COMPRESSED);
 }
 
@@ -102,7 +103,9 @@ void CacheManager::getItemDataUnCompressed(const std::string& name, std::string&
     if( (m_items[_idx].flags & kFlag_COMPRESSED) != 0){
         std::string _out;
         getItemData0(_idx, _out);
-        snappy::Uncompress(_out.data(), _out.length(), &out);
+        MED_ASSERT(m_funcDec);
+        //snappy::Uncompress(_out.data(), _out.length(), &out);
+        m_funcDec(_out.data(), _out.length(), &out);
     }else{
         getItemData0(_idx, out);
     }
@@ -114,7 +117,8 @@ void CacheManager::getItemAt(unsigned int _idx, std::string& o_name, std::string
     if( (m_items[_idx].flags & kFlag_COMPRESSED) != 0){
         std::string _out;
         getItemData0(_idx, _out);
-        snappy::Uncompress(_out.data(), _out.length(), &o_data);
+        MED_ASSERT(m_funcDec);
+        m_funcDec(_out.data(), _out.length(), &o_data);
     }else{
         getItemData0(_idx, o_data);
     }
@@ -274,13 +278,15 @@ void CacheManager::compressTo(CString dir,CString recordName, CString dataName){
     if(m_items.empty()){
         return;
     }
+    MED_ASSERT(m_funcEnc);
     std::string outDir_pre = dir.empty() ? "" : dir + "/";
     uint32 block_count = m_data.size();
     for(uint32 i = 0 ; i < block_count ; i ++){
         MED_ASSERT(!m_data[i].empty());
         std::string out_file = outDir_pre + dataName + std::to_string(i) + ".dt";
         std::string real_data;
-        auto _csize = snappy::Compress(m_data[i].data(), m_data[i].size(), &real_data);
+        //snappy::Compress
+        auto _csize = m_funcEnc(m_data[i].data(), m_data[i].size(), &real_data);
         MED_ASSERT(_csize == real_data.length());
         FILE* stream_out = fopen64(out_file.data(), "wb");
         fwrite(real_data.data(), 1, _csize, stream_out);
@@ -296,7 +302,7 @@ bool CacheManager::load(CString dir,CString recordName, CString dataName){
      std::string outDir_pre = dir.empty() ? "" : dir + "/";
      std::string rfile = outDir_pre + recordName + ".dr";
      std::vector<char> _buffer;
-     readBigFile(rfile, _buffer);
+     readBigFile$$0(rfile, _buffer);
      if(_buffer.empty()){
          return false;
      }
@@ -333,19 +339,20 @@ bool CacheManager::load(CString dir,CString recordName, CString dataName){
         offset += id_count * sizeof(uint32);
      }
      //data file
+     MED_ASSERT(m_funcDec);
      m_data.resize(block_count);
      for(uint32 i = 0 ; i < block_count ; i ++){
          std::string out_file = outDir_pre + dataName + std::to_string(i) + ".dt";
          if(compressed){
              std::vector<char> vec;
-             readBigFile(out_file, vec);
+             readBigFile$$0(out_file, vec);
 
              std::string str;
-             MED_ASSERT(snappy::Uncompress(vec.data(), vec.size(), &str));
+             MED_ASSERT(m_funcDec(vec.data(), vec.size(), &str));
              m_data[i].resize(str.length());
              memcpy(m_data[i].data(), str.data(), str.length());
          }else{
-             readBigFile(out_file, m_data[i]);
+             readBigFile$$0(out_file, m_data[i]);
          }
      }
      return true;
