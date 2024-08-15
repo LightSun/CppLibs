@@ -28,11 +28,13 @@ typedef unsigned int uint32;
 typedef signed long long sint64;
 #endif
 
+#ifndef uint64
 #ifdef uint64_t
 typedef uint64_t uint64;
 #else
 //typedef unsigned long long uint64;
 typedef uint64_t uint64;
+#endif
 #endif
 
 #ifdef __cplusplus

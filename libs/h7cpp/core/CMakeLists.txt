@@ -109,6 +109,7 @@ file(GLOB_RECURSE SRC_CORE
     table/*.h table/*.hpp table/*.cpp table/*.c
     io/*.h io/*.cpp
     lang/*.h lang/*.cpp
+    cache/*.h cache/*.cpp
     c10/*.h c10/*.hpp c10/*.cpp
     utils/*.h utils/*.hpp utils/*.cpp utils/*.c utils/*.inc
     )
@@ -152,3 +153,25 @@ target_link_libraries(unittest PUBLIC h7cpp)
 if(CPPAST_BUILD_H7CPP)
     target_link_libraries(unittest PUBLIC cppast)
 endif()
+
+##
+install(TARGETS h7cpp DESTINATION
+    ${CMAKE_BINARY_DIR}/_install/lib)
+install(DIRECTORY common/ DESTINATION
+    ${CMAKE_BINARY_DIR}/_install/include/core/common
+        FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY common/ DESTINATION
+    ${CMAKE_BINARY_DIR}/_install/include/core/common
+        FILES_MATCHING PATTERN "*.hpp")
+install(DIRECTORY table/ DESTINATION
+    ${CMAKE_BINARY_DIR}/_install/include/core/table
+        FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY table/ DESTINATION
+    ${CMAKE_BINARY_DIR}/_install/include/core/table
+        FILES_MATCHING PATTERN "*.hpp")
+install(DIRECTORY utils/ DESTINATION
+    ${CMAKE_BINARY_DIR}/_install/include/core/utils
+    FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY utils/ DESTINATION
+    ${CMAKE_BINARY_DIR}/_install/include/core/utils
+    FILES_MATCHING PATTERN "*.hpp")

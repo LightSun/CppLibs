@@ -42,17 +42,17 @@ void test_medRSA(){
     //printf("gen_sequence(%lu): %s\n", str.length(), str.data());
     //test_medRSA0(10 << 20);
     String dir = "/home/heaven7/heaven7/env/linux/openssl_1.1.1s/bin/";
-    test_medRSA(10 << 20, dir + "rsa_public_key.pem",  dir + "rsa_private_key.pem");
+    test_medRSA(800 << 20, dir + "rsa_public_key.pem",  dir + "rsa_private_key.pem");
 
-    test_AES(10 << 20, KeyMode::kKey_16);
-    test_AES(10 << 20, KeyMode::kKey_24);
-    test_AES(10 << 20, KeyMode::kKey_32);
+//    test_AES(800 << 20, KeyMode::kKey_16);
+//    test_AES(800 << 20, KeyMode::kKey_24);
+//    test_AES(800 << 20, KeyMode::kKey_32);
 }
 
 void test_AES(size_t len, KeyMode keyMode){
     test_AES_ecb(len, keyMode);
     test_AES_cbc(len, keyMode);
-    test_AES_cfb1(len, keyMode);
+   // test_AES_cfb1(len, keyMode);//so slow
     test_AES_cfb8(len, keyMode);
     test_AES_cfb128(len, keyMode);
     test_AES_ofb128(len, keyMode);
@@ -117,7 +117,7 @@ void test_medRSA0(size_t len){
 void test_medRSA00(size_t len, CString pubKey, CString priKey){
     h7::PerfHelper ph;
     auto str = gen_sequence(len);
-    MedRSA mrsa(1 << 20); // 1M
+    MedRSA mrsa(10 << 20); // 1M
     printf("max_tc = %d\n", mrsa.getMaxThreadCount());
     {
         ph.begin();

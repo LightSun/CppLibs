@@ -198,6 +198,14 @@ void CacheManager::removeItem(CString name){
 uint32 CacheManager::getItemCount(){
     return m_items.size();
 }
+std::vector<String> CacheManager::getItemNames(){
+    std::vector<String> ret;
+    ret.reserve(m_items.size());
+    for(auto& item : m_items){
+        ret.push_back(item.name);
+    }
+    return ret;
+}
 
 CacheManager::uint64 CacheManager::computeRecordSize(){
     uint64 _size = 0;

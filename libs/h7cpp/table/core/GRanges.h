@@ -23,7 +23,7 @@ public:
         MED_ASSERT(m_starts->size() == m_ends->size());
         this->m_keys = sk_make_sp<ListS>(m_starts->size(), true);
     }
-    GRanges(Cons_Ref(ListS) m_keys, Cons_Ref(ListI) m_starts, Cons_Ref(ListI) m_ends){
+    GRanges(const ListS& m_keys, const ListI& m_starts, const ListI& m_ends){
         MED_ASSERT(m_starts.size() == m_ends.size());
         MED_ASSERT_IF(!m_keys.isEmpty(), m_keys.size() == m_starts.size());
         if(m_keys.isEmpty()){

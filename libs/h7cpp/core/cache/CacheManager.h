@@ -62,6 +62,7 @@ using CString = const std::string&;
         void removeItem(const std::string& name);
 
         uint32 getItemCount();
+        std::vector<String> getItemNames();
 
         void saveTo(const std::string& dir,const std::string& recordName,
                     const std::string& dataName);

@@ -129,7 +129,7 @@ inline String rGsub(CString pat, CString replace, CString text){
     return std::regex_replace(text.c_str(), reg, replace.c_str());
 }
 
-inline bool match(std::regex& reg, Cons_Ref(String) text){
+inline bool match(std::regex& reg, CString text){
     return rGrepl(reg, text);
 }
 

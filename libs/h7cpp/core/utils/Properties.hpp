@@ -57,6 +57,13 @@ public:
         }
         return defVal;
     }
+    String getStringWithReplace(CString key, CString defVal = ""){
+        auto str = getString("REPLACE::" + key);
+        if(str.empty()){
+            return getString(key, defVal);
+        }
+        return str;
+    }
     bool getBool(CString key){
         Value v(getString(key));
         return v.getBool();
