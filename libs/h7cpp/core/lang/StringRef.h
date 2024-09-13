@@ -8,9 +8,9 @@ namespace h7 {
         using Long = long long;
         using ULong = unsigned long long;
 
-        StringRef(char* data, u32 start, u32 len);
-        StringRef(char* data);
-        StringRef(String* ref);
+        explicit StringRef(char* data, u32 start, u32 len);
+        explicit StringRef(char* data);
+        explicit StringRef(String* ref);
         //malloc
         StringRef(u32 len, bool resize);
         StringRef(const char* data, u32 start, u32 len);
