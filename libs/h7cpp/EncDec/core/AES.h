@@ -39,5 +39,4 @@ private:
     int m_tc;
     size_t m_maxLen {1 << 20};
 };
-
 }
