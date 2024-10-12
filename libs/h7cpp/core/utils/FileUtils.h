@@ -18,6 +18,7 @@ namespace h7 {
         static bool isRelativePath(CString path);
         static String getFilePath(CString path, const std::vector<String>& dirs);
 
+        static String getCurrentDir();
         static sk_sp<ListS> getFiles(CString path, bool recursion = true,
                                      CString suffix = "");
         //remove dir and below-files

@@ -29,6 +29,7 @@
 #ifdef WIN32
 #include <windows.h>                 //Windows API   FindFirstFile
 #include <shlwapi.h>
+#undef CString
 #endif
 
 #include <list>
@@ -164,8 +165,33 @@ static char ALPHABET[] = {
     'O','P','Q','R','S','T',
     'U','V','W','X','Y','Z'
 };
+static void Wchar_tToString(std::string& szDst, wchar_t*wchar)
+{
+    wchar_t * wText = wchar;
+    DWORD dwNum = WideCharToMultiByte(CP_OEMCP,NULL,wText,-1,NULL,0,NULL,FALSE);
+    char *psText;  // psText为char*的临时数组，作为赋值给std::string的中间变量
+    psText = new char[dwNum];
+    WideCharToMultiByte(CP_OEMCP,NULL,wText,-1,psText,dwNum,NULL,FALSE);
+    szDst = psText;
+    delete []psText;
+}
 #endif
 
+String FileUtils::getCurrentDir(){
+#ifdef _WIN32
+    WCHAR czFileName[1024] = {0};
+    GetModuleFileName(NULL, czFileName, _countof(czFileName)-1);
+    PathRemoveFileSpec(czFileName);
+    String ret;
+    Wchar_tToString(ret, czFileName);
+    return ret;
+   // fprintf(stderr, "getCurrentDir >> win32 not support\n");
+#else
+    char buf[1024];
+    getcwd(buf, 1024);
+    return String(buf);
+#endif
+}
 bool FileUtils::isRelativePath(CString path){
     auto strs = path.c_str();
     if(strs[0] == '/'){

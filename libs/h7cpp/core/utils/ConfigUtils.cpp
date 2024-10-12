@@ -1,8 +1,8 @@
 #include <fstream>
-#include "utils/ConfigUtils.h"
-#include "utils/string_utils.hpp"
-#include "utils/FileUtils.h"
-#include "utils/StringBuffer.h"
+#include "ConfigUtils.h"
+#include "string_utils.hpp"
+#include "FileUtils.h"
+#include "StringBuffer.h"
 
 #ifdef _WIN32
 #include <direct.h>
@@ -15,6 +15,8 @@
 #include <shlwapi.h>
 #endif
 
+#define __KEY_CUR_DIR "$(CUR_DIR)"
+#define __KEY_INCLUDES "$(INCLUDES)"
 
 namespace h7 {
 
@@ -59,8 +61,8 @@ static String _getRealValue(std::map<String,String>& map, CString key){
                     printf("Properties >> can't find replacement, for key = %s.\n", _key.c_str());
                     break;
                 }else{
-                    std::cout << "start replace: " << _key << " --> "
-                              << newVal << std::endl;
+                    //std::cout << "start replace: " << _key << " --> "
+                    //          << newVal << std::endl;
                     val = h7::utils::replace("\\$\\{"+ _key + "\\}", newVal, val);
                 }
             }else{
@@ -150,6 +152,12 @@ void ConfigUtils::loadProperties(CString prop_file,
     //
     _readProperties(m_stream, m_map);
     m_stream.close();
+    //
+    if(FileUtils::isRelativePath(prop_file)){
+        m_map[__KEY_CUR_DIR] = FileUtils::getCurrentDir();
+    }else{
+        m_map[__KEY_CUR_DIR] = FileUtils::getFileDir(prop_file);
+    }
 }
 
 void ConfigUtils::resolveProperties(const std::vector<String>& dirs,
@@ -160,8 +168,40 @@ void ConfigUtils::resolveProperties(const std::vector<String>& dirs,
     }
     //do resolve
     {
-        auto end = m_map.end();
-        for(auto it = m_map.begin(); it != end ; it ++){
+        std::vector<String> toIncFiles;
+        for(auto it = m_map.begin(); it != m_map.end() ; it ++){
+            auto& key = it->first;
+            if(key.find(__KEY_INCLUDES) != String::npos){
+                auto& v = it->second;
+                auto files = h7::utils::split(",", v);
+                int size = files.size();
+                for(int i = 0 ; i < size ; ++i){
+                    auto& f = files[i];
+                    auto realF = _getRealValue(m_map, f);
+                    if(realF.empty()){
+                        realF = f;
+                    }
+                    if(FileUtils::isRelativePath(realF)){
+                        auto curDir = m_map[__KEY_CUR_DIR];
+                        if(curDir.empty()){
+                            fprintf(stderr, "[WARN] value of '$(INCLUDES)' has relative path. please check!\n");
+                        }else{
+                            toIncFiles.push_back(curDir + "/" + realF);
+                        }
+                    }else{
+                        toIncFiles.push_back(realF);
+                    }
+                }
+            }
+        }
+        for(int i = 0 ; i < (int)toIncFiles.size() ; ++i){
+            loadProperties(toIncFiles[i], m_map);
+        }
+        for(auto it = m_map.begin(); it != m_map.end() ; it ++){
+            auto& key = it->first;
+            if(key.find(__KEY_INCLUDES) != String::npos){
+                continue;
+            }
             m_map[it->first] = _getRealValue(m_map, it->first);
         }
     }
