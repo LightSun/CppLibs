@@ -29,6 +29,7 @@ extern void test_splits();
 extern void test_Callbacks();
 extern void test_LockFreeHashMap();
 extern void test_SaveQueue();
+extern void test_SFINAE();
 
 using namespace h7;
 
@@ -57,7 +58,8 @@ int main(int argc, char* argv[]){
     //test_Callbacks();
 
     //test_LockFreeHashMap();
-    test_SaveQueue();
+    //test_SaveQueue();
+    test_SFINAE();
 
     //test_ConfigUtils();
     //test_Platforms();

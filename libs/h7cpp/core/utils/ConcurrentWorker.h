@@ -7,6 +7,7 @@
 
 namespace h7 {
 
+//support multi-produce with single consumer
 template <typename T>
 class ConcurrentWorker
 {
@@ -70,6 +71,7 @@ private:
     std::atomic_bool m_started {false};
 };
 
+//support multi-produce with single consumer
 template <typename R,typename T,typename P>
 class ConcurrentCallbackWorker{
 public:
@@ -82,7 +84,7 @@ public:
     using SItem = std::shared_ptr<Item>;
     ConcurrentCallbackWorker(int count, std::function<R(T& task, const P& p)> func)
         : m_func(func){
-        m_queue = std::make_unique<SItem>(ConcurrentWorker<int>::tableSizeFor(count));
+        m_queue = std::make_unique<SaveQueue<SItem>>(ConcurrentWorker<int>::tableSizeFor(count));
     }
     void start(){
         bool exp = false;

@@ -2,6 +2,7 @@
 
 #include <random>
 #include <string>
+#include <algorithm>
 
 namespace h7 {
     class Random{
@@ -26,5 +27,6 @@ namespace h7 {
             }
             return str;
         }
+        //dep exist str random: std::random_shuffle
     };
 }

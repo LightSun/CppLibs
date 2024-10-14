@@ -128,6 +128,7 @@ set(SRC_TEST
     test/test_callback_wrapper.cpp
     test/test_LockFreeHashMap.cpp
     test/test_SaveQueue.cpp
+    test/test_sfinae.cpp
     test/main.cpp
     )
 
