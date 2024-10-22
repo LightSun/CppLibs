@@ -25,6 +25,7 @@ else()
 endif()
 
 include_directories(core/)
+include_directories(valgrind-headers/)
 include_directories(./)
 
 ## sub dirs
