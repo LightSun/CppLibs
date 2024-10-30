@@ -40,15 +40,17 @@ public:
         }
         return false;
     }
-    //func: called on stop success.
-    void stop(Func func = nullptr){
+    //return true for call stop ok. failed for already called stop.
+    bool stop(){
+        if(h_atomic_get(&m_runCount) == 0){
+            return false;
+        }
         if(h_atomic_cas(&m_reqStop, 0, 1)){
             mMLock.wait();
             reset();
-            if(func){
-                func();
-            }
+            return true;
         }
+        return false;
     }
 private:
     void reset(){

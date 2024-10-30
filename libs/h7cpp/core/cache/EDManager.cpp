@@ -30,7 +30,7 @@ void EDManager::compress(bool verify){
         List<String> l;
         for(auto& suf : suffixes){
             auto list = FileUtils::getFiles(dir, true, suf);
-            l.insert(l.end(), list->list.begin(), list->list.end());
+            l.insert(l.end(), list.begin(), list.end());
         }
         files.insert(files.end(), l.begin(), l.end());
         //

@@ -56,8 +56,8 @@ bool FileUtils::isFileExists(const std::string &path) {
 #endif // !_WIN32
 }
 
-sk_sp<ListS> FileUtils::getFiles(CString path, bool recursion, CString suffix){
-    sk_sp<ListS> ret = sk_make_sp<ListS>();
+std::vector<String> FileUtils::getFiles(CString path, bool recursion, CString suffix){
+    std::vector<String> ret;
 #ifdef __linux__
     DIR *dir;
 #endif
@@ -80,10 +80,10 @@ sk_sp<ListS> FileUtils::getFiles(CString path, bool recursion, CString suffix){
               if(strcmp(ptr->d_name, ".") == 0 || strcmp(ptr->d_name, "..") == 0) {
                   continue;
               } else if (ptr->d_type == DT_REG) { /* regular file */
-                  if(suffix.length() > 0){
+                  if(suffix.empty() || suffix.length() > 0){
                       String _file(ptr->d_name);
                       if(h7::utils::endsWith(_file, suffix)){
-                          ret->add(str + std::string("/") + _file);
+                          ret.push_back(str + std::string("/") + _file);
                       }
                   }
               } else if (ptr->d_type == DT_DIR) { /* dir */
@@ -110,8 +110,8 @@ sk_sp<ListS> FileUtils::getFiles(CString path, bool recursion, CString suffix){
             }
             else{
                 String _file(fileinfo.name);
-                if(h7::utils::endsWith(_file, suffix)){
-                    ret->add(p.assign(path).append("\\").append(fileinfo.name));
+                if(suffix.empty() || h7::utils::endsWith(_file, suffix)){
+                    ret.push_back(p.assign(path).append("\\").append(fileinfo.name));
                 }
             }
         }while (_findnext(hFile, &fileinfo) == 0);

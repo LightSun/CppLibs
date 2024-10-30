@@ -95,6 +95,13 @@ do{\
     code;\
 }while(0);
 
+#define HFMT_BUF_512(code, fmt ,...)\
+do{\
+    char buf[512];\
+    snprintf(buf, 512, fmt, ##__VA_ARGS__);\
+    code;\
+}while(0);
+
 #ifndef MED_ASSERT
 #define MED_ASSERT(condition)                                                   \
     do                                                                      \

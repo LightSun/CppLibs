@@ -108,6 +108,7 @@ file(GLOB_RECURSE SRC_CORE
     common/*.h common/*.hpp common/*.cpp common/*.c
     table/*.h table/*.hpp table/*.cpp table/*.c
     io/*.h io/*.cpp
+    io2/*.h io2/*.cpp
     lang/*.h lang/*.cpp
     cache/*.h cache/*.cpp
     c10/*.h c10/*.hpp c10/*.cpp
@@ -129,6 +130,7 @@ set(SRC_TEST
     test/test_LockFreeHashMap.cpp
     test/test_SaveQueue.cpp
     test/test_sfinae.cpp
+    test/test_dir_files_md5.cpp
     test/main.cpp
     )
 
