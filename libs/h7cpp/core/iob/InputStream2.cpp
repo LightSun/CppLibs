@@ -2,7 +2,7 @@
 #include <fstream>
 #include <stdlib.h>
 #include <memory.h>
-#include "InputStream.h"
+#include "InputStream2.h"
 #include "utils/string_utils.hpp"
 
 using namespace h7;

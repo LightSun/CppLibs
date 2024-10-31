@@ -108,7 +108,7 @@ file(GLOB_RECURSE SRC_CORE
     common/*.h common/*.hpp common/*.cpp common/*.c
     table/*.h table/*.hpp table/*.cpp table/*.c
     io/*.h io/*.cpp
-    io2/*.h io2/*.cpp
+    iob/*.h iob/*.cpp
     lang/*.h lang/*.cpp
     cache/*.h cache/*.cpp
     c10/*.h c10/*.hpp c10/*.cpp
