@@ -4,7 +4,7 @@
 #include "utils/convert.hpp"
 #include "utils/FileUtils.h"
 #include "utils/Regex.h"
-#include "io/StringReader.h"
+#include "StringReader.h"
 
 namespace h7 {
 

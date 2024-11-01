@@ -15,6 +15,8 @@ typedef unsigned __int64 uint64_t;
 
 #include <string>
 
+namespace h7 {
+
 /// Portable read-only memory mapping (Windows and Linux)
 /** Filesize limited by size_t, usually 2^32 or 2^64 */
 class MemoryMapped
@@ -100,3 +102,5 @@ private:
   /// pointer to the file contents mapped into memory
   void*       _mappedView {nullptr};
 };
+
+}

@@ -10,11 +10,13 @@ namespace h7 {
 
 class BufferedInputStream : public AbsInputStream<BufferedInputStream>{
 public:
-    using UPInputStream = std::unique_ptr<InputStream>;
+    using InputStreamPtr = InputStream*;
 
-    BufferedInputStream(UPInputStream is, size_t bufSize = (2 << 20)){
-        m_is = std::move(is);
+    //bufSize: in bytes
+    BufferedInputStream(InputStreamPtr is, size_t bufSize = (2 << 20)){
+        MED_ASSERT(is);
         MED_ASSERT(bufSize > 0);
+        m_is = is;
         m_buffer.resize(bufSize);
     }
     bool open(CString buffer, CString p){
@@ -69,9 +71,10 @@ public:
         }else{
             offset = -offset;
             // 5, 8 / 8, 5
-            if(offset <= m_bufPos){
+            if((size_t)offset <= m_bufPos){
                 m_bufPos -= offset;
             }else{
+                //m_validLen: 100, m_bufPos:10, offset: 20(-)
                 m_is->seekDelta(-(m_validLen + offset));
                 m_bufPos = 0;
                 m_validLen = 0;
@@ -102,10 +105,6 @@ private:
         MED_ASSERT(bufLeft >= 0);
         if(bufLeft > 0){
             std::memmove(m_buffer.data(), bufData(), bufLeft);
-            //std::vector<char> buf2;
-            //buf2.resize(bufLeft);
-            //std::memcpy(buf2.data(), bufData(), (size_t)bufLeft);
-            //std::memcpy(m_buffer.data(), buf2.data(), bufLeft);
         }
         size_t nextSize = m_buffer.size() - bufLeft;
         if(nextSize > 0){
@@ -117,7 +116,7 @@ private:
         m_bufPos = 0;
     }
 private:
-    UPInputStream m_is;
+    InputStreamPtr m_is;
     std::vector<char> m_buffer;
     size_t m_bufPos {0};
     size_t m_validLen {0}; //only write in 'bufFill()'

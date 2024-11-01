@@ -11,7 +11,13 @@ namespace h7 {
 
 class MappedInputStream : public AbsInputStream<MappedInputStream>{
 public:
-    bool open(CString file, CString hint){
+    using UPMemoryMapped = std::unique_ptr<MemoryMapped>;
+
+    MappedInputStream(){
+        m_memMapped = std::make_unique<MemoryMapped>();
+    }
+
+    static bool open0(MemoryMapped& memMap,CString file, CString hint){
         Count mapSize;
         MemoryMapped::CacheHint cacheHint;
         int pos = hint.find(":");
@@ -33,17 +39,23 @@ public:
             }
         }
         MED_ASSERT(mapSize > 0);
+        auto pgSize = MemoryMapped::getpagesize();
+        bool hasLeft = (mapSize % pgSize) != 0;
+        mapSize = (mapSize / pgSize + (hasLeft ? 1 : 0)) * pgSize;
+        return memMap.open(file, mapSize, cacheHint);
+    }
+    bool open(CString file, CString hint){
         m_nextPos = 0;
-        return m_memMapped.open(file, mapSize, cacheHint);
+        return open0(*m_memMapped, file, hint);
     }
     void close(){
-        m_memMapped.close();
+        m_memMapped->close();
     }
     //return actual read count . -1 for failed.
     size_t readCount(Count c, char* outArr){
         const auto left = leftSize();
         if(c > left) c = left;
-        std::memcpy(outArr, m_memMapped.getData() + m_nextPos, c);
+        std::memcpy(outArr, m_memMapped->getData() + m_nextPos, c);
         m_nextPos += c;
         return c;
     }
@@ -57,11 +69,11 @@ public:
         return totalSize() - m_nextPos;
     }
     Count totalSize(){
-        return m_memMapped.mappedSize();
+        return m_memMapped->mappedSize();
     }
 
 private:
-    MemoryMapped m_memMapped;
+    UPMemoryMapped m_memMapped;
     Count m_nextPos {0};
 };
 

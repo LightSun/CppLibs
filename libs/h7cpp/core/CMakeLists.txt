@@ -114,7 +114,9 @@ file(GLOB_RECURSE SRC_CORE
     c10/*.h c10/*.hpp c10/*.cpp
     utils/*.h utils/*.hpp utils/*.cpp utils/*.c utils/*.inc
     )
+
 set(SRC_TEST
+    test/main.cpp
     test/test_asyncs.cpp
     test/test_FilesSync.cpp
     test/test_CountDownLatch.cpp
@@ -131,7 +133,7 @@ set(SRC_TEST
     test/test_SaveQueue.cpp
     test/test_sfinae.cpp
     test/test_dir_files_md5.cpp
-    test/main.cpp
+    test/test_ios.cpp
     )
 
 add_library(h7cpp

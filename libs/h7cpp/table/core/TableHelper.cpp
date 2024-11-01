@@ -4,7 +4,7 @@
 #include "utils/BufFileWriter.h"
 #include "utils/FileUtils.h"
 #include "utils/Regex.h"
-#include "io/StringReader.h"
+#include "StringReader.h"
 
 namespace h7{
     sk_sp<Table> TableHelper::readTableFromOneLine(CString data, CString seq_inner,

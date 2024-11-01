@@ -1,6 +1,12 @@
 #ifndef COMMON_BASE_H
 #define COMMON_BASE_H
 
+#if defined(_WIN32) || defined(WIN32)
+#define CMD_LINE "\r\n"
+#else
+#define CMD_LINE "\n"
+#endif
+
 #define HFMT_BUF_32(code, fmt,...)\
 do{\
     char buf[32];\

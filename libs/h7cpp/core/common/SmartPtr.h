@@ -29,16 +29,20 @@ struct SmartPtr{
     T* release(){T* p = ptr; ptr = nullptr; return p;}
 
     void reset(T* ptr, std::function<void(T*)> del){
-        delete0();
-        this->ptr = ptr;
-        this->del = del;
+        if(this->ptr != ptr){
+            delete0();
+            this->ptr = ptr;
+            this->del = del;
+        }
     }
     //like std::move
     void reset(SmartPtr<T>& src){
-        delete0();
-        this->ptr = src.ptr;
-        this->del = src.del;
-        src.ptr = nullptr;
+        if(this->ptr != src.ptr){
+            delete0();
+            this->ptr = src.ptr;
+            this->del = src.del;
+            src.ptr = nullptr;
+        }
     }
 private:
     void delete0(){

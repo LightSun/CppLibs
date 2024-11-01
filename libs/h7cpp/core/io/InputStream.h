@@ -1,10 +1,6 @@
 #pragma once
 
-#include <string>
-#include <vector>
-#include <functional>
-
-#define DEF_IS_API_VIRTUAL(a) virtual a = 0
+#include "io/io_common.h"
 
 namespace h7 {
 
@@ -21,6 +17,9 @@ struct StringConvertor{
     static long long atoll(const char* str){
         return std::stoll(str);
     }
+    static long long atoull(const char* str){
+        return std::stoull(str);
+    }
 };
 
 class InputStream{
@@ -29,6 +28,8 @@ public:
     using String = std::string;
     using CString = const std::string&;
 
+    virtual ~InputStream(){}
+
     DEF_IS_API_VIRTUAL(bool open(CString file, CString param));
     DEF_IS_API_VIRTUAL(void close());
     //return actual read count . -1 for failed.
@@ -36,7 +37,7 @@ public:
     DEF_IS_API_VIRTUAL(void seekDelta(Count offset));
     //reset to first position
     DEF_IS_API_VIRTUAL(void reset());
-    //return -1 for failed
+    //return 0 for failed
     DEF_IS_API_VIRTUAL(Count leftSize());
     //return > 0 for valid
     DEF_IS_API_VIRTUAL(Count totalSize());
@@ -54,65 +55,86 @@ public:
         seekDelta(offset);
     }
     inline bool readDouble(double& out){
-        String str = readString(sizeof (double));
-        if(!str.empty()){
-            out = StringConvertor::atof(str.c_str());
+        using TYPE = double;
+        UniDouble uni;
+        if(readCount(sizeof(TYPE), uni.arr) == sizeof(TYPE)){
+            out = uni.val;
             return true;
         }
         return false;
     }
     inline bool readFloat(float& out){
-        String str = readString(sizeof (float));
-        if(!str.empty()){
-            out = (float)StringConvertor::atof(str.c_str());
-            return true;
-        }
-        return false;
-    }
-    inline bool readShort(short& out){
-        String str = readString(sizeof (short));
-        if(!str.empty()){
-            out = (short)StringConvertor::atoi(str.c_str());
+        using TYPE = float;
+        UniFloat uni;
+        if(readCount(sizeof(TYPE), uni.arr) == sizeof(TYPE)){
+            out = uni.val;
             return true;
         }
         return false;
     }
     inline bool readBool(bool& out){
-        auto str0 = readString(4);
-        if(str0 == "TRUE" || str0 == "true"){
-            out = true;
+        char val;
+        if(readChar(val)){
+            out = val != 0;
             return true;
         }
-        seekDelta(-4);
-        String str = readString(sizeof (bool));
-        if(!str.empty()){
-            out = StringConvertor::atoi(str.c_str()) != 0;
+        return false;
+    }
+    inline bool readShort(short& out){
+        UniShort uni;
+        if(readCount(sizeof(short), uni.arr) == sizeof(short)){
+            out = uni.val;
             return true;
         }
-        out = false;
         return false;
     }
     inline bool readInt(int& out){
-        String str = readString(sizeof (int));
-        if(!str.empty()){
-            out = StringConvertor::atoi(str.c_str());
+        UniInt uni;
+        if(readCount(sizeof(int), uni.arr) == sizeof(int)){
+            out = uni.val;
+            return true;
+        }
+        return false;
+    }
+    inline bool readUInt(unsigned int& out){
+        using TYPE = unsigned int;
+        UniUInt uni;
+        if(readCount(sizeof(TYPE), uni.arr) == sizeof(TYPE)){
+            out = uni.val;
             return true;
         }
         return false;
     }
     inline bool readLong(long long int & out){
-        String str = readString(sizeof (long long int));
-        if(!str.empty()){
-            out = StringConvertor::atoll(str.c_str());
+        using TYPE = long long;
+        UniLong uni;
+        if(readCount(sizeof(TYPE), uni.arr) == sizeof(TYPE)){
+            out = uni.val;
             return true;
         }
         return false;
     }
-    inline String readString(Count count){
+    inline bool readULong(unsigned long long & out){
+        using TYPE = unsigned long long;
+        UniULong uni;
+        if(readCount(sizeof(TYPE), uni.arr) == sizeof(TYPE)){
+            out = uni.val;
+            return true;
+        }
+        return false;
+    }
+    inline String readRawString(Count count){
         std::vector<char> vec;
         vec.resize(count);
         auto actCnt = readCount(count, vec.data());
         return actCnt > 0 ? String(vec.data(), actCnt) : "";
+    }
+    inline String readString(){
+        unsigned int size = 0;
+        if(readUInt(size)){
+            return readRawString(size);
+        }
+        return "";
     }
     inline bool readChar(char& out){
         return readCount(1, &out) > 0;
@@ -146,19 +168,34 @@ public:
             func(lineIdx++, str);
         }
     }
-    void readLines(std::vector<String>& vec, std::function<bool(String&)> func_filter = nullptr){
+    std::vector<String> readLines(std::function<bool(String&)> func_filter = nullptr){
+        std::vector<String> vec;
         String str;
         while (readline(str)) {
             if(!func_filter || !func_filter(str)){
                 vec.push_back(str);
             }
         }
+        return vec;
+    }
+    template<typename T>
+    std::vector<T> readList(std::function<void(String&, T&)> convertor,
+                            std::function<bool(String&)> func_filter = nullptr){
+        auto lines = readLines(func_filter);
+        std::vector<T> ret;
+        ret.resize(ret.size());
+        for(int i = 0 ; i < (int)lines.size(); ++i){
+            convertor(lines[i], ret[i]);
+        }
+        return ret;
     }
 };
 
 template<typename T>
 class AbsInputStream : public InputStream{
 public:
+    virtual ~AbsInputStream(){}
+
     bool open(CString s, CString param) override{
         return (static_cast<T*>(this))->open(s, param);
     }

@@ -1,6 +1,8 @@
 #include "utils/ConfigUtils.h"
 #include "common/common.h"
 
+using namespace h7;
+
 using Map = std::map<String, String>;
 
 void test_ConfigUtils(){

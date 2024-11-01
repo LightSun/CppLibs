@@ -26,12 +26,6 @@ using String = std::string;
 #define HMIN(a, b) (a < b ? a : b)
 #define HMAX(a, b) (a > b ? a : b)
 
-#if defined(_WIN32) || defined(WIN32)
-#define CMD_LINE "\r\n"
-#else
-#define CMD_LINE "\n"
-#endif
-
 #if defined(_WIN32)|| defined(WIN32)
     #include <windows.h>
 #define SLEEP(x) Sleep(x) //msec

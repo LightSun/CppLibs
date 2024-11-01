@@ -30,6 +30,7 @@ extern void test_Callbacks();
 extern void test_LockFreeHashMap();
 extern void test_SaveQueue();
 extern void test_SFINAE();
+extern void test_IOs();
 extern void test_dir_files_md5(const char* dir);
 
 using namespace h7;
@@ -48,12 +49,11 @@ int main(int argc, char* argv[]){
     */
     if(argc == 1){
         String fir = "/home/heaven7/heaven7/work/TensorRT/libtorch_1.12.1/libtorch/lib";
-        test_dir_files_md5(fir.data());
+       // test_dir_files_md5(fir.data());
+        test_IOs();
         return 0;
     }
     if(argc > 1){
-        test_dir_files_md5(argv[1]);
-        return 0;
         //auto ret = h7::FileUtils::isFileExists(argv[1]);
        // printf("file exists: %s\n", ret ? "true" : "false");
     }

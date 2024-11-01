@@ -31,6 +31,7 @@
 #include <unistd.h>
 #endif
 
+using namespace h7;
 
 /// do nothing, must use open()
 MemoryMapped::MemoryMapped()
