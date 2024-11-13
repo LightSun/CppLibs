@@ -113,6 +113,7 @@ file(GLOB_RECURSE SRC_CORE
     cache/*.h cache/*.cpp
     c10/*.h c10/*.hpp c10/*.cpp
     utils/*.h utils/*.hpp utils/*.cpp utils/*.c utils/*.inc
+    experimental/*.h experimental/*.cpp
     )
 
 set(SRC_TEST
