@@ -162,7 +162,10 @@ struct ConfigItem : public IConfigResolver{
     }
     void loadFromBuffer(CString buffer, CString curDir);
     //return error msg.
+    String resolve(const Map& prop);
+    String resolve(Map* prop);
     String resolve(IConfigResolver* resolver);
+
     UPConfigItem copy();
     void mergeForInclude(ConfigItem* ci);
     void mergeForSuper(ConfigItem* ci);
@@ -170,22 +173,21 @@ struct ConfigItem : public IConfigResolver{
     ConfigItemHolder resolveInclude(String, CString, String&) override{
         return ConfigItemHolder();
     }
-    ConfigItemHolder resolveSuper(String, CString, String&) override{
-        return ConfigItemHolder();
-    }
+    ConfigItemHolder resolveSuper(String, CString, String&) override;
     String resolveValue(CString name, String& errorMsg) override;
 };
 
 class SuperConfig
 {
 public:
-    SuperConfig() = default;
+    SuperConfig(Map* env = nullptr):m_env(env){}
 
     bool loadFromBuffer(CString buffer, CString curDir);
     bool loadFromFile(CString file);
     String getString(CString key, CString def = "");
 
 private:
+    Map* m_env;
     UPConfigItem m_item;
 };
 

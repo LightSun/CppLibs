@@ -68,6 +68,7 @@ namespace h7 {
         static std::string getFileContent(CString file);
         static std::string getFileContent(CString file, uint64 offset, uint64 size);
         static uint64 getFileSize(CString file);
+        static bool writeFile(CString file, CString content);
     };
 }
 

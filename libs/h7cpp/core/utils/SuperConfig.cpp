@@ -1,6 +1,7 @@
 #include "core/utils/SuperConfig.h"
 #include "core/utils/string_utils.hpp"
 #include "core/utils/StringBuffer.h"
+#include "core/utils/FileUtils.h"
 
 using namespace h7;
 
@@ -8,13 +9,14 @@ using namespace h7;
 
 namespace h7 {
 
-bool IConfigResolver::getRealValue(String& val, IConfigResolver* reso, String& errorMsg){
+bool getRealValueImpl(CString pre, String& val, IConfigResolver* reso, String& errorMsg){
     if(!val.empty()){
+        const String first = pre + "{";
         String _key;
         int s1, s2;
         String newVal;
         while (true) {
-            s1 = val.find("${");
+            s1 = val.find(first);
             if(s1 >=0 ){
                 s2 = val.find("}", s1 + 2);
                 _key = utils::subString(val, s1 + 2, s2);
@@ -41,6 +43,60 @@ bool IConfigResolver::getRealValue(String& val, IConfigResolver* reso, String& e
     }
     return true;
 }
+bool IConfigResolver::getRealValue(String& val, IConfigResolver* reso, String& errorMsg){
+    return getRealValueImpl("$", val, reso, errorMsg);
+}
+
+struct RuntimeEnvConfigResolver: public IConfigResolver{
+
+    std::map<String, String>* prop;
+    ConfigItem* pItem {nullptr};
+
+    ConfigItemHolder resolveInclude(String curDir, CString name, String& errorMsg) override{
+        String path = name;
+        String errMsg;
+        if(IConfigResolver::getRealValue(path, this, errMsg)){
+            if(FileUtils::isRelativePath(path)){
+                path = curDir + "/" + path;
+            }
+            if(!FileUtils::isFileExists(path)){
+                errorMsg = "cant find file for include: " + path;
+                return ConfigItemHolder();
+            }
+            auto dir = FileUtils::getFileDir(path);
+            auto cs = FileUtils::getFileContent(path);
+            auto ci = ConfigItem::make();
+            ci->loadFromBuffer(cs, dir);
+            errorMsg = ci->resolve(prop);
+            if(errorMsg.empty()){
+                return ConfigItemHolder(ci.release(), [](ConfigItem* it){
+                    delete it;
+                });
+            }
+        }else{
+            errorMsg = "getRealValue failed. val = " + path;
+        }
+        return ConfigItemHolder();
+    }
+    ConfigItemHolder resolveSuper(String curDir, CString name, String& errorMsg)override{
+        return pItem->resolveSuper(curDir, name, errorMsg);
+    }
+    String resolveValue(CString n, String&) override{
+        return getVal(n);
+    }
+private:
+    String getVal(CString n){
+        if(prop){
+            auto it = prop->find(n);
+            if(it != prop->end()){
+                return it->second;
+            }
+        }
+        auto val = getenv(n.data());
+        return val ? val : "";
+    }
+};
+
 struct WrappedResolver: public IConfigResolver{
 
     std::unordered_map<String, ConfigItemHolder> incMap;
@@ -332,6 +388,19 @@ String ConfigItem::resolve(IConfigResolver* reso){
     //
     return wreso.resolveValues(this);
 }
+String ConfigItem::resolve(const Map& prop){
+    Map prop1 = prop;
+    RuntimeEnvConfigResolver recr;
+    recr.prop = &prop1;
+    recr.pItem = this;
+    return resolve(&recr);
+}
+String ConfigItem::resolve(Map* prop){
+    RuntimeEnvConfigResolver recr;
+    recr.prop = prop;
+    recr.pItem = this;
+    return resolve(&recr);
+}
 void ConfigItem::mergeForInclude(ConfigItem* ci){
     mergeForSuper(ci);
 }
@@ -354,6 +423,24 @@ void ConfigItem::mergeForSuper(ConfigItem* ci){
     //super.
     this->supers.merge(ci->supers);
 }
+//---------------
+ConfigItemHolder ConfigItem::resolveSuper(String curDir, CString name, String& errMsg){
+    int idxOfDot = name.find(".");
+    if(idxOfDot >= 0){
+        String sn1 = name.substr(0, idxOfDot);
+        auto it = children.find(sn1);
+        if(it != children.end()){
+            String sn2 = name.substr(idxOfDot+ 1);
+            return it->second->resolveSuper(curDir, sn2, errMsg);
+        }
+        return ConfigItemHolder();
+    }
+    auto it = children.find(name);
+    if(it != children.end()){
+        return ConfigItemHolder(it->second.get());
+    }
+    return ConfigItemHolder();
+}
 String ConfigItem::resolveValue(CString name, String& errorMsg){
     int idxOfDot = name.find(".");
     if(idxOfDot >= 0){
@@ -373,12 +460,30 @@ String ConfigItem::resolveValue(CString name, String& errorMsg){
 }
 //==================================================
 bool SuperConfig::loadFromFile(CString file){
-
+    String path = file;
+    if(FileUtils::isRelativePath(path)){
+        path = FileUtils::getCurrentDir() + "/" + path;
+    }
+    if(!FileUtils::isFileExists(path)){
+        return false;
+    }
+    auto dir = FileUtils::getFileDir(path);
+    return loadFromBuffer(FileUtils::getFileContent(path), dir);
 }
 bool SuperConfig::loadFromBuffer(CString buffer, CString curDir){
     m_item->loadFromBuffer(buffer, curDir);
-    //m_item->resolve()
+    auto msg = m_item->resolve(m_env);
+    if(!msg.empty()){
+        fprintf(stderr, "%s\n", msg.data());
+        return false;
+    }
+    return true;
 }
 String SuperConfig::getString(CString key, CString def){
-
+    String eMsg;
+    auto val = m_item->resolveValue(key, eMsg);
+    if(val.empty()){
+        val = def;
+    }
+    return val;
 }

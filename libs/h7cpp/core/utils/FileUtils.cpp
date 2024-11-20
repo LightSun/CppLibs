@@ -404,6 +404,17 @@ std::string FileUtils::sha256(CString file, uint64* out_len){
     return fstr;
     */
 }
+bool FileUtils::writeFile(CString file, CString content){
+    auto dir = getFileDir(file);
+    mkdirs(dir);
+    std::ofstream fos(file, std::ios::binary);
+    if(fos.is_open()){
+         fos.write(content.data(), content.length());
+         fos.close();
+         return true;
+    }
+    return false;
+}
 
 }
 
