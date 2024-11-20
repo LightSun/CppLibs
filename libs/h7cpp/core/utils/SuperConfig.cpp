@@ -81,6 +81,9 @@ struct WrappedResolver: public IConfigResolver{
             if(!errMsg.empty()){
                 return errMsg;
             }
+            if(item.ci == nullptr){
+                return "resolveInclude >> can't find " + inc;
+            }
             parItem->mergeForInclude(item.ci);
             resoIncMap.emplace(inc, std::move(item));
         }
@@ -89,19 +92,45 @@ struct WrappedResolver: public IConfigResolver{
             if(!errMsg.empty()){
                 return errMsg;
             }
+            if(item.ci == nullptr){
+                return "resolveSuper >> can't find " + inc;
+            }
             parItem->mergeForSuper(item.ci);
             resoSuperMap.emplace(inc, std::move(item));
+        }
+        {//children can ref prop of parent, but reverse not.
+            auto it = parItem->children.begin();
+            for(; it != parItem->children.end() ; ++it){
+                auto ci = it->second.get();
+                errMsg = this->resolves(ci);
+                if(!errMsg.empty()){
+                    return errMsg;
+                }
+            }
         }
         return "";
     }
     String resolveValues(ConfigItem* item){
+        TwoResolver reso(item, this);
         String errMsg;
-        auto it = item->body.begin();
-        for(; it != item->body.end() ; ++it){
-            if(!getRealValue(it->second, this, errMsg)){
-                return errMsg;
+        {
+            auto it = item->body.begin();
+            for(; it != item->body.end() ; ++it){
+                if(!getRealValue(it->second, &reso, errMsg)){
+                    return errMsg;
+                }
+                kv[it->first] = it->second;
             }
-            kv[it->first] = it->second;
+        }
+        {//children can ref prop of parent, but reverse not.
+            auto it = item->children.begin();
+            for(; it != item->children.end() ; ++it){
+                auto ci = it->second.get();
+                errMsg = resolveValues(ci);
+                if(!errMsg.empty()){
+                    return errMsg;
+                }
+            }
         }
         return "";
     }
@@ -325,4 +354,31 @@ void ConfigItem::mergeForSuper(ConfigItem* ci){
     //super.
     this->supers.merge(ci->supers);
 }
+String ConfigItem::resolveValue(CString name, String& errorMsg){
+    int idxOfDot = name.find(".");
+    if(idxOfDot >= 0){
+        String sn1 = name.substr(0, idxOfDot);
+        auto it = children.find(sn1);
+        if(it != children.end()){
+            String sn2 = name.substr(idxOfDot+ 1);
+            return it->second->resolveValue(sn2, errorMsg);
+        }
+        return "";
+    }
+    auto it = body.find(name);
+    if(it != body.end()){
+        return it->second;
+    }
+    return "";
+}
+//==================================================
+bool SuperConfig::loadFromFile(CString file){
 
+}
+bool SuperConfig::loadFromBuffer(CString buffer, CString curDir){
+    m_item->loadFromBuffer(buffer, curDir);
+    //m_item->resolve()
+}
+String SuperConfig::getString(CString key, CString def){
+
+}

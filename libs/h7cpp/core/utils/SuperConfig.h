@@ -91,14 +91,45 @@ struct ConfigItemHolder{
 };
 
 struct IConfigResolver{
+    virtual ~IConfigResolver(){}
     virtual ConfigItemHolder resolveInclude(String curDir, CString name, String& errorMsg) = 0;
     virtual ConfigItemHolder resolveSuper(String curDir, CString name, String& errorMsg) = 0;
     virtual String resolveValue(CString name, String& errorMsg) = 0;
 
     static bool getRealValue(String& val, IConfigResolver* reso, String& errorMsg);
 };
+struct TwoResolver: public IConfigResolver{
+    IConfigResolver* reso1;
+    IConfigResolver* reso2;
+    TwoResolver(IConfigResolver* reso1, IConfigResolver* reso2):
+        reso1(reso1), reso2(reso2){}
+
+    ConfigItemHolder resolveInclude(String curDir, CString name, String& errorMsg) override{
+        auto h = reso1->resolveInclude(curDir, name, errorMsg);
+        if(h.ci == nullptr){
+            return reso2->resolveInclude(curDir, name, errorMsg);
+        }
+        return h;
+    }
+    ConfigItemHolder resolveSuper(String curDir, CString name, String& errorMsg) override{
+        auto h = reso1->resolveSuper(curDir, name, errorMsg);
+        if(h.ci == nullptr){
+            return reso2->resolveSuper(curDir, name, errorMsg);
+        }
+        return h;
+    }
+    String resolveValue(CString name, String& errorMsg) override{
+        auto h = reso1->resolveValue(name, errorMsg);
+        if(h.empty()){
+            return reso2->resolveValue(name, errorMsg);
+        }
+        return h;
+    }
+};
+
+
 using UPConfigItem = std::unique_ptr<ConfigItem>;
-struct ConfigItem{
+struct ConfigItem : public IConfigResolver{
     enum{
         kFlag_PUBLIC = 0x0001
     };
@@ -135,17 +166,27 @@ struct ConfigItem{
     UPConfigItem copy();
     void mergeForInclude(ConfigItem* ci);
     void mergeForSuper(ConfigItem* ci);
+    //==================
+    ConfigItemHolder resolveInclude(String, CString, String&) override{
+        return ConfigItemHolder();
+    }
+    ConfigItemHolder resolveSuper(String, CString, String&) override{
+        return ConfigItemHolder();
+    }
+    String resolveValue(CString name, String& errorMsg) override;
 };
 
 class SuperConfig
 {
 public:
-    SuperConfig();
+    SuperConfig() = default;
 
-    void loadFromFile(CString file);
-    void loadFromBuffer(CString buffer, CString curDir);
+    bool loadFromBuffer(CString buffer, CString curDir);
+    bool loadFromFile(CString file);
+    String getString(CString key, CString def = "");
 
 private:
+    UPConfigItem m_item;
 };
 
 }
