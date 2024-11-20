@@ -1,10 +1,12 @@
 #pragma once
 
+#include <string>
 #include <map>
 #include <unordered_map>
-#include <string>
 #include <vector>
+#include <set>
 #include <memory>
+#include <functional>
 
 /**
 //cur dir
@@ -45,9 +47,52 @@ using Map = std::map<String, String>;
 
 struct ConfigItem;
 
+struct ConfigItemHolder{
+    ConfigItem* ci;
+    std::function<void(ConfigItem*)> del;
+
+    ~ConfigItemHolder(){
+        if(ci && del){
+            del(ci);
+            ci = nullptr;
+        }
+    }
+    ConfigItemHolder(){ci = nullptr; del = nullptr;}
+    ConfigItemHolder(ConfigItem* ci, std::function<void(ConfigItem*)> del = nullptr):
+        ci(ci), del(del){
+    }
+    ConfigItemHolder(ConfigItemHolder&& ch){
+        this->ci = ch.ci;
+        this->del = ch.del;
+        ch.ci = nullptr;
+    }
+    ConfigItemHolder(ConfigItemHolder const& _ch){
+        auto& ch = const_cast<ConfigItemHolder&>(_ch);
+        this->ci = ch.ci;
+        this->del = ch.del;
+        ch.ci = nullptr;
+    }
+    ConfigItemHolder& operator=(ConfigItemHolder&& ch){
+        this->ci = ch.ci;
+        this->del = ch.del;
+        ch.ci = nullptr;
+        return *this;
+    }
+    ConfigItemHolder& operator=(ConfigItemHolder const& _ch){
+        auto& ch = const_cast<ConfigItemHolder&>(_ch);
+        this->ci = ch.ci;
+        this->del = ch.del;
+        ch.ci = nullptr;
+        return *this;
+    }
+    ConfigItemHolder ref(){
+        return ConfigItemHolder(ci);
+    }
+};
+
 struct IConfigResolver{
-    virtual ConfigItem* resolveInclude(String curDir, CString name, String& errorMsg) = 0;
-    virtual ConfigItem* resolveSuper(String curDir, CString name, String& errorMsg) = 0;
+    virtual ConfigItemHolder resolveInclude(String curDir, CString name, String& errorMsg) = 0;
+    virtual ConfigItemHolder resolveSuper(String curDir, CString name, String& errorMsg) = 0;
     virtual String resolveValue(CString name, String& errorMsg) = 0;
 
     static bool getRealValue(String& val, IConfigResolver* reso, String& errorMsg);
@@ -57,8 +102,8 @@ struct ConfigItem{
     enum{
         kFlag_PUBLIC = 0x0001
     };
-    std::vector<String> includes;
-    std::vector<String> supers;
+    std::set<String> includes;
+    std::set<String> supers;
     String dir;
     std::map<String, String> body;
     std::unordered_map<String, UPConfigItem> children;

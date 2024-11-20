@@ -43,23 +43,23 @@ bool IConfigResolver::getRealValue(String& val, IConfigResolver* reso, String& e
 }
 struct WrappedResolver: public IConfigResolver{
 
-    std::unordered_map<String, ConfigItem*> incMap;
-    std::unordered_map<String, ConfigItem*> superMap;
+    std::unordered_map<String, ConfigItemHolder> incMap;
+    std::unordered_map<String, ConfigItemHolder> superMap;
     std::map<String, String> kv;
 
     WrappedResolver(IConfigResolver* base):m_base(base){}
 
-    ConfigItem* resolveInclude(String curDir, CString name, String& errorMsg) override{
+    ConfigItemHolder resolveInclude(String curDir, CString name, String& errorMsg) override{
         auto it = incMap.find(name);
         if(it != incMap.end()){
-            return it->second;
+            return it->second.ref();
         }
         return m_base->resolveInclude(curDir, name, errorMsg);
     }
-    ConfigItem* resolveSuper(String curDir, CString name, String& errorMsg) override{
+    ConfigItemHolder resolveSuper(String curDir, CString name, String& errorMsg) override{
         auto it = superMap.find(name);
         if(it != superMap.end()){
-            return it->second;
+            return it->second.ref();
         }
         return m_base->resolveSuper(curDir, name, errorMsg);
     }
@@ -70,25 +70,27 @@ struct WrappedResolver: public IConfigResolver{
         }
         return m_base->resolveValue(name, errorMsg);
     }
-    String resolves(ConfigItem* item){
+    String resolves(ConfigItem* parItem){
         String errMsg;
         auto reso = this;
-        auto& dir = item->dir;
+        auto& dir = parItem->dir;
         auto& resoIncMap = incMap;
         auto& resoSuperMap = superMap;
-        for(auto& inc: item->includes){
+        for(auto& inc: parItem->includes){
             auto item = reso->resolveInclude(dir, inc, errMsg);
             if(!errMsg.empty()){
                 return errMsg;
             }
-            resoIncMap.emplace(inc, item);
+            parItem->mergeForInclude(item.ci);
+            resoIncMap.emplace(inc, std::move(item));
         }
-        for(auto& inc: item->supers){
+        for(auto& inc: parItem->supers){
             auto item = reso->resolveSuper(dir, inc, errMsg);
             if(!errMsg.empty()){
                 return errMsg;
             }
-            resoSuperMap.emplace(inc, item);
+            parItem->mergeForSuper(item.ci);
+            resoSuperMap.emplace(inc, std::move(item));
         }
         return "";
     }
@@ -151,9 +153,12 @@ struct MultiLineItemParser{
         auto id_m = p.preStr.find(":");
         if(id_m > 0){
             preStr = p.preStr.substr(0, id_m);
-            parent->supers = h7::utils::split(",", p.preStr.substr(id_m + 1));
-            for(auto& su : parent->supers){
+            auto list = h7::utils::split(",", p.preStr.substr(id_m + 1));
+            for(auto& su : list){
                 h7::utils::trim(su);
+            }
+            for(auto& su : list){
+                parent->supers.insert(su);
             }
         }else{
             preStr = p.preStr;
@@ -261,7 +266,7 @@ void ConfigItem::loadFromBuffer(CString buffer, CString curDir){
             h7::utils::trim(val);
             if(_s == DEF_INC_KEY){
                 if(!val.empty()){
-                    includes.push_back(val);
+                    includes.insert(val);
                 }
             }else{
                 body[_s] = val;
@@ -299,9 +304,25 @@ String ConfigItem::resolve(IConfigResolver* reso){
     return wreso.resolveValues(this);
 }
 void ConfigItem::mergeForInclude(ConfigItem* ci){
-
+    mergeForSuper(ci);
 }
 void ConfigItem::mergeForSuper(ConfigItem* ci){
-
+    //ci->includes
+    includes.merge(ci->includes);
+    //body
+    Map newBody = ci->body;
+    for(auto it = body.begin(); it != body.end() ; ++it){
+        newBody[it->first] = it->second;
+    }
+    this->body = newBody;
+    //children
+    for(auto it = ci->children.begin(); it != ci->children.end() ; ++it){
+        auto ret = children.emplace(it->first, it->second);
+        if(!ret.second){
+            MED_ASSERT_X(false, "redfined: " << it->first);
+        }
+    }
+    //super.
+    this->supers.merge(ci->supers);
 }
 
