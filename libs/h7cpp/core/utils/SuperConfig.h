@@ -188,7 +188,7 @@ public:
 
 private:
     Map* m_env;
-    UPConfigItem m_item;
+    ConfigItem m_item;
 };
 
 }

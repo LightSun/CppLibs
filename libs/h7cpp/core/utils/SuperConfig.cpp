@@ -471,8 +471,8 @@ bool SuperConfig::loadFromFile(CString file){
     return loadFromBuffer(FileUtils::getFileContent(path), dir);
 }
 bool SuperConfig::loadFromBuffer(CString buffer, CString curDir){
-    m_item->loadFromBuffer(buffer, curDir);
-    auto msg = m_item->resolve(m_env);
+    m_item.loadFromBuffer(buffer, curDir);
+    auto msg = m_item.resolve(m_env);
     if(!msg.empty()){
         fprintf(stderr, "%s\n", msg.data());
         return false;
@@ -481,7 +481,7 @@ bool SuperConfig::loadFromBuffer(CString buffer, CString curDir){
 }
 String SuperConfig::getString(CString key, CString def){
     String eMsg;
-    auto val = m_item->resolveValue(key, eMsg);
+    auto val = m_item.resolveValue(key, eMsg);
     if(val.empty()){
         val = def;
     }
