@@ -135,6 +135,7 @@ set(SRC_TEST
     test/test_sfinae.cpp
     test/test_dir_files_md5.cpp
     test/test_ios.cpp
+    test/test_super_config.cpp
     )
 
 add_library(h7cpp

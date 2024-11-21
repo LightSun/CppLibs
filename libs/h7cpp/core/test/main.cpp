@@ -32,6 +32,7 @@ extern void test_SaveQueue();
 extern void test_SFINAE();
 extern void test_IOs();
 extern void test_dir_files_md5(const char* dir);
+extern void test_SuperConfig();
 
 using namespace h7;
 
@@ -48,9 +49,9 @@ int main(int argc, char* argv[]){
     printf("p = %p, p1 = %p, p2 = %p\n", p, p1, p2);
     */
     if(argc == 1){
-        String fir = "/home/heaven7/heaven7/work/TensorRT/libtorch_1.12.1/libtorch/lib";
+        //String fir = "/home/heaven7/heaven7/work/TensorRT/libtorch_1.12.1/libtorch/lib";
        // test_dir_files_md5(fir.data());
-        test_IOs();
+        test_SuperConfig();
         return 0;
     }
     if(argc > 1){

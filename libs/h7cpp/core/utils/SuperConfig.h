@@ -7,6 +7,7 @@
 #include <set>
 #include <memory>
 #include <functional>
+#include "core/utils/IConfigResolver.h"
 
 /**
 //cur dir
@@ -46,89 +47,8 @@ using CString = const std::string&;
 using Map = std::map<String, String>;
 
 struct ConfigItem;
-
-struct ConfigItemHolder{
-    ConfigItem* ci;
-    std::function<void(ConfigItem*)> del;
-
-    ~ConfigItemHolder(){
-        if(ci && del){
-            del(ci);
-            ci = nullptr;
-        }
-    }
-    ConfigItemHolder(){ci = nullptr; del = nullptr;}
-    ConfigItemHolder(ConfigItem* ci, std::function<void(ConfigItem*)> del = nullptr):
-        ci(ci), del(del){
-    }
-    ConfigItemHolder(ConfigItemHolder&& ch){
-        this->ci = ch.ci;
-        this->del = ch.del;
-        ch.ci = nullptr;
-    }
-    ConfigItemHolder(ConfigItemHolder const& _ch){
-        auto& ch = const_cast<ConfigItemHolder&>(_ch);
-        this->ci = ch.ci;
-        this->del = ch.del;
-        ch.ci = nullptr;
-    }
-    ConfigItemHolder& operator=(ConfigItemHolder&& ch){
-        this->ci = ch.ci;
-        this->del = ch.del;
-        ch.ci = nullptr;
-        return *this;
-    }
-    ConfigItemHolder& operator=(ConfigItemHolder const& _ch){
-        auto& ch = const_cast<ConfigItemHolder&>(_ch);
-        this->ci = ch.ci;
-        this->del = ch.del;
-        ch.ci = nullptr;
-        return *this;
-    }
-    ConfigItemHolder ref(){
-        return ConfigItemHolder(ci);
-    }
-};
-
-struct IConfigResolver{
-    virtual ~IConfigResolver(){}
-    virtual ConfigItemHolder resolveInclude(String curDir, CString name, String& errorMsg) = 0;
-    virtual ConfigItemHolder resolveSuper(String curDir, CString name, String& errorMsg) = 0;
-    virtual String resolveValue(CString name, String& errorMsg) = 0;
-
-    static bool getRealValue(String& val, IConfigResolver* reso, String& errorMsg);
-};
-struct TwoResolver: public IConfigResolver{
-    IConfigResolver* reso1;
-    IConfigResolver* reso2;
-    TwoResolver(IConfigResolver* reso1, IConfigResolver* reso2):
-        reso1(reso1), reso2(reso2){}
-
-    ConfigItemHolder resolveInclude(String curDir, CString name, String& errorMsg) override{
-        auto h = reso1->resolveInclude(curDir, name, errorMsg);
-        if(h.ci == nullptr){
-            return reso2->resolveInclude(curDir, name, errorMsg);
-        }
-        return h;
-    }
-    ConfigItemHolder resolveSuper(String curDir, CString name, String& errorMsg) override{
-        auto h = reso1->resolveSuper(curDir, name, errorMsg);
-        if(h.ci == nullptr){
-            return reso2->resolveSuper(curDir, name, errorMsg);
-        }
-        return h;
-    }
-    String resolveValue(CString name, String& errorMsg) override{
-        auto h = reso1->resolveValue(name, errorMsg);
-        if(h.empty()){
-            return reso2->resolveValue(name, errorMsg);
-        }
-        return h;
-    }
-};
-
-
 using UPConfigItem = std::unique_ptr<ConfigItem>;
+
 struct ConfigItem : public IConfigResolver{
     enum{
         kFlag_PUBLIC = 0x0001
@@ -137,7 +57,7 @@ struct ConfigItem : public IConfigResolver{
     std::set<String> supers;
     String dir;
     std::map<String, String> body;
-    std::unordered_map<String, UPConfigItem> children;
+    std::unordered_map<String, ConfigItemHolder> children;
     //std::vector<String> array;
     int flags {0};
 //no copy
@@ -158,7 +78,7 @@ struct ConfigItem : public IConfigResolver{
     }
     bool isPublic()const {return (flags & kFlag_PUBLIC) == kFlag_PUBLIC;}
     void putChild(CString key, UPConfigItem item){
-        children[key] = std::move(item);
+        children[key] = ConfigItemHolder::newDefault(item.release());
     }
     void loadFromBuffer(CString buffer, CString curDir);
     //return error msg.
@@ -167,6 +87,7 @@ struct ConfigItem : public IConfigResolver{
     String resolve(IConfigResolver* resolver);
 
     UPConfigItem copy();
+    void dump(int indent = 0);
     void mergeForInclude(ConfigItem* ci);
     void mergeForSuper(ConfigItem* ci);
     //==================
@@ -185,6 +106,7 @@ public:
     bool loadFromBuffer(CString buffer, CString curDir);
     bool loadFromFile(CString file);
     String getString(CString key, CString def = "");
+    void dump(){m_item.dump();}
 
 private:
     Map* m_env;

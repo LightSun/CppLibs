@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "core/utils/SuperConfig.h"
 #include "core/utils/string_utils.hpp"
 #include "core/utils/StringBuffer.h"
@@ -8,192 +9,6 @@ using namespace h7;
 #define DEF_INC_KEY "$(INCLUDE)"
 
 namespace h7 {
-
-bool getRealValueImpl(CString pre, String& val, IConfigResolver* reso, String& errorMsg){
-    if(!val.empty()){
-        const String first = pre + "{";
-        String _key;
-        int s1, s2;
-        String newVal;
-        while (true) {
-            s1 = val.find(first);
-            if(s1 >=0 ){
-                s2 = val.find("}", s1 + 2);
-                _key = utils::subString(val, s1 + 2, s2);
-                newVal = reso->resolveValue(_key, errorMsg);
-                if(newVal.empty()){
-                    char buf[1024];
-                    snprintf(buf, 1024, "can't find value for key = %s, "
-                           "val = %s\n", _key.c_str(), val.data());
-                    if(!errorMsg.empty()){
-                        errorMsg += "; " + String(buf);
-                    }else{
-                        errorMsg = String(buf);
-                    }
-                    return false;
-                }else{
-                    //std::cout << "start replace: " << _key << " --> "
-                    //          << newVal << std::endl;
-                    val = utils::replace("\\$\\{"+ _key + "\\}", newVal, val);
-                }
-            }else{
-                break;
-            }
-        }
-    }
-    return true;
-}
-bool IConfigResolver::getRealValue(String& val, IConfigResolver* reso, String& errorMsg){
-    return getRealValueImpl("$", val, reso, errorMsg);
-}
-
-struct RuntimeEnvConfigResolver: public IConfigResolver{
-
-    std::map<String, String>* prop;
-    ConfigItem* pItem {nullptr};
-
-    ConfigItemHolder resolveInclude(String curDir, CString name, String& errorMsg) override{
-        String path = name;
-        String errMsg;
-        if(IConfigResolver::getRealValue(path, this, errMsg)){
-            if(FileUtils::isRelativePath(path)){
-                path = curDir + "/" + path;
-            }
-            if(!FileUtils::isFileExists(path)){
-                errorMsg = "cant find file for include: " + path;
-                return ConfigItemHolder();
-            }
-            auto dir = FileUtils::getFileDir(path);
-            auto cs = FileUtils::getFileContent(path);
-            auto ci = ConfigItem::make();
-            ci->loadFromBuffer(cs, dir);
-            errorMsg = ci->resolve(prop);
-            if(errorMsg.empty()){
-                return ConfigItemHolder(ci.release(), [](ConfigItem* it){
-                    delete it;
-                });
-            }
-        }else{
-            errorMsg = "getRealValue failed. val = " + path;
-        }
-        return ConfigItemHolder();
-    }
-    ConfigItemHolder resolveSuper(String curDir, CString name, String& errorMsg)override{
-        return pItem->resolveSuper(curDir, name, errorMsg);
-    }
-    String resolveValue(CString n, String&) override{
-        return getVal(n);
-    }
-private:
-    String getVal(CString n){
-        if(prop){
-            auto it = prop->find(n);
-            if(it != prop->end()){
-                return it->second;
-            }
-        }
-        auto val = getenv(n.data());
-        return val ? val : "";
-    }
-};
-
-struct WrappedResolver: public IConfigResolver{
-
-    std::unordered_map<String, ConfigItemHolder> incMap;
-    std::unordered_map<String, ConfigItemHolder> superMap;
-    std::map<String, String> kv;
-
-    WrappedResolver(IConfigResolver* base):m_base(base){}
-
-    ConfigItemHolder resolveInclude(String curDir, CString name, String& errorMsg) override{
-        auto it = incMap.find(name);
-        if(it != incMap.end()){
-            return it->second.ref();
-        }
-        return m_base->resolveInclude(curDir, name, errorMsg);
-    }
-    ConfigItemHolder resolveSuper(String curDir, CString name, String& errorMsg) override{
-        auto it = superMap.find(name);
-        if(it != superMap.end()){
-            return it->second.ref();
-        }
-        return m_base->resolveSuper(curDir, name, errorMsg);
-    }
-    String resolveValue(CString name, String& errorMsg) override{
-        auto it = kv.find(name);
-        if(it != kv.end()){
-            return it->second;
-        }
-        return m_base->resolveValue(name, errorMsg);
-    }
-    String resolves(ConfigItem* parItem){
-        String errMsg;
-        auto reso = this;
-        auto& dir = parItem->dir;
-        auto& resoIncMap = incMap;
-        auto& resoSuperMap = superMap;
-        for(auto& inc: parItem->includes){
-            auto item = reso->resolveInclude(dir, inc, errMsg);
-            if(!errMsg.empty()){
-                return errMsg;
-            }
-            if(item.ci == nullptr){
-                return "resolveInclude >> can't find " + inc;
-            }
-            parItem->mergeForInclude(item.ci);
-            resoIncMap.emplace(inc, std::move(item));
-        }
-        for(auto& inc: parItem->supers){
-            auto item = reso->resolveSuper(dir, inc, errMsg);
-            if(!errMsg.empty()){
-                return errMsg;
-            }
-            if(item.ci == nullptr){
-                return "resolveSuper >> can't find " + inc;
-            }
-            parItem->mergeForSuper(item.ci);
-            resoSuperMap.emplace(inc, std::move(item));
-        }
-        {//children can ref prop of parent, but reverse not.
-            auto it = parItem->children.begin();
-            for(; it != parItem->children.end() ; ++it){
-                auto ci = it->second.get();
-                errMsg = this->resolves(ci);
-                if(!errMsg.empty()){
-                    return errMsg;
-                }
-            }
-        }
-        return "";
-    }
-    String resolveValues(ConfigItem* item){
-        TwoResolver reso(item, this);
-        String errMsg;
-        {
-            auto it = item->body.begin();
-            for(; it != item->body.end() ; ++it){
-                if(!getRealValue(it->second, &reso, errMsg)){
-                    return errMsg;
-                }
-                kv[it->first] = it->second;
-            }
-        }
-        {//children can ref prop of parent, but reverse not.
-            auto it = item->children.begin();
-            for(; it != item->children.end() ; ++it){
-                auto ci = it->second.get();
-                errMsg = resolveValues(ci);
-                if(!errMsg.empty()){
-                    return errMsg;
-                }
-            }
-        }
-        return "";
-    }
-
-private:
-    IConfigResolver* m_base;
-};
 
 struct MultiLineItemParser{
     struct ReadItem{
@@ -208,6 +23,11 @@ struct MultiLineItemParser{
         String preStr;
         String body;
     };
+    struct IdxPair{
+        int startIdx;
+        int leftIdx;
+        int rightIdx;
+    };
     std::vector<ReadItem> lines;
     int leftCount {0};
     int rightCount {0};
@@ -221,9 +41,21 @@ struct MultiLineItemParser{
         lines.emplace_back(str, id_l, id_r);
         if(id_l >= 0){
             leftCount ++;
+
+            int start_pos = id_l + 1;
+            int id = -1;
+            while ( (id = str.find("{", start_pos)) >= 0) {
+                leftCount ++;
+                start_pos = id + 1;
+            }
         }
         if(id_r >= 0){
-            rightCount ++;
+            int start_pos = 0;
+            int id = -1;
+            while ( (id = str.find("}", start_pos)) >= 0) {
+                start_pos = id + 1;
+                rightCount ++;
+            }
         }
     }
     bool isEnd()const{
@@ -238,11 +70,11 @@ struct MultiLineItemParser{
         auto id_m = p.preStr.find(":");
         if(id_m > 0){
             preStr = p.preStr.substr(0, id_m);
-            auto list = h7::utils::split(",", p.preStr.substr(id_m + 1));
-            for(auto& su : list){
+            auto supers = h7::utils::split(",", p.preStr.substr(id_m + 1));
+            for(auto& su : supers){
                 h7::utils::trim(su);
             }
-            for(auto& su : list){
+            for(auto& su : supers){
                 parent->supers.insert(su);
             }
         }else{
@@ -263,12 +95,65 @@ struct MultiLineItemParser{
         }else{
             MED_ASSERT_X(false, "wrong state of config error.");
         }
-        auto ci = ConfigItem::make(p.body, parent->dir);
-        ci->flags = flags;
-        parent->putChild(key, std::move(ci));
+        parent->flags = flags;
+        //may have multi.  'B{C{}D{}}' -> 'C{}D{}'
+        //find all "{" and all "${"
+        std::vector<IdxPair> bigQuotePairs;
+        if(!findBigQuotePairs(p.body, bigQuotePairs)){
+            return false;
+        }
+        for(auto& pair: bigQuotePairs){
+            // 1A012B{}C -> 1,7
+            auto nbody = p.body.substr(pair.startIdx, pair.rightIdx - pair.startIdx + 1);
+            auto ci = ConfigItem::make(nbody, parent->dir);
+            parent->putChild(key, std::move(ci));
+        }
         return true;
     }
 private:
+    bool findBigQuotePairs(CString body, std::vector<IdxPair>& ps){
+        int offset = 0;
+        //bool doubleQuoteClosed = true;
+        std::vector<int> beginIdxes;
+        std::vector<int> endIdxes;
+        int lastRightId = -1;
+        while (true) {
+            //int idx_dq = body.find("\"");
+            int idx = body.find("{", offset);
+            if(idx < 0){
+                break;
+            }
+            beginIdxes.push_back(idx);
+            if(body.data()[idx - 1] == '$'){
+                //var-ref
+                int id2 = body.find("}", idx + 1);
+                offset = id2 + 1;
+            }else{
+                //non var-ref
+                int idx2 = body.find("}", idx + 1);
+                if(idx2 < 0){
+                    fprintf(stderr, "Parse error: while parse '%s'\n", body.data());
+                    return false;
+                }
+                offset = idx2 + 1;
+                endIdxes.push_back(idx2);
+                //find inside.
+                if(endIdxes.size() == beginIdxes.size()){
+                    //pair of first begin and last of end.
+                    IdxPair pair;
+                    pair.startIdx = lastRightId >= 0 ? lastRightId + 1 : 0;
+                    pair.leftIdx = beginIdxes[0];
+                    pair.rightIdx = endIdxes[endIdxes.size()-1];
+                    ps.push_back(pair);
+                    //
+                    lastRightId = pair.rightIdx;
+                    beginIdxes.clear();
+                    endIdxes.clear();
+                }
+            }
+        }
+        return true;
+    }
     void getOutPair(PairItem& p){
         int id_l_first = -1;
         int id_r_last = -1;
@@ -279,7 +164,7 @@ private:
             if(ri.id_left >= 0){
                 preStr.append(ri.str.substr(0, ri.id_left));
                 body = ri.str.substr(ri.id_left + 1);
-                h7::utils::trim(body);
+                //h7::utils::trim(body);
                 id_l_first = i;
                 break;
             }else{
@@ -297,12 +182,19 @@ private:
         for(int i = id_l_first + 1 ; i < id_r_last ; ++i){
             auto& ri = lines[i];
             //space
-            h7::utils::trim(ri.str);
+            //h7::utils::trim(ri.str);
             body.append(ri.str);
         }
-        auto s = lines[id_r_last].str.substr(0, lines[id_r_last].id_right);
-        h7::utils::trim(s);
-        body.append(s);
+        if(id_r_last > id_l_first){
+            auto s = lines[id_r_last].str.substr(0, lines[id_r_last].id_right);
+            //h7::utils::trim(s);
+            body.append(s);
+        }else if(id_r_last == id_l_first){
+            auto& ri = lines[id_r_last];
+            //012{334}6
+            //3,7
+            body = ri.str.substr(ri.id_left + 1, ri.id_right - ri.id_left - 1);
+        }
         //
         p.preStr = preStr;
         p.body = body;
@@ -311,20 +203,6 @@ private:
 
 }
 
-UPConfigItem ConfigItem::copy(){
-    auto item = make();
-    item->includes = includes;
-    item->supers = supers;
-    item->dir = dir;
-    item->body = body;
-    item->flags = flags;
-    auto it = children.begin();
-    for(; it != children.end(); ++it){
-        auto next = it->second->copy();
-        item->putChild(it->first, std::move(next));
-    }
-    return item;
-}
 void ConfigItem::loadFromBuffer(CString buffer, CString curDir){
     this->dir = curDir;
     h7::StringBuffer sb(buffer);
@@ -368,7 +246,9 @@ void ConfigItem::loadFromBuffer(CString buffer, CString curDir){
                     mp.addLine(str2);
                 }
                 MED_ASSERT_X(mp.isEnd(), "[ERROR] unexpect end if line: " << str2);
-                mp.parse(this);
+                if(!mp.parse(this)){
+                    break;
+                }
             }else{
                 MED_ASSERT_X(false, "[ERROR] wrong line: " << str);
             }
@@ -380,26 +260,21 @@ String ConfigItem::resolve(IConfigResolver* reso){
     //1, resolve include.
     //2, resolve super.
     //3, resolve variable
-    WrappedResolver wreso(reso);
-    String errMsg = wreso.resolves(this);
+    auto wreso = IConfigResolver::newWrappedConfigResolver(reso);
+    String errMsg = wreso->resolves(this);
     if(!errMsg.empty()){
         return errMsg;
     }
     //
-    return wreso.resolveValues(this);
+    return wreso->resolveValues(this);
 }
 String ConfigItem::resolve(const Map& prop){
-    Map prop1 = prop;
-    RuntimeEnvConfigResolver recr;
-    recr.prop = &prop1;
-    recr.pItem = this;
-    return resolve(&recr);
+    auto recr = IConfigResolver::newRuntimeConfigResolver(this, prop);
+    return resolve(recr.get());
 }
 String ConfigItem::resolve(Map* prop){
-    RuntimeEnvConfigResolver recr;
-    recr.prop = prop;
-    recr.pItem = this;
-    return resolve(&recr);
+    auto recr = IConfigResolver::newRuntimeConfigResolver(this, prop);
+    return resolve(recr.get());
 }
 void ConfigItem::mergeForInclude(ConfigItem* ci){
     mergeForSuper(ci);
@@ -415,13 +290,58 @@ void ConfigItem::mergeForSuper(ConfigItem* ci){
     this->body = newBody;
     //children
     for(auto it = ci->children.begin(); it != ci->children.end() ; ++it){
-        auto ret = children.emplace(it->first, it->second);
+        auto ret = children.emplace(it->first, it->second.ref());
         if(!ret.second){
             MED_ASSERT_X(false, "redfined: " << it->first);
         }
     }
     //super.
     this->supers.merge(ci->supers);
+}
+UPConfigItem ConfigItem::copy(){
+    auto item = make();
+    item->includes = includes;
+    item->supers = supers;
+    item->dir = dir;
+    item->body = body;
+    item->flags = flags;
+    auto it = children.begin();
+    for(; it != children.end(); ++it){
+        auto next = it->second.ci->copy();
+        item->putChild(it->first, std::move(next));
+    }
+    return item;
+}
+void ConfigItem::dump(int indent){
+    String pre;
+    for(int i = 0 ; i < indent ; ++i){
+        pre += " ";
+    }
+    printf("---- Includes start ------\n");
+    for(auto& inc : includes){
+        printf("%s%s\n", pre.data(), inc.data());
+    }
+    printf("---- Includes end ------\n\n");
+
+    printf("---- Supers start ------\n");
+    for(auto& inc : supers){
+        printf("%s%s\n", pre.data(), inc.data());
+    }
+    printf("---- Supers end ------\n\n");
+
+    printf("---- Body start ------\n");
+    for(auto& inc : body){
+        printf("%s%s = %s\n", pre.data(), inc.first.data(), inc.second.data());
+    }
+    printf("---- Body end ------\n\n");
+
+    printf("---- Children start ------\n");
+    for(auto& inc : children){
+        printf("%s%s{\n", pre.data(), inc.first.data());
+        inc.second.ci->dump(indent + inc.first.length() + 1);
+        printf("%s  }\n", pre.data());
+    }
+    printf("---- Children end ------\n\n");
 }
 //---------------
 ConfigItemHolder ConfigItem::resolveSuper(String curDir, CString name, String& errMsg){
@@ -431,13 +351,13 @@ ConfigItemHolder ConfigItem::resolveSuper(String curDir, CString name, String& e
         auto it = children.find(sn1);
         if(it != children.end()){
             String sn2 = name.substr(idxOfDot+ 1);
-            return it->second->resolveSuper(curDir, sn2, errMsg);
+            return it->second.ci->resolveSuper(curDir, sn2, errMsg);
         }
         return ConfigItemHolder();
     }
     auto it = children.find(name);
     if(it != children.end()){
-        return ConfigItemHolder(it->second.get());
+        return ConfigItemHolder(it->second.ci);
     }
     return ConfigItemHolder();
 }
@@ -448,7 +368,7 @@ String ConfigItem::resolveValue(CString name, String& errorMsg){
         auto it = children.find(sn1);
         if(it != children.end()){
             String sn2 = name.substr(idxOfDot+ 1);
-            return it->second->resolveValue(sn2, errorMsg);
+            return it->second.ci->resolveValue(sn2, errorMsg);
         }
         return "";
     }
