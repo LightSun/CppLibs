@@ -81,7 +81,7 @@ bool MemoryMapped::open(const std::string& filename, size_t mappedBytes, CacheHi
   _file       = 0;
   _filesize   = 0;
   _hint       = hint;
-#ifdef _MSC_VER
+#ifdef _WIN32
   _mappedFile = NULL;
 #endif
   _mappedView = NULL;

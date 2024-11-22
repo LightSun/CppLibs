@@ -1,5 +1,4 @@
-#ifndef CMDRUNNER_H
-#define CMDRUNNER_H
+#pragma once
 
 #include "common/common.h"
 #include <mutex>
@@ -70,5 +69,3 @@ namespace h7 {
         int m_pid;
    };
 }
-
-#endif // CMDRUNNER_H

@@ -1,5 +1,4 @@
-#ifndef CMDHELPER_H
-#define CMDHELPER_H
+#pragma once
 
 #include <initializer_list>
 #include "common/common.h"
@@ -74,4 +73,3 @@ private:
 
 }
 
-#endif // CMDHELPER_H

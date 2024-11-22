@@ -45,7 +45,7 @@ endif()
 set(OPEN_SSL_DIR $ENV{OPEN_SSL_DIR})
 if(NOT DEFINED ENV{OPEN_SSL_DIR})
     IF(BUILD_ON_WIN)
-        SET(OPEN_SSL_DIR D:/study/cpp/ENV/openssl)
+        SET(OPEN_SSL_DIR E:/study/cpp/ENV/openssl)
     ELSE(BUILD_ON_WIN)
         SET(OPEN_SSL_DIR /home/heaven7/heaven7/env/linux/openssl)
     ENDIF(BUILD_ON_WIN)
@@ -76,8 +76,13 @@ endif(BUILD_WITH_LIBHV)
 ## dep libs
 SET(DEP_LIBS ${DEP_RSA_LIBS}
     ${HV_LIB}
-    pcre
     )
+if(NOT WIN32)
+    SET(DEP_LIBS ${DEP_LIBS}
+        pcre
+    )
+endif()
+
 IF(BUILD_ON_WIN OR BUILD_MINGW64)
     set(DEP_LIBS ${DEP_LIBS}
         ws2_32
@@ -99,7 +104,9 @@ ENDIF()
 include_directories(./)
 include_directories(${UPLOAD_UI_DIR}/include)
 add_compile_definitions(USE_C11_ATOMICS)
-add_compile_definitions(SUPPORTS_BACKTRACE)
+if(NOT WIN32)
+    add_compile_definitions(SUPPORTS_BACKTRACE)
+endif()
 add_compile_definitions(HAS_DEMANGLE)
 
 

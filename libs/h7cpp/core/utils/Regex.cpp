@@ -1,32 +1,46 @@
 #include <memory.h>
 #include <sstream>
 #include "utils/Regex.h"
+
+#ifndef _WIN32
 #include "pcre.h"
+#endif
 
 using namespace h7;
 
 Regex::Regex(CString pat){
+#ifndef _WIN32
     const char* pErrMsg;
     int nOffset = 0;
     m_pcre_pat = pcre_compile(pat.c_str(), 0, &pErrMsg, &nOffset, NULL);
     if(m_pcre_pat == nullptr){
         m_error = pErrMsg;
     }
+#else
+    MED_ASSERT_X(false, "pcre not support windows now.");
+#endif
 }
 Regex::~Regex(){
+#ifndef _WIN32
     if(m_pcre_pat){
         pcre_free(m_pcre_pat);
         m_pcre_pat = nullptr;
     }
+#endif
 }
 
 bool Regex::match(CString pText)const{
+#ifndef _WIN32
     //int* ovector = (int*)&m_ovector[0];
     return pcre_exec(m_pcre_pat, NULL, pText.c_str(), pText.length(), 0,
                    0, (int*)&m_ovector[0], OVER_COUNT) > 0;
+#else
+    return false;
+#endif
 }
 
 String Regex::replaceAll(CString pText,CString target) const{
+#ifndef _WIN32
     int ovector[OVER_COUNT];
     //the match count
     int rc;
@@ -52,9 +66,11 @@ String Regex::replaceAll(CString pText,CString target) const{
         ss << pText.substr(exec_offset, pText.length() - exec_offset);
     }
     return ss.str();
+#endif
 }
 
 void Regex::extractStrs(CString pText, IColumn<String>* ret)const{
+#ifndef _WIN32
     int ovector[OVER_COUNT];
     int rc; //the match count
     int exec_offset = 0;
@@ -76,9 +92,11 @@ void Regex::extractStrs(CString pText, IColumn<String>* ret)const{
                break;
            }
     }while( true );
+#endif
 }
 
 void Regex::split(CString pText, IColumn<String>* ret)const{
+#ifndef _WIN32
     int ovector[OVER_COUNT];
     int rc; //the match count
     int exec_offset = 0;
@@ -104,9 +122,11 @@ void Regex::split(CString pText, IColumn<String>* ret)const{
     }else{
         ret->add_cons(pText.c_str() + lastEnd, pText.length() - lastEnd);
     }
+#endif
 }
 
 void Regex::groups(CString pText,IColumn<String>* ret)const{
+#ifndef _WIN32
     int ovector[OVER_COUNT];
     int rc; //the match count
     rc = pcre_exec(m_pcre_pat, NULL, pText.c_str(), pText.length(), 0,
@@ -118,4 +138,5 @@ void Regex::groups(CString pText,IColumn<String>* ret)const{
             ret->add_cons(pText.c_str() + ovector[2*i], ovector[2*i+1] - ovector[2*i]);
        }
     }
+#endif
 }

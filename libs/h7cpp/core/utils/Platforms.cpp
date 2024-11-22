@@ -1,9 +1,15 @@
 #include "Platforms.h"
 
 #include <string.h>
+#include <memory>
+#include <array>
+#include <vector>
 
 #ifdef _WIN32
 #include <windows.h>
+#include <iptypes.h>
+#include <iphlpapi.h>
+#include <intrin.h>
 #else
 #include <net/if.h>
 #include <sys/ioctl.h>
@@ -36,7 +42,7 @@ Platforms::String Platforms::getMac(){
         PIP_ADAPTER_INFO AdapterInfo = (IP_ADAPTER_INFO *)malloc(sizeof(IP_ADAPTER_INFO));
         if (AdapterInfo == nullptr) {
             fprintf(stderr, "fail to malloc\n");
-            return -1;
+            return "";
         }
 
         DWORD dwBufLen = sizeof(IP_ADAPTER_INFO);
@@ -48,7 +54,7 @@ Platforms::String Platforms::getMac(){
             AdapterInfo = (IP_ADAPTER_INFO *)malloc(dwBufLen);
             if (AdapterInfo == nullptr) {
                 fprintf(stderr, "fail to malloc\n");
-                return -1;
+                return "";
             }
         }
 

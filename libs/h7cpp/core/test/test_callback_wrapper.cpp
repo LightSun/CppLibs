@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "utils/Callbacks.h"
 
 using namespace h7;

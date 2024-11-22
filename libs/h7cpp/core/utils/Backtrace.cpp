@@ -66,6 +66,8 @@ Project: https://github.com/e-fever/xbacktrace
 #include <stdexcept>
 #include <iterator>
 
+#ifdef _
+MSC_VER
 #pragma comment(lib, "psapi.lib")
 #pragma comment(lib, "dbghelp.lib")
 
@@ -74,6 +76,7 @@ Project: https://github.com/e-fever/xbacktrace
 #pragma pack( push, before_imagehlp, 8 )
 #include <imagehlp.h>
 #pragma pack( pop, before_imagehlp )
+#endif
 #endif
 
 namespace XBacktrace {
@@ -194,16 +197,21 @@ class SymHandler
 public:
     SymHandler(HANDLE process, char const *path = NULL, bool intrude = false) : m_Process(process)
     {
+#ifdef _MSC_VER
         if (!SymInitialize(m_Process, path, intrude))
             throw(std::logic_error("Unable to initialize symbol handler"));
+#endif
     }
     ~SymHandler()
     {
+#ifdef _MSC_VER
         SymCleanup(m_Process);
+#endif
     }
 };
 
 #ifdef _M_X64
+#ifdef _MSC_VER
 STACKFRAME64 initStackFrame(CONTEXT c)
 {
     STACKFRAME64 s;
@@ -215,6 +223,7 @@ STACKFRAME64 initStackFrame(CONTEXT c)
     s.AddrFrame.Mode = AddrModeFlat;
     return s;
 }
+#endif
 #else
 STACKFRAME64 initStackFrame(CONTEXT c)
 {
@@ -231,12 +240,15 @@ STACKFRAME64 initStackFrame(CONTEXT c)
 
 void symOptions(DWORD add, DWORD remove = 0)
 {
+#ifdef _MSC_VER
     DWORD symOptions = SymGetOptions();
     symOptions |= add;
     symOptions &= ~remove;
     SymSetOptions(symOptions);
+#endif
 }
 
+#ifdef _MSC_VER
 class Symbol
 {
     typedef IMAGEHLP_SYMBOL64 SymType;
@@ -266,9 +278,11 @@ public:
         return std::string(&und_name[0], strlen(&und_name[0]));
     }
 };
+#endif
 
 std::string showStack(HANDLE hThread, CONTEXT &c)
 {
+#ifdef _MSC_VER
     HANDLE process = GetCurrentProcess();
     int frameNumber = 0;
     DWORD offsetFromSymbol = 0;
@@ -313,6 +327,9 @@ std::string showStack(HANDLE hThread, CONTEXT &c)
     while (stackFrame.AddrReturn.Offset != 0);
 
     return errorOutput;
+else
+    fprintf(stderr, "showStack not impl for mingw.\n");
+#endif
 }
 
 class GetModInfo
@@ -339,7 +356,9 @@ public:
         ret.moduleName = temp;
         std::vector<char> img(ret.imageName.begin(), ret.imageName.end());
         std::vector<char> mod(ret.moduleName.begin(), ret.moduleName.end());
+#ifdef _MSC_VER
         SymLoadModule64(process, 0, &img[0], &mod[0], (DWORD64)ret.baseAddress, ret.loadSize);
+#endif
         return ret;
     }
 };
@@ -347,7 +366,6 @@ public:
 void *loadModulesSymbols(HANDLE process, DWORD pid)
 {
     ModuleList modules;
-    Q_UNUSED(pid);
 
     DWORD cbNeeded;
     std::vector<HMODULE> module_handles(1);
@@ -408,7 +426,7 @@ inline void enableBacktraceLogOnUnhandledException(const char* exe_name,int ret_
 
         static LONG handler(struct _EXCEPTION_POINTERS *ExInfo)
         {
-            qWarning().noquote() << QString::fromStdString(Private::filterCrash(ExInfo));
+            std::cerr << Private::filterCrash(ExInfo) << std::endl;
             ExitProcess(__ret_code);
         }
     };
@@ -423,7 +441,9 @@ inline void enableBacktraceLogOnUnhandledException(const char* exe_name) {
 #endif
 
 #if defined(Q_OS_WIN)
+#ifdef _MSC_VER
     enableBacktraceLogOnUnhandledException([]() {return EXCEPTION_EXECUTE_HANDLER;});
+#endif
 #endif
 }
 

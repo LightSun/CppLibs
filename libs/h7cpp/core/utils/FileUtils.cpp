@@ -179,12 +179,13 @@ static void Wchar_tToString(std::string& szDst, wchar_t*wchar)
 
 String FileUtils::getCurrentDir(){
 #ifdef _WIN32
-    WCHAR czFileName[1024] = {0};
+    CHAR czFileName[1024] = {0};
     GetModuleFileName(NULL, czFileName, _countof(czFileName)-1);
     PathRemoveFileSpec(czFileName);
-    String ret;
-    Wchar_tToString(ret, czFileName);
-    return ret;
+   // String ret;
+    //Wchar_tToString(ret, czFileName);
+   // return ret;
+    return String(czFileName);
    // fprintf(stderr, "getCurrentDir >> win32 not support\n");
 #else
     char buf[1024];

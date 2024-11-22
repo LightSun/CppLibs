@@ -89,7 +89,7 @@ private:
   size_t      _mappedBytes {0};
 
   /// define handle
-#ifdef _MSC_VER
+#ifdef _WIN32
   typedef void* FileHandle;
   /// Windows handle to memory mapping of _file
   void*       _mappedFile;

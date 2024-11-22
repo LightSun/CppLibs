@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sstream>
+
 #include <errno.h>
 
 #include "table/Column.h"
@@ -39,6 +40,9 @@ static bool chechCmdRet(int ret){
         PRINTERR("cmd is error, can't run.\n");
     }
     else{
+#ifdef _WIN32
+        return ret == 0;
+#else
         if(WIFEXITED(ret)){
             int s = WEXITSTATUS(ret);
             PRINTLN("normal exit：%d\n", s);
@@ -52,6 +56,7 @@ static bool chechCmdRet(int ret){
         }else{
             return true;
         }
+#endif
     }
     return false;
 }

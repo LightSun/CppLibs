@@ -8,13 +8,16 @@
 #include "io/StringOutputStream.h"
 #include "io/MappedOutputStream.h"
 
-#include "common/common.h"
 #include "utils/Random.h"
+#include "common/common.h"
 #include "utils/Numbers.hpp"
 
 using namespace h7;
 using Long = long long;
 using ULong = unsigned long long;
+#ifndef uint
+using uint = unsigned int;
+#endif
 
 struct TestStruct{
     bool val_b {true};

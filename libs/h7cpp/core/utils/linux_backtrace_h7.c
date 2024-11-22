@@ -3,9 +3,10 @@
 //must define '_GNU_SOURCE' or else cause can't find 'Dl_info'
 #ifdef __linux__
 #define _GNU_SOURCE
+#include <execinfo.h>
 #endif
 
-#include <execinfo.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -153,6 +154,7 @@ int always_use_builtin = 0;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wframe-address"
 void _get_backtrace() {
+#ifdef __linux__
     // Each item in the array pointed to by buffer is of type void *, and is the return address from the corresponding
     // stack frame.
     void* addresses[64];
@@ -196,6 +198,9 @@ void _get_backtrace() {
     free(symbols);
 
     //printf("bar OK\n");
+#else
+    fprintf(stderr, "_get_backtrace >> not impl for non-linux platform.\n");
+#endif
     return;
 }
 #pragma GCC diagnostic pop

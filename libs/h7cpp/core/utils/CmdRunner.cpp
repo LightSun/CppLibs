@@ -4,8 +4,11 @@
 #include <stdio.h>
 #include <signal.h>
 #include <string.h>
-#include <sys/wait.h>
 #include <errno.h>
+
+#ifndef _WIN32
+#include <sys/wait.h>
+#endif
 
 using namespace std;
 
@@ -13,6 +16,7 @@ using namespace std;
 #define WRITE  1
 
 FILE* __popen2(const char* cmd, int write, int& pid){
+#ifndef _WIN32
     pid_t child_pid;
     int fd[2];
     if(pipe(fd) == -1){
@@ -64,11 +68,15 @@ FILE* __popen2(const char* cmd, int write, int& pid){
         return fdopen(fd[READ], "r");
     }
     return fdopen(fd[WRITE], "w");
+#else
+    MED_ASSERT_X(false, "__popen2 >> win32 not support");
+    return NULL;
+#endif
 }
 
 int __pclose2(FILE* fp, int pid){
     int  stat;
-
+#ifndef _WIN32
     //fd = fileno(fp);
     if(pid == 0)
         return (-1); //fp wasn't opened by popen()
@@ -86,6 +94,10 @@ int __pclose2(FILE* fp, int pid){
         if(errno != EINTR )
             return (-1); /*error other than EINTR from waitpid()*/
     }
+#else
+    MED_ASSERT_X(false, "__pclose2 >> win32 not support");
+    return NULL;
+#endif
     return stat;
 }
 int __pread2(FILE* fp, char* buf, unsigned int buf_size){
