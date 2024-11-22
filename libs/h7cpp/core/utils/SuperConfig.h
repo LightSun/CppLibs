@@ -39,7 +39,13 @@ conf{
     }
 }
  */
-
+/*unitTest:
+1, only props.
+2, include a class-like.
+3, include extend. 找兄弟 - 包括inlcude过来的
+4, include files.
+5, final test
+*/
 namespace h7 {
 
 using String = std::string;

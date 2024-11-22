@@ -2,10 +2,10 @@
 
 #include <string.h>
 #include <stdio.h>
-#include "utils/h_atomic.h"
-#include "utils/string_utils.hpp"
+#include "core/utils/h_atomic.h"
+#include "core/utils/string_utils.hpp"
 
-namespace h7 {
+namespace med_qa {
 using CString = const std::string&;
 using String = std::string;
     class CmdBuilder2{

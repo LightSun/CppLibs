@@ -1,8 +1,10 @@
+#include <sstream>
+#include <stdio.h>
 #include "CmdBuilder2.h"
+#include "core/common/msvc_compat.h"
 
-#ifdef _WIN32
-#define popen _popen
-#define pclose _pclose
+#ifdef __linux
+#include <unistd.h>
 #endif
 
 struct CharBuf{
@@ -62,7 +64,7 @@ static bool chechCmdRet(int ret){
     return false;
 }
 
-bool h7::CmdHelper2::runCmdDirectly(String& ret){
+bool med_qa::CmdHelper2::runCmdDirectly(String& ret){
     CharBuf cbuf(CMD_RESULT_BUF_SIZE, 0);
     char* buf_ps = cbuf.data;
     std::stringstream ss;
@@ -74,10 +76,10 @@ bool h7::CmdHelper2::runCmdDirectly(String& ret){
     {
 #ifdef _WIN32
         while((c = fread(buf_ps, 1, CMD_RESULT_BUF_SIZE, fptr)) > 0){
-           if(isReqStop()){
-               break;
-           }
-           ss << String(buf_ps, c);
+            if(isReqStop()){
+                break;
+            }
+            ss << String(buf_ps, c);
         }
 //        while (fgets(buf_ps, CMD_RESULT_BUF_SIZE, fptr) != NULL) {
 //            if(isReqStop()){
@@ -87,10 +89,10 @@ bool h7::CmdHelper2::runCmdDirectly(String& ret){
 //        }
 #else
         while((c = read(fileno(fptr), buf_ps, CMD_RESULT_BUF_SIZE)) > 0){
-           if(isReqStop()){
-               break;
-           }
-           ss << String(buf_ps, c);
+            if(isReqStop()){
+                break;
+            }
+            ss << String(buf_ps, c);
         }
 #endif
         int _ret = pclose(fptr);

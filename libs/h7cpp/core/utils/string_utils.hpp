@@ -175,6 +175,26 @@ inline void split(CString pat, CString text, std::vector<String>& out){
     out.assign(first, last);
 }
 
+inline std::vector<std::string> split2(CString pat, const std::string& str)
+{
+    std::vector<std::string> result;
+    const int size = str.size();
+    for (int i = 0; i < size; i++)
+    {
+        int pos = str.find(pat, i);
+        if (pos < size)
+        {
+            std::string s = str.substr(i, pos - i);
+            result.push_back(s);
+            i = pos + pat.size() - 1;
+        }
+    }
+    if(result.empty()){
+        result.push_back(pat);
+    }
+    return result;
+}
+
 inline std::string& trim(std::string &s) {
     if (s.empty()) {
         return s;

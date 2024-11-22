@@ -62,30 +62,93 @@ struct WrappedResolver: public IWrappedResolver{
         }
         return m_base->resolveValue(name, errorMsg);
     }
+
     String resolves(ConfigItem* parItem) override{
         String errMsg;
         auto reso = this;
         auto& dir = parItem->dir;
-        auto& resoIncMap = incMap;
         auto& resoSuperMap = superMap;
-        for(auto& inc: parItem->includes){
-            auto item = reso->resolveInclude(dir, inc, errMsg);
-            if(!errMsg.empty()){
+        for(auto& _inc: parItem->includes){
+            String inc = _inc;
+            h7::utils::trim(inc);
+            if(!getRealValue(inc, this, errMsg)){
                 return errMsg;
             }
-            if(item.ci == nullptr){
-                return "resolveInclude >> can't find " + inc;
+            {
+                int pos = inc.find("./");
+                if(pos == 0){
+                    inc = dir + inc.substr(pos + 1);
+                }
             }
-            parItem->mergeForInclude(item.ci);
-            resoIncMap.emplace(inc, std::move(item));
+            //handle '../../<...>'
+            {
+                int parCount = 0;
+                while(utils::startsWith(inc, "../")){
+                    parCount ++;
+                }
+                if(parCount > 0){
+                    int id = inc.rfind("../");
+                    auto suffix = inc.substr(id + 2);
+                    String pdir = dir;
+                    for(int i = 0 ; i < parCount ; ++i){
+                        pdir = FileUtils::getFileDir(pdir);
+                    }
+                    inc = pdir + suffix;
+                }
+            }
+            //check all files include subs.
+            if(utils::endsWith(inc, "/**")){
+                auto tdir = inc.substr(0, inc.length() - 3);
+                if(tdir == dir){
+                    errMsg = "can't include with curDir: " + dir;
+                    return errMsg;
+                }
+                if(FileUtils::isRelativePath(tdir)){
+                    tdir = dir + "/" + tdir;
+                }
+                auto files = FileUtils::getFiles(tdir, true, "");
+                for(auto& f1 : files){
+                    auto dir1 = FileUtils::getFileDir(f1);
+                    if(!resolveIncludeImpl(dir1, f1, errMsg, parItem)){
+                        return errMsg;
+                    }
+                }
+            }
+             //check all files , exclude sub dirs
+            else if(utils::endsWith(inc, "/*")){
+                auto tdir = inc.substr(0, inc.length() - 2);
+                if(tdir == dir){
+                    errMsg = "can't include with curDir: " + dir;
+                    return errMsg;
+                }
+                if(FileUtils::isRelativePath(tdir)){
+                    tdir = dir + "/" + tdir;
+                }
+                auto files = FileUtils::getFiles(tdir, false, "");
+                for(auto& f1 : files){
+                    auto dir1 = FileUtils::getFileDir(f1);
+                    if(!resolveIncludeImpl(dir1, f1, errMsg, parItem)){
+                        return errMsg;
+                    }
+                }
+            }
+            else{
+                if(FileUtils::isRelativePath(inc)){
+                    inc = dir + "/" + inc;
+                }
+                auto dir1 = FileUtils::getFileDir(inc);
+                if(!resolveIncludeImpl(dir1, inc, errMsg, parItem)){
+                    return errMsg;
+                }
+            }
         }
         for(auto& inc: parItem->supers){
             auto item = reso->resolveSuper(dir, inc, errMsg);
-            if(!errMsg.empty()){
-                return errMsg;
-            }
             if(item.ci == nullptr){
-                return "resolveSuper >> can't find " + inc;
+                if(errMsg.empty()){
+                    errMsg = "resolveSuper >> can't find " + inc;
+                }
+                return errMsg;
             }
             parItem->mergeForSuper(item.ci);
             resoSuperMap.emplace(inc, std::move(item));
@@ -128,6 +191,20 @@ struct WrappedResolver: public IWrappedResolver{
     }
 
 private:
+    bool resolveIncludeImpl(CString dir, CString name, String& errMsg, ConfigItem* parItem){
+        auto item = resolveInclude(dir, name, errMsg);
+        if(item.ci == nullptr){
+            if(errMsg.empty()){
+                errMsg = "resolveInclude >> can't find " + name;
+            }
+            return false;
+        }
+        parItem->mergeForInclude(item.ci);
+        incMap.emplace(name, std::move(item));
+        return true;
+    }
+
+private:
     IConfigResolver* m_base;
 };
 
@@ -155,7 +232,7 @@ struct RuntimeEnvConfigResolver: public IConfigResolver{
                 path = curDir + "/" + path;
             }
             if(!FileUtils::isFileExists(path)){
-                errorMsg = "cant find file for include: " + path;
+                errorMsg = "can't find file for include: " + path;
                 return ConfigItemHolder();
             }
             auto dir = FileUtils::getFileDir(path);

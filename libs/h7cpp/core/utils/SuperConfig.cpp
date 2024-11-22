@@ -67,15 +67,21 @@ struct MultiLineItemParser{
         //
         String key;
         String preStr;
-        auto id_m = p.preStr.find(":");
+        int id_m = p.preStr.find(":");
         if(id_m > 0){
             preStr = p.preStr.substr(0, id_m);
-            auto supers = h7::utils::split(",", p.preStr.substr(id_m + 1));
-            for(auto& su : supers){
-                h7::utils::trim(su);
-            }
-            for(auto& su : supers){
-                parent->supers.insert(su);
+            auto s = p.preStr.substr(id_m + 1);
+            h7::utils::trim(s);
+            if(!s.empty()){
+                auto supers = h7::utils::split2(",", s);
+                for(auto& su : supers){
+                    h7::utils::trim(su);
+                }
+                for(auto& su : supers){
+                    if(!su.empty()){
+                        parent->supers.insert(su);
+                    }
+                }
             }
         }else{
             preStr = p.preStr;
@@ -97,7 +103,7 @@ struct MultiLineItemParser{
         }
         parent->flags = flags;
         //may have multi.  'B{C{}D{}}' -> 'C{}D{}'
-        //find all "{" and all "${"
+        //find all '{' '}' and all "${"
         std::vector<IdxPair> bigQuotePairs;
         if(!findBigQuotePairs(p.body, bigQuotePairs)){
             return false;
@@ -112,32 +118,26 @@ struct MultiLineItemParser{
     }
 private:
     bool findBigQuotePairs(CString body, std::vector<IdxPair>& ps){
-        int offset = 0;
-        //bool doubleQuoteClosed = true;
         std::vector<int> beginIdxes;
         std::vector<int> endIdxes;
         int lastRightId = -1;
-        while (true) {
-            //int idx_dq = body.find("\"");
-            int idx = body.find("{", offset);
-            if(idx < 0){
-                break;
-            }
-            beginIdxes.push_back(idx);
-            if(body.data()[idx - 1] == '$'){
-                //var-ref
-                int id2 = body.find("}", idx + 1);
-                offset = id2 + 1;
-            }else{
-                //non var-ref
-                int idx2 = body.find("}", idx + 1);
-                if(idx2 < 0){
-                    fprintf(stderr, "Parse error: while parse '%s'\n", body.data());
-                    return false;
+        const int body_len = body.size();
+        for(int i = 0 ; i < body_len; ++i){
+            auto& ch = body.data()[i];
+            if(ch == '{'){
+                if(i > 0 && body.data()[i-1] == '$'){
+                    int id2 = body.find("}", i + 1);
+                    if(id2 < 0){
+                        fprintf(stderr, "'{' and '}' must be pairs.\n");
+                        return false;
+                    }
+                    i = id2;
+                    continue;
                 }
-                offset = idx2 + 1;
-                endIdxes.push_back(idx2);
-                //find inside.
+                beginIdxes.push_back(i);
+            }else if(ch == '}'){
+                endIdxes.push_back(i);
+
                 if(endIdxes.size() == beginIdxes.size()){
                     //pair of first begin and last of end.
                     IdxPair pair;
@@ -151,6 +151,10 @@ private:
                     endIdxes.clear();
                 }
             }
+        }
+        if(!beginIdxes.empty() || !endIdxes.empty()){
+            fprintf(stderr, "'{' and '}' must be pairs.\n");
+            return false;
         }
         return true;
     }
@@ -214,6 +218,7 @@ void ConfigItem::loadFromBuffer(CString buffer, CString curDir){
         if(str.empty()){
             continue;
         }
+        printf("line: >> '%s'\n", str.data());
         //anno
         if(str.c_str()[0] == '#' || h7::utils::startsWith(str, "//")){
            continue;
@@ -247,6 +252,7 @@ void ConfigItem::loadFromBuffer(CString buffer, CString curDir){
                 }
                 MED_ASSERT_X(mp.isEnd(), "[ERROR] unexpect end if line: " << str2);
                 if(!mp.parse(this)){
+                    MED_ASSERT_X(false, "[MultiLine-Parse-ERROR] wrong line: " << str);
                     break;
                 }
             }else{

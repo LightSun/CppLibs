@@ -6,8 +6,11 @@ using namespace h7;
 
 
 void test_SuperConfig(){
-    CString file = "/media/heaven7/Elements_SE/study/work/HxPoc/SConfig/test.prop";
-    SuperConfig sc;
+    String dir = "/media/heaven7/Elements_SE/study/work/HxPoc/SConfig";
+    String file = dir + "/test.prop";
+    Map map = {
+        {"CUR_DIR", dir}};
+    SuperConfig sc(&map);
     MED_ASSERT(sc.loadFromFile(file));
     sc.dump();
 }

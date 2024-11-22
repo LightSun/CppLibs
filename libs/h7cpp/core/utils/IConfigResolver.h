@@ -83,6 +83,9 @@ struct IConfigResolver{
 };
 
 struct IWrappedResolver: public IConfigResolver{
+
+    virtual ~IWrappedResolver(){}
+
     virtual String resolves(ConfigItem* parItem) = 0;
     virtual String resolveValues(ConfigItem* item) = 0;
 };
