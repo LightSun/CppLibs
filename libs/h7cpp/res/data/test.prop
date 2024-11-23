@@ -1,0 +1,16 @@
+
+include super.prop
+
+# A: B,C
+Config: Super.D{
+    name: heaven7
+    test_name=${CUR_DIR}/x.h
+	A : Super.D{
+	   B{ 
+		 k1=v1
+	   }	
+	}
+	C : A.B{
+	   k2=v2	
+	}
+}

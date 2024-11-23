@@ -39,12 +39,6 @@ struct ConfigItemHolder{
         ch.ci = nullptr;
     }
 
-    static inline ConfigItemHolder newDefault(ConfigItem* ci){
-        return ConfigItemHolder(ci, [](ConfigItem* it){
-            delete it;
-        });
-    }
-
     ConfigItemHolder& operator=(ConfigItemHolder&& ch){
         this->ci = ch.ci;
         this->del = ch.del;
@@ -63,6 +57,11 @@ struct ConfigItemHolder{
     }
 };
 
+struct ConfigItemCache{
+    std::unordered_map<String, ConfigItemHolder> incMap;
+    std::unordered_map<String, ConfigItemHolder> superMap;
+};
+
 struct IWrappedResolver;
 
 struct IConfigResolver{
@@ -75,11 +74,11 @@ struct IConfigResolver{
     static std::shared_ptr<IConfigResolver> newTwoConfigResolver(
             IConfigResolver* reso1, IConfigResolver* reso2);
     static std::shared_ptr<IWrappedResolver> newWrappedConfigResolver(
-            IConfigResolver* reso1);
+            ConfigItemCache* cache,IConfigResolver* reso1);
     static std::shared_ptr<IConfigResolver> newRuntimeConfigResolver(
-            ConfigItem* item, Map* prop);
+            ConfigItemCache* cache,ConfigItem* item, Map* prop);
     static std::shared_ptr<IConfigResolver> newRuntimeConfigResolver(
-            ConfigItem* item, const Map& prop);
+            ConfigItemCache* cache,ConfigItem* item, const Map& prop);
 };
 
 struct IWrappedResolver: public IConfigResolver{

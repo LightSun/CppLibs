@@ -35,22 +35,22 @@ struct TwoResolver: public IConfigResolver{
 
 struct WrappedResolver: public IWrappedResolver{
 
-    std::unordered_map<String, ConfigItemHolder> incMap;
-    std::unordered_map<String, ConfigItemHolder> superMap;
     std::map<String, String> kv;
+    IConfigResolver* m_base;
+    ConfigItemCache* m_cache;
 
-    WrappedResolver(IConfigResolver* base):m_base(base){}
+    WrappedResolver(ConfigItemCache* cache, IConfigResolver* base):m_base(base), m_cache(cache){}
 
     ConfigItemHolder resolveInclude(String curDir, CString name, String& errorMsg) override{
-        auto it = incMap.find(name);
-        if(it != incMap.end()){
+        auto it = m_cache->incMap.find(name);
+        if(it != m_cache->incMap.end()){
             return it->second.ref();
         }
         return m_base->resolveInclude(curDir, name, errorMsg);
     }
     ConfigItemHolder resolveSuper(String curDir, CString name, String& errorMsg) override{
-        auto it = superMap.find(name);
-        if(it != superMap.end()){
+        auto it = m_cache->superMap.find(name);
+        if(it != m_cache->superMap.end()){
             return it->second.ref();
         }
         return m_base->resolveSuper(curDir, name, errorMsg);
@@ -67,7 +67,7 @@ struct WrappedResolver: public IWrappedResolver{
         String errMsg;
         auto reso = this;
         auto& dir = parItem->dir;
-        auto& resoSuperMap = superMap;
+        auto& resoSuperMap = m_cache->superMap;
         for(auto& _inc: parItem->includes){
             String inc = _inc;
             h7::utils::trim(inc);
@@ -198,28 +198,31 @@ private:
                 errMsg = "resolveInclude >> can't find " + name;
             }
             return false;
+        }       
+        if(!parItem->addBrother(item.ref())){
+            if(errMsg.empty()){
+                errMsg = "addBrother failed >> " + item.ci->name;
+            }
+            return false;
         }
-        parItem->mergeForInclude(item.ci);
-        incMap.emplace(name, std::move(item));
+        m_cache->incMap.emplace(name, std::move(item));
         return true;
     }
-
-private:
-    IConfigResolver* m_base;
 };
 
 struct RuntimeEnvConfigResolver: public IConfigResolver{
 
+    ConfigItemCache* pCache;
     ConfigItem* pItem {nullptr};
     std::map<String, String>* prop {nullptr};
     std::map<String, String> prop0;
 
-    RuntimeEnvConfigResolver(ConfigItem* pItem, std::map<String, String>* prop)
-        :pItem(pItem), prop(prop){
+    RuntimeEnvConfigResolver(ConfigItemCache* cache, ConfigItem* pItem, std::map<String, String>* prop)
+        :pCache(cache),pItem(pItem), prop(prop){
     }
 
-    RuntimeEnvConfigResolver(ConfigItem* pItem, const std::map<String, String>& prop)
-        :pItem(pItem){
+    RuntimeEnvConfigResolver(ConfigItemCache* cache, ConfigItem* pItem, const std::map<String, String>& prop)
+        :pCache(cache), pItem(pItem){
         this->prop0 = prop;
         this->prop = &prop0;
     }
@@ -237,11 +240,13 @@ struct RuntimeEnvConfigResolver: public IConfigResolver{
             }
             auto dir = FileUtils::getFileDir(path);
             auto cs = FileUtils::getFileContent(path);
-            auto ci = ConfigItem::make();
-            ci->loadFromBuffer(cs, dir);
-            errorMsg = ci->resolve(prop);
+            auto ci = ConfigItem::make(cs, dir, pCache);
+            if(!ci){
+                return ConfigItemHolder();
+            }
+            errorMsg = ci->resolve(pCache, prop);
             if(errorMsg.empty()){
-                return ConfigItemHolder::newDefault(ci.release());
+                return ConfigItem::newDefaultHolder(ci.release());
             }
         }else{
             errorMsg = "getRealValue failed. val = " + path;
@@ -309,15 +314,15 @@ std::shared_ptr<IConfigResolver> IConfigResolver::newTwoConfigResolver(
     return std::make_shared<TwoResolver>(reso1, reso2);
 }
 std::shared_ptr<IWrappedResolver> IConfigResolver::newWrappedConfigResolver(
-        IConfigResolver* reso1){
-    return std::make_shared<WrappedResolver>(reso1);
+        ConfigItemCache* cache, IConfigResolver* reso1){
+    return std::make_shared<WrappedResolver>(cache, reso1);
 }
 std::shared_ptr<IConfigResolver> IConfigResolver::newRuntimeConfigResolver(
-        ConfigItem* item, Map* prop){
-    return std::make_shared<RuntimeEnvConfigResolver>(item, prop);
+        ConfigItemCache* cache, ConfigItem* item, Map* prop){
+    return std::make_shared<RuntimeEnvConfigResolver>(cache, item, prop);
 }
 std::shared_ptr<IConfigResolver> IConfigResolver::newRuntimeConfigResolver(
-        ConfigItem* item, const Map& prop){
-    return std::make_shared<RuntimeEnvConfigResolver>(item, prop);
+        ConfigItemCache* cache, ConfigItem* item, const Map& prop){
+    return std::make_shared<RuntimeEnvConfigResolver>(cache, item, prop);
 }
 }

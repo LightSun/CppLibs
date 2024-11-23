@@ -59,12 +59,14 @@ struct ConfigItem : public IConfigResolver{
     enum{
         kFlag_PUBLIC = 0x0001
     };
+    String name;
+    String dir;
     std::set<String> includes;
     std::set<String> supers;
-    String dir;
     std::map<String, String> body;
-    std::unordered_map<String, ConfigItemHolder> children;
-    //std::vector<String> array;
+    std::map<String, ConfigItemHolder> children;
+    std::map<String, ConfigItemHolder> brothers;
+
     int flags {0};
 //no copy
     ConfigItem() = default;
@@ -77,24 +79,37 @@ struct ConfigItem : public IConfigResolver{
     static UPConfigItem make(){
         return std::make_unique<ConfigItem>();
     }
-    static UPConfigItem make(CString buffer, CString curDir){
+    static UPConfigItem make(CString buffer, CString curDir, ConfigItemCache* cache){
         auto item = make();
-        item->loadFromBuffer(buffer, curDir);
-        return item;
+        if(item->loadFromBuffer(buffer, curDir, cache)){
+            return item;
+        }
+        return nullptr;
+    }
+    static ConfigItemHolder newDefaultHolder(ConfigItem* item){
+        return ConfigItemHolder(item, [](ConfigItem* it){
+            delete it;
+        });
     }
     bool isPublic()const {return (flags & kFlag_PUBLIC) == kFlag_PUBLIC;}
     void putChild(CString key, UPConfigItem item){
-        children[key] = ConfigItemHolder::newDefault(item.release());
+        children[key] = newDefaultHolder(item.release());
     }
-    void loadFromBuffer(CString buffer, CString curDir);
+    void putChild(CString key, const ConfigItemHolder& ch){
+        children[key] = std::move(ch);
+    }
+    bool loadFromBuffer(CString buffer, CString curDir, ConfigItemCache* cache);
     //return error msg.
-    String resolve(const Map& prop);
-    String resolve(Map* prop);
-    String resolve(IConfigResolver* resolver);
+    String resolve(ConfigItemCache* cache, const Map& prop);
+    String resolve(ConfigItemCache* cache, Map* prop);
+    String resolve(ConfigItemCache* cache, IConfigResolver* resolver);
 
     UPConfigItem copy();
     void dump(int indent = 0);
-    void mergeForInclude(ConfigItem* ci);
+    bool addBrother(const ConfigItemHolder& ch){
+        auto name = ch.ci->name;
+        return brothers.emplace(name, std::move(ch)).second;
+    }
     void mergeForSuper(ConfigItem* ci);
     //==================
     ConfigItemHolder resolveInclude(String, CString, String&) override{
@@ -117,6 +132,7 @@ public:
 private:
     Map* m_env;
     ConfigItem m_item;
+    ConfigItemCache m_cache;
 };
 
 }

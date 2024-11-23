@@ -3,10 +3,10 @@
 #include "core/utils/string_utils.hpp"
 #include "core/utils/StringBuffer.h"
 #include "core/utils/FileUtils.h"
+#include "core/common/c_common.h"
 
 using namespace h7;
 
-#define DEF_INC_KEY "$(INCLUDE)"
 
 namespace h7 {
 
@@ -17,6 +17,12 @@ struct MultiLineItemParser{
         int id_right;
         ReadItem(String str, int id_l, int id_r):
             str(str), id_left(id_l), id_right(id_r){
+        }
+        String subStrLeft(){
+            return str.substr(0, id_left);
+        }
+        String subStrRight(){
+            return str.substr(0, id_right);
         }
     };
     struct PairItem{
@@ -44,7 +50,7 @@ struct MultiLineItemParser{
 
             int start_pos = id_l + 1;
             int id = -1;
-            while ( (id = str.find("{", start_pos)) >= 0) {
+            while ( (id = str.find("{", start_pos)) >= 0) {               
                 leftCount ++;
                 start_pos = id + 1;
             }
@@ -61,62 +67,69 @@ struct MultiLineItemParser{
     bool isEnd()const{
         return leftCount > 0 && leftCount == rightCount;
     }
-    bool parse(ConfigItem* parent){
-        PairItem p;
-        getOutPair(p);
-        //
-        String key;
-        String preStr;
-        int id_m = p.preStr.find(":");
-        if(id_m > 0){
-            preStr = p.preStr.substr(0, id_m);
-            auto s = p.preStr.substr(id_m + 1);
-            h7::utils::trim(s);
-            if(!s.empty()){
-                auto supers = h7::utils::split2(",", s);
-                for(auto& su : supers){
-                    h7::utils::trim(su);
-                }
-                for(auto& su : supers){
-                    if(!su.empty()){
-                        parent->supers.insert(su);
-                    }
-                }
+    bool parse(ConfigItem* parent, ConfigItemCache* cache){
+
+        PairItem pi;
+        getBody(parent, pi);
+
+        int idx = pi.preStr.find(":");
+        if(idx > 0){
+            parent->name = pi.preStr.substr(0, idx);
+            String ss = pi.preStr.substr(idx + 1);
+            auto sus = h7::utils::split2(",", ss);
+            for(auto& s: sus){
+                h7::utils::trim(s);
+                parent->supers.insert(s);
             }
         }else{
-            preStr = p.preStr;
+            parent->name = pi.preStr;
         }
-        h7::utils::trim(preStr);
-        auto l = h7::utils::split("\\s+", preStr);
-        int flags = 0;
-        if(l.size() > 1){
-            if(l[0] == "public"){
-                flags = ConfigItem::kFlag_PUBLIC;
-                key = l[1];
-            }else{
-                MED_ASSERT_X(false, "unrec str: " << l[0]);
-            }
-        }else if(l.size() == 1){
-            key = l[0];
-        }else{
-            MED_ASSERT_X(false, "wrong state of config error.");
-        }
-        parent->flags = flags;
+        h7::utils::trim(parent->name);
+        //parent->flags = flags;
+
         //may have multi.  'B{C{}D{}}' -> 'C{}D{}'
         //find all '{' '}' and all "${"
         std::vector<IdxPair> bigQuotePairs;
-        if(!findBigQuotePairs(p.body, bigQuotePairs)){
+        if(!findBigQuotePairs(pi.body, bigQuotePairs)){
             return false;
         }
         for(auto& pair: bigQuotePairs){
             // 1A012B{}C -> 1,7
-            auto nbody = p.body.substr(pair.startIdx, pair.rightIdx - pair.startIdx + 1);
-            auto ci = ConfigItem::make(nbody, parent->dir);
+            auto nbody = pi.body.substr(pair.startIdx, pair.rightIdx - pair.startIdx + 1);
+            auto ci = ConfigItem::make(nbody, parent->dir, cache);
+            if(!ci){
+                return false;
+            }
+            MED_ASSERT(!ci->name.empty());
+            String key = ci->name;
             parent->putChild(key, std::move(ci));
         }
         return true;
     }
+    static bool hasNonVarRefBigQuote(CString body, bool incRight = false){
+        const int body_len = body.size();
+        for(int i = 0 ; i < body_len; ++i){
+            auto& ch = body.data()[i];
+            if(ch == '{'){
+                if(i > 0 && body.data()[i-1] == '$'){
+                    int id2 = body.find("}", i + 1);
+                    if(id2 < 0){
+                        fprintf(stderr, "'{' and '}' must be pairs.\n");
+                        return false;
+                    }
+                    i = id2;
+                    continue;
+                }
+                return true;
+            }
+            if(incRight && ch == '}'){
+                return true;
+            }
+        }
+        return false;
+    }
 private:
+
     bool findBigQuotePairs(CString body, std::vector<IdxPair>& ps){
         std::vector<int> beginIdxes;
         std::vector<int> endIdxes;
@@ -158,60 +171,50 @@ private:
         }
         return true;
     }
-    void getOutPair(PairItem& p){
-        int id_l_first = -1;
-        int id_r_last = -1;
-        String preStr;
-        String body;
-        for(int i = 0 ; i < (int)lines.size() ; ++i){
-            auto& ri = lines[i];
-            if(ri.id_left >= 0){
-                preStr.append(ri.str.substr(0, ri.id_left));
-                body = ri.str.substr(ri.id_left + 1);
-                //h7::utils::trim(body);
-                id_l_first = i;
-                break;
+    void getBody(ConfigItem* ci, PairItem& p){
+        MED_ASSERT(lines[0].id_left > 0);
+        p.preStr = lines[0].subStrLeft();
+        const int size = lines.size();
+        int bodyStartIdx = -1;
+        for(int i = 1 ; i < size ; ++i){
+            auto& line = lines[i];
+            //auto& str = line.str;
+            if(!hasNonVarRefBigQuote(line.str, true)){
+                //prop line
+                int index = line.str.find("=");
+                if(index < 0){
+                    index = line.str.find(":");
+                }
+                if(index >= 0){
+                    String _s = line.str.substr(0, index);
+                    h7::utils::trim(_s);
+                    String val;
+                    if(index != (int)line.str.length() - 1){
+                        val = line.str.substr(index + 1, line.str.length() - index - 1);
+                    }
+                    h7::utils::trim(val);
+                    ci->body[_s] = val;
+                }
             }else{
-                preStr += ri.str;
-            }
-        }
-        for(int i = lines.size() - 1 ; i >=0  ; --i){
-            auto& ri = lines[i];
-            if(ri.id_right >= 0){
-                id_r_last = i;
+                bodyStartIdx = i;
                 break;
             }
         }
-        MED_ASSERT_X(id_l_first >=0 && id_r_last >= 0, "getOutPair failed.");
-        for(int i = id_l_first + 1 ; i < id_r_last ; ++i){
-            auto& ri = lines[i];
-            //space
-            //h7::utils::trim(ri.str);
-            body.append(ri.str);
+        if(bodyStartIdx > 0){
+            for(int i = bodyStartIdx ; i < size - 1 ; ++i){
+                p.body.append(lines[i].str + NEW_LINE);
+            }
         }
-        if(id_r_last > id_l_first){
-            auto s = lines[id_r_last].str.substr(0, lines[id_r_last].id_right);
-            //h7::utils::trim(s);
-            body.append(s);
-        }else if(id_r_last == id_l_first){
-            auto& ri = lines[id_r_last];
-            //012{334}6
-            //3,7
-            body = ri.str.substr(ri.id_left + 1, ri.id_right - ri.id_left - 1);
-        }
-        //
-        p.preStr = preStr;
-        p.body = body;
     }
 };
 
 }
 
-void ConfigItem::loadFromBuffer(CString buffer, CString curDir){
+bool ConfigItem::loadFromBuffer(CString _buffer, CString curDir, ConfigItemCache* cache){
+    auto buffer = h7::utils::replace("\\t", "", _buffer);
     this->dir = curDir;
     h7::StringBuffer sb(buffer);
     String str;
-    int index;
 
     while (sb.readLine(str)) {
         h7::utils::trim(str);
@@ -221,52 +224,44 @@ void ConfigItem::loadFromBuffer(CString buffer, CString curDir){
         printf("line: >> '%s'\n", str.data());
         //anno
         if(str.c_str()[0] == '#' || h7::utils::startsWith(str, "//")){
-           continue;
+            continue;
         }
-        index = str.find("=");
-        if(index >= 0){
-            String _s = str.substr(0, index);
-            h7::utils::trim(_s);
-            String val;
-            if(index != (int)str.length() - 1){
-                val = str.substr(index + 1, str.length() - index - 1);
-            }
-            h7::utils::trim(val);
-            if(_s == DEF_INC_KEY){
-                if(!val.empty()){
-                    includes.insert(val);
+        if(MultiLineItemParser::hasNonVarRefBigQuote(str)){
+            MultiLineItemParser mp;
+            String str2;
+            mp.addLine(str);
+            while (!mp.isEnd() && sb.readLine(str2)) {
+                //ignore anno line .
+                if(str2.c_str()[0] == '#' || h7::utils::startsWith(str2, "//")){
+                    continue;
                 }
-            }else{
-                body[_s] = val;
-                //if(val.data()[0] == '[' && val.data()[val.length()-1] == ']'){
+                mp.addLine(str2);
             }
-        }else{
-            int idx1_l = str.find("{");
-            int idx1_r = str.rfind("}");
-            if(idx1_l > 0){
-                MultiLineItemParser mp;
-                mp.addItem(str, idx1_l, idx1_r);
-                String str2;
-                while (!mp.isEnd() && sb.readLine(str2)) {
-                    mp.addLine(str2);
-                }
-                MED_ASSERT_X(mp.isEnd(), "[ERROR] unexpect end if line: " << str2);
-                if(!mp.parse(this)){
-                    MED_ASSERT_X(false, "[MultiLine-Parse-ERROR] wrong line: " << str);
-                    break;
-                }
-            }else{
-                MED_ASSERT_X(false, "[ERROR] wrong line: " << str);
+            if(!mp.isEnd()){
+                fprintf(stderr, "loadFromBuffer >> [ERROR] unexpect end if line = %s.\n", str2.data());
+                return false;
             }
+            if(!mp.parse(this, cache)){
+                fprintf(stderr, "loadFromBuffer >> [MultiLine-Parse-ERROR] wrong line: %s.\n", str.data());
+                return false;
+            }
+            continue;
+        }
+        if(utils::startsWith(str, "include")){
+            String name = str.substr(7);
+            h7::utils::trim(name);
+            this->includes.insert(name);
         }
     }
+    return true;
 }
+
 //return error msg.
-String ConfigItem::resolve(IConfigResolver* reso){
+String ConfigItem::resolve(ConfigItemCache* cache, IConfigResolver* reso){
     //1, resolve include.
     //2, resolve super.
     //3, resolve variable
-    auto wreso = IConfigResolver::newWrappedConfigResolver(reso);
+    auto wreso = IConfigResolver::newWrappedConfigResolver(cache, reso);
     String errMsg = wreso->resolves(this);
     if(!errMsg.empty()){
         return errMsg;
@@ -274,16 +269,13 @@ String ConfigItem::resolve(IConfigResolver* reso){
     //
     return wreso->resolveValues(this);
 }
-String ConfigItem::resolve(const Map& prop){
-    auto recr = IConfigResolver::newRuntimeConfigResolver(this, prop);
-    return resolve(recr.get());
+String ConfigItem::resolve(ConfigItemCache* cache, const Map& prop){
+    auto recr = IConfigResolver::newRuntimeConfigResolver(cache, this, prop);
+    return resolve(cache, recr.get());
 }
-String ConfigItem::resolve(Map* prop){
-    auto recr = IConfigResolver::newRuntimeConfigResolver(this, prop);
-    return resolve(recr.get());
-}
-void ConfigItem::mergeForInclude(ConfigItem* ci){
-    mergeForSuper(ci);
+String ConfigItem::resolve(ConfigItemCache* cache, Map* prop){
+    auto recr = IConfigResolver::newRuntimeConfigResolver(cache, this, prop);
+    return resolve(cache, recr.get());
 }
 void ConfigItem::mergeForSuper(ConfigItem* ci){
     //ci->includes
@@ -323,41 +315,81 @@ void ConfigItem::dump(int indent){
     for(int i = 0 ; i < indent ; ++i){
         pre += " ";
     }
-    printf("---- Includes start ------\n");
-    for(auto& inc : includes){
-        printf("%s%s\n", pre.data(), inc.data());
-    }
-    printf("---- Includes end ------\n\n");
+    if(indent > 0){
+        for(auto& inc : includes){
+            printf("%s%s\n", pre.data(), inc.data());
+        }
+        for(auto& inc : supers){
+            printf("%s%s\n", pre.data(), inc.data());
+        }
+        for(auto& inc : body){
+            printf("%s%s: %s\n", pre.data(), inc.first.data(), inc.second.data());
+        }
+        for(auto& inc : children){
+            printf("%s%s{\n", pre.data(), inc.first.data());
+            inc.second.ci->dump(indent + inc.first.length() + 1);
+            printf("%s}\n", pre.data());
+        }
+        for(auto& inc : brothers){
+            printf("%s%s{\n", pre.data(), inc.first.data());
+            inc.second.ci->dump(indent + inc.first.length() + 1);
+            printf("%s}\n", pre.data());
+        }
+    }else{
+        printf("---- Includes start ------\n");
+        for(auto& inc : includes){
+            printf("%s%s\n", pre.data(), inc.data());
+        }
+        printf("---- Includes end ------\n\n");
 
-    printf("---- Supers start ------\n");
-    for(auto& inc : supers){
-        printf("%s%s\n", pre.data(), inc.data());
-    }
-    printf("---- Supers end ------\n\n");
+        printf("---- Supers start ------\n");
+        for(auto& inc : supers){
+            printf("%s%s\n", pre.data(), inc.data());
+        }
+        printf("---- Supers end ------\n\n");
 
-    printf("---- Body start ------\n");
-    for(auto& inc : body){
-        printf("%s%s = %s\n", pre.data(), inc.first.data(), inc.second.data());
-    }
-    printf("---- Body end ------\n\n");
+        printf("---- Body start ------\n");
+        for(auto& inc : body){
+            printf("%s%s: %s\n", pre.data(), inc.first.data(), inc.second.data());
+        }
+        printf("---- Body end ------\n\n");
 
-    printf("---- Children start ------\n");
-    for(auto& inc : children){
-        printf("%s%s{\n", pre.data(), inc.first.data());
-        inc.second.ci->dump(indent + inc.first.length() + 1);
-        printf("%s  }\n", pre.data());
+        printf("---- Children start ------\n");
+        for(auto& inc : children){
+            printf("%s%s{\n", pre.data(), inc.first.data());
+            inc.second.ci->dump(indent + inc.first.length() + 1);
+            printf("%s}\n", pre.data());
+        }
+        printf("---- Children end ------\n\n");
+
+        printf("---- Brothers start ------\n");
+        for(auto& inc : brothers){
+            printf("%s%s{\n", pre.data(), inc.first.data());
+            inc.second.ci->dump(indent + inc.first.length() + 1);
+            printf("%s}\n", pre.data());
+        }
+        printf("---- Brothers end ------\n\n");
     }
-    printf("---- Children end ------\n\n");
 }
 //---------------
 ConfigItemHolder ConfigItem::resolveSuper(String curDir, CString name, String& errMsg){
     int idxOfDot = name.find(".");
     if(idxOfDot >= 0){
+        //find from children
         String sn1 = name.substr(0, idxOfDot);
-        auto it = children.find(sn1);
-        if(it != children.end()){
-            String sn2 = name.substr(idxOfDot+ 1);
-            return it->second.ci->resolveSuper(curDir, sn2, errMsg);
+        String sn2 = name.substr(idxOfDot+ 1);
+        {
+            auto it = children.find(sn1);
+            if(it != children.end()){
+                return it->second.ci->resolveSuper(curDir, sn2, errMsg);
+            }
+        }
+        //find from brother
+        {
+            auto it = brothers.find(sn1);
+            if(it != brothers.end()){
+                return it->second.ci->resolveSuper(curDir, sn2, errMsg);
+            }
         }
         return ConfigItemHolder();
     }
@@ -371,10 +403,18 @@ String ConfigItem::resolveValue(CString name, String& errorMsg){
     int idxOfDot = name.find(".");
     if(idxOfDot >= 0){
         String sn1 = name.substr(0, idxOfDot);
-        auto it = children.find(sn1);
-        if(it != children.end()){
-            String sn2 = name.substr(idxOfDot+ 1);
-            return it->second.ci->resolveValue(sn2, errorMsg);
+        String sn2 = name.substr(idxOfDot+ 1);
+        {
+            auto it = children.find(sn1);
+            if(it != children.end()){
+                return it->second.ci->resolveValue(sn2, errorMsg);
+            }
+        }
+        {
+            auto it = brothers.find(sn1);
+            if(it != brothers.end()){
+                return it->second.ci->resolveValue(sn2, errorMsg);
+            }
         }
         return "";
     }
@@ -397,8 +437,10 @@ bool SuperConfig::loadFromFile(CString file){
     return loadFromBuffer(FileUtils::getFileContent(path), dir);
 }
 bool SuperConfig::loadFromBuffer(CString buffer, CString curDir){
-    m_item.loadFromBuffer(buffer, curDir);
-    auto msg = m_item.resolve(m_env);
+    if(!m_item.loadFromBuffer(buffer, curDir, &m_cache)){
+        return false;
+    }
+    auto msg = m_item.resolve(&m_cache, m_env);
     if(!msg.empty()){
         fprintf(stderr, "%s\n", msg.data());
         return false;

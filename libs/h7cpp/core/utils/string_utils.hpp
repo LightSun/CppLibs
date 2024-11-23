@@ -179,18 +179,20 @@ inline std::vector<std::string> split2(CString pat, const std::string& str)
 {
     std::vector<std::string> result;
     const int size = str.size();
-    for (int i = 0; i < size; i++)
+    for (int i = 0; ;)
     {
         int pos = str.find(pat, i);
-        if (pos < size)
+        if (pos >= 0 && pos < size)
         {
             std::string s = str.substr(i, pos - i);
             result.push_back(s);
             i = pos + pat.size() - 1;
+        }else{
+            break;
         }
     }
     if(result.empty()){
-        result.push_back(pat);
+        result.push_back(str);
     }
     return result;
 }
