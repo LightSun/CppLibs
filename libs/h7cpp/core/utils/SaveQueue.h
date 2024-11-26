@@ -1,11 +1,10 @@
-#ifndef SAVEQUEUE_H
-#define SAVEQUEUE_H
+#pragma once
 
 #include <assert.h>
 #include <atomic>
 #include <stdlib.h>
 #include <stdio.h>
-
+#include <memory>
 
 namespace h7 {
 
@@ -125,7 +124,8 @@ private:
   //thread not safe.
   void expand(){
       size_t nextBufSize = bufferSize() << 1;
-      auto newBuf = new cell_t [nextBufSize];
+      //auto newBuf = new cell_t [nextBufSize];
+      auto newBuf = std::unique_ptr<cell_t[]>(new cell_t [nextBufSize]);
       //copy old data
       size_t curSize = size();
       for(size_t i = 0 ; i < curSize ; ++i){
@@ -137,7 +137,7 @@ private:
       }
       //set buf to new
       delete[] buffer_;
-      buffer_ = newBuf;
+      buffer_ = newBuf.release();
       buffer_mask_ = nextBufSize - 1 ;
       enqueue_pos_.store(curSize, std::memory_order_relaxed);
       dequeue_pos_.store(0, std::memory_order_relaxed);
@@ -166,4 +166,3 @@ private:
   void operator = (SaveQueue const&);
 };
 }
-#endif // SAVEQUEUE_H

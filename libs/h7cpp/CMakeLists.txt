@@ -11,6 +11,7 @@ else(WIN32)
     set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fPIC -g -O0 -rdynamic")
 endif(WIN32)
 set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fPIC -std=c11 -g -O0")
+set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wno-error=register")
 
 
 #platform
@@ -33,6 +34,7 @@ include_directories(valgrind-headers/)
 include_directories(./)
 
 ## sub dirs
+add_subdirectory(zip/)
 add_subdirectory(core/)
 add_subdirectory(handler-os/)
 add_subdirectory(table/)

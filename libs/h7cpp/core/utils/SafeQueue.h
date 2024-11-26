@@ -51,6 +51,7 @@ namespace h7 {
             m_expanding.store(true, std::memory_order_relaxed);
             m_queue->expand();
             m_expanding.store(false, std::memory_order_relaxed);
+            return enqueue(data);
         }
         bool dequeue(T& data){
             while (m_expanding.load(std::memory_order_acquire)) {

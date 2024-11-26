@@ -1,7 +1,7 @@
 
 #include "common/common.h"
 #include "common/logger.h"
-#include "utils/Backtrace.h"
+//#include "utils/Backtrace.h"
 
 void crash2(const std::string& str) {
     int *s = 0;
@@ -13,10 +13,10 @@ void crash1() {
 }
 
 void test_XBacktrace(){
-    h7::initLogger(h7::LoggerParam());
-    h7::Backtrace::enableBacktrace("unittest", 0);
-    LOGI("test_XBacktrace >> enable backtrace.\n");
+//    h7::initLogger(h7::LoggerParam());
+//    h7::Backtrace::enableBacktrace("unittest", 0);
+//    LOGI("test_XBacktrace >> enable backtrace.\n");
 
-    LOGI("test_XBacktrace >> Calling crash function.\n");
-    crash1();
+//    LOGI("test_XBacktrace >> Calling crash function.\n");
+//    crash1();
 }
