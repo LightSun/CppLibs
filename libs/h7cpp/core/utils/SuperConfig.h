@@ -11,30 +11,32 @@
 
 /**
 //cur dir
-//@{CUR_DIR}: @ means from outside.
-//${CUR_DIR}: means from config.
-$(INCLUDE)=@{CUR_DIR}/a.lp
-$(INCLUDE)=b.lp,c.lp
+include ${CUR_DIR}/a.lp
+include b.lp,c.lp
 //include all
-$(INCLUDE)=.
-$(INCLUDE)=@{CUR_DIR}/.
+include .
+include ${CUR_DIR}/.
 ABC=xxx,prop
 
-public A{
-B{
-  C{}
-  D{}
-}
-}
 conf{
+    public A{
+    B{
+      C{
+        }
+      D{
+        }
+    }
+    }
     sub{
     }
     stu: A.B.C, A.B.D{
-        name = abc,
-        age = 16,
+        name = abc
+        age = 16
         classes = [${math}, eng, sport],
         kv{
-            a = 1, b = 2, c = 3
+            a = 1
+            b = 2
+            c = 3
         }
     }
 }
@@ -42,7 +44,7 @@ conf{
 /*unitTest:
 1, only props.
 2, include a class-like.
-3, include extend. 找兄弟 - 包括inlcude过来的
+3, include extend.
 4, include files.
 5, final test
 */

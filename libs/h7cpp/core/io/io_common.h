@@ -4,8 +4,16 @@
 #include <vector>
 #include <functional>
 
-#ifndef DEF_IS_API_VIRTUAL
-#define DEF_IS_API_VIRTUAL(a) virtual a = 0
+#ifndef DEF_API_VIRTUAL
+#define DEF_API_VIRTUAL(a) virtual a = 0
+#endif
+
+#ifndef CMD_LINE
+#ifdef _WIN32
+#define CMD_LINE "\r\n"
+#else
+#define CMD_LINE "\n"
+#endif
 #endif
 
 namespace h7 {

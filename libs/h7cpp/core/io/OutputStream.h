@@ -6,25 +6,20 @@ namespace h7 {
 
 class OutputStream{
 public:
-    template<typename T>
-    union UniVal{
-        char arr[sizeof(T)];
-        T val;
-    };
 
     using String = std::string;
     using CString = const std::string&;
 
     virtual ~OutputStream(){}
 
-    DEF_IS_API_VIRTUAL(bool open(CString file, CString param));
+    DEF_API_VIRTUAL(bool open(CString file, CString param));
 
     //start: include, return 0 for failed.
-    DEF_IS_API_VIRTUAL(size_t write(char* buf, size_t start, size_t len));
-    DEF_IS_API_VIRTUAL(bool canWrite(size_t size));
+    DEF_API_VIRTUAL(size_t write(char* buf, size_t start, size_t len));
+    DEF_API_VIRTUAL(bool canWrite(size_t size));
 
-    DEF_IS_API_VIRTUAL(void flush());
-    DEF_IS_API_VIRTUAL(void close());
+    DEF_API_VIRTUAL(void flush());
+    DEF_API_VIRTUAL(void close());
 
     //-------------------
 

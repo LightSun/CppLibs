@@ -14,7 +14,7 @@ public:
     using UPMemoryMapped = std::unique_ptr<MemoryMapped>;
 
     MappedInputStream(){
-        m_memMapped = std::make_unique<MemoryMapped>();
+        m_memMapped = std::make_unique<MemoryMapped>(MemoryMapped::kOP_READ);
     }
 
     static bool open0(MemoryMapped& memMap,CString file, CString hint){

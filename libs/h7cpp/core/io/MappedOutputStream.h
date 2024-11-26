@@ -10,14 +10,18 @@
 namespace h7 {
 class MappedOutputStream : public AbsOutputStream<MappedOutputStream>{
 public:
+    MappedOutputStream(){
+        m_memMapped = std::make_unique<MemoryMapped>(MemoryMapped::kOP_WRITE);
+    }
+
     bool open(CString file, CString param){
-        return MappedInputStream::open0(m_memMapped, file, param);
+        return MappedInputStream::open0(*m_memMapped, file, param);
     }
     //start: include, end: exclude. return 0 for failed.
     size_t write(char* buf, size_t start, size_t len){
-        MED_ASSERT(m_memMapped.isValid());
+        MED_ASSERT(m_memMapped->isValid());
         if(len > leftSize()) return 0;
-        auto dataPtr = (char*)m_memMapped.getData() + m_nextPos;
+        auto dataPtr = (char*)m_memMapped->getData() + m_nextPos;
         std::memcpy((void*)dataPtr, buf + start, len);
         m_nextPos += len;
         return len;
@@ -32,11 +36,11 @@ public:
 
 private:
     size_t leftSize(){
-        return m_memMapped.size() - m_nextPos;
+        return m_memMapped->size() - m_nextPos;
     }
 
 private:
-    MemoryMapped m_memMapped;
+    std::unique_ptr<MemoryMapped> m_memMapped;
     size_t m_nextPos {0};
 };
 }

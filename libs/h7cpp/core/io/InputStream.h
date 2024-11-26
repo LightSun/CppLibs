@@ -30,17 +30,17 @@ public:
 
     virtual ~InputStream(){}
 
-    DEF_IS_API_VIRTUAL(bool open(CString file, CString param));
-    DEF_IS_API_VIRTUAL(void close());
+    DEF_API_VIRTUAL(bool open(CString file, CString param));
+    DEF_API_VIRTUAL(void close());
     //return actual read count . -1 for failed.
-    DEF_IS_API_VIRTUAL(size_t readCount(Count count, char* buf));
-    DEF_IS_API_VIRTUAL(void seekDelta(Count offset));
+    DEF_API_VIRTUAL(size_t readCount(Count count, char* buf));
+    DEF_API_VIRTUAL(void seekDelta(Count offset));
     //reset to first position
-    DEF_IS_API_VIRTUAL(void reset());
+    DEF_API_VIRTUAL(void reset());
     //return 0 for failed
-    DEF_IS_API_VIRTUAL(Count leftSize());
+    DEF_API_VIRTUAL(Count leftSize());
     //return > 0 for valid
-    DEF_IS_API_VIRTUAL(Count totalSize());
+    DEF_API_VIRTUAL(Count totalSize());
     //------------------------
     inline bool isValid(){
         return totalSize() > 0;

@@ -30,6 +30,12 @@ public:
     RandomAccess    ///< jump around
   };
 
+  enum{
+      kOP_READ,
+      kOP_WRITE,
+      kOP_READ_WRITE,
+  };
+
   /// how much should be mappend
   enum MapRange
   {
@@ -37,7 +43,7 @@ public:
   };
 
   /// do nothing, must use open()
-  MemoryMapped();
+  MemoryMapped(int op);
   /// open file, mappedBytes = 0 maps the whole file
   MemoryMapped(const std::string& filename, size_t mappedBytes = WholeFile,
                CacheHint hint = Normal);
@@ -101,6 +107,7 @@ private:
   FileHandle  _file;
   /// pointer to the file contents mapped into memory
   void*       _mappedView {nullptr};
+  int _op {kOP_READ};
 };
 
 }
