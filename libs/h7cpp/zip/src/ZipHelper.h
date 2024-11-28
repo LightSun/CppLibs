@@ -7,20 +7,6 @@ namespace h7 {
 using String = std::string;
 using CString = const std::string&;
 
-class ZipHelper
-{
-public:
-    ZipHelper();
-
-    bool createZip(CString fn);
-    bool openZip(CString fn);
-
-    int getItemCount();
-
-private:
-
-};
-
 class ZipImpl{
 public:
     ~ZipImpl();
@@ -29,17 +15,17 @@ public:
     void close();
 };
 
+typedef struct UnZipImpl_Ctx0 UnZipImpl_Ctx0;
 class UnZipImpl{
 public:
+    UnZipImpl();
     ~UnZipImpl();
-    bool openZip(CString fn, CString pwd);
-    int getItemCount();
+    bool openZip(CString fn, CString pwd = "");
+    bool unzip(CString dir);
+    bool unzip2(CString dir);
 
 private:
-    void close0();
-    void newEntry0();
-private:
-    void* m_ctx {nullptr};
+    UnZipImpl_Ctx0* m_ctx {nullptr};
 };
 
 }

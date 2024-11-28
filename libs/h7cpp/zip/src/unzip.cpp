@@ -335,7 +335,7 @@ typedef struct unz_file_info_s
 // Basic data types
 typedef unsigned char  Byte;  // 8 bits
 typedef unsigned int   uInt;  // 16 bits or more
-typedef unsigned long  uLong; // 32 bits or more
+typedef unsigned long uLong; // 32 bits or more
 typedef void *voidpf;
 typedef void     *voidp;
 typedef long z_off_t;
@@ -358,11 +358,11 @@ struct internal_state;
 
 typedef struct z_stream_s {
     Byte    *next_in;  // next input byte
-    uInt     avail_in;  // number of bytes available at next_in
+    uLong     avail_in;  // number of bytes available at next_in
     uLong    total_in;  // total nb of input bytes read so far
 
     Byte    *next_out; // next output byte should be put there
-    uInt     avail_out; // remaining free space at next_out
+    uLong     avail_out; // remaining free space at next_out
     uLong    total_out; // total nb of bytes output so far
 
     char     *msg;      // last error message, NULL if no error
@@ -2855,7 +2855,7 @@ typedef struct
 	uLong stream_initialised;   // flag set if stream structure is initialised
 
 	uLong offset_local_extrafield;// offset of the local extra field
-	uInt  size_local_extrafield;// size of the local extra field
+    uLong  size_local_extrafield;// size of the local extra field
 	uLong pos_local_extrafield;   // position in the local extra field in read
 
 	uLong crc32;                // crc32 of all data uncompressed
@@ -3999,7 +3999,7 @@ ZRESULT TUnzip::Get(int index,ZIPENTRY *ze)
     isdir=     (a&0x00000010)!=0;
     archive=   (a&0x00000020)!=0;
   }
-  readonly; hidden; system; isdir; archive;
+  //readonly; hidden; system; isdir; archive;
   ze->attr=0;
 #ifdef ZIP_STD
   ze->attr = (a&0xFFFF0000)>>16;
