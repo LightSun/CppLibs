@@ -35,7 +35,7 @@ include_directories(./)
 
 ## sub dirs
 add_subdirectory(zip/)
-add_subdirectory(gzip/)
+#add_subdirectory(gzip/)
 add_subdirectory(core/)
 add_subdirectory(handler-os/)
 add_subdirectory(table/)

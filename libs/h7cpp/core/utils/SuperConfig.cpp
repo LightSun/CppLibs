@@ -455,3 +455,8 @@ String SuperConfig::getString(CString key, CString def){
     }
     return val;
 }
+void SuperConfig::print(CString prefix){
+     printf("========== %s start ==============%s", prefix.data(), CMD_LINE);
+     dump();
+     printf("========== %s end ==============%s", prefix.data(), CMD_LINE);
+}

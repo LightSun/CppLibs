@@ -1,10 +1,11 @@
-#ifndef PROPERTIES_H
-#define PROPERTIES_H
+#pragma once
 
 #include <map>
 #include <vector>
-#include "utils/Value.hpp"
-#include "utils/string_utils.hpp"
+#include <stdio.h>
+#include "core/utils/Value.hpp"
+#include "core/utils/string_utils.hpp"
+#include "core/utils/IKeyValue.h"
 
 #define __H7_Properties_G_LIST(func)\
     std::vector<String> vec;\
@@ -24,7 +25,7 @@
 
 namespace h7 {
 
-class Properties
+class Properties: public IKeyValue
 {
 public:
     using String = std::string;
@@ -50,23 +51,27 @@ public:
     bool hasProperty(CString key){
         return m_map.find(key) != m_map.end();
     }
-    String getString(CString key, CString defVal = ""){
+    String getString(CString key, CString defVal = "") override{
         auto it = m_map.find(key);
         if(it != m_map.end()){
             return it->second;
         }
         return defVal;
     }
-    String getStringWithReplace(CString key, CString defVal = ""){
+    void print(CString prefix) override{
+        prints(prefix);
+    }
+    //with replace
+    String getStringRep(CString key, CString defVal = ""){
         auto str = getString("REPLACE::" + key);
         if(str.empty()){
             return getString(key, defVal);
         }
         return str;
     }
-    bool getBool(CString key){
+    bool getBool(CString key, bool def = false){
         Value v(getString(key));
-        return v.getBool();
+        return v.getBool(def);
     }
     int getInt(CString key,int defVal = 0){
         Value v(getString(key));
@@ -151,7 +156,21 @@ public:
     void getVectorBool(CString key,std::vector<bool>& out){
         __H7_Properties_G_LIST0(getBool)
     }
-
+    void prints(CString prefix){
+#ifdef _WIN32
+#define _NEW_LINE "\r\n"
+#else
+#define _NEW_LINE "\n"
+#endif
+        printf("========== %s start ==============%s", prefix.data(), _NEW_LINE);
+        auto it = m_map.begin();
+        for(; it != m_map.end(); ++it){
+            printf("[ %s ]: kv = (%s, %s)%s", prefix.data(),
+                   it->first.data(), it->second.data(), _NEW_LINE);
+        }
+        printf("========== %s end ==============%s", prefix.data(), _NEW_LINE);
+#undef _NEW_LINE
+    }
 private:
     /*
 children_dirs-FORMAT=${MI_NUO_WA_DIR}/7月/15日/<<_names>>/<<_category>>
@@ -194,7 +213,7 @@ category=AI诊断,甲状腺
         //add to ret
         out.insert(out.end(), fmts.begin(), fmts.end());
     }
-    std::vector<String> do_replace(std::vector<String>& fmts,
+    static std::vector<String> do_replace(std::vector<String>& fmts,
                                         CString rep_name,
                                         std::vector<String>& _names){
         std::vector<String> newFmts;
@@ -210,5 +229,3 @@ public:
 };
 
 }
-
-#endif // PROPERTIES_H

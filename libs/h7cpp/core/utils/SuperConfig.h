@@ -8,7 +8,7 @@
 #include <memory>
 #include <functional>
 #include "core/utils/IConfigResolver.h"
-
+#include "core/utils/IKeyValue.h"
 /**
 //cur dir
 include ${CUR_DIR}/a.lp
@@ -121,14 +121,17 @@ struct ConfigItem : public IConfigResolver{
     String resolveValue(CString name, String& errorMsg) override;
 };
 
-class SuperConfig
+class SuperConfig: public IKeyValue
 {
 public:
     SuperConfig(Map* env = nullptr):m_env(env){}
 
     bool loadFromBuffer(CString buffer, CString curDir);
     bool loadFromFile(CString file);
-    String getString(CString key, CString def = "");
+
+    String getString(CString key, CString def = "") override;
+    void print(CString prefix) override;
+
     void dump(){m_item.dump();}
 
 private:
