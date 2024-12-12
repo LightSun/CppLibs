@@ -231,6 +231,10 @@ bool ConfigItem::loadFromBuffer(CString _buffer, CString curDir, ConfigItemCache
             String str2;
             mp.addLine(str);
             while (!mp.isEnd() && sb.readLine(str2)) {
+                h7::utils::trim(str2);
+                if(str2.empty()){
+                    continue;
+                }
                 //ignore anno line .
                 if(str2.c_str()[0] == '#' || h7::utils::startsWith(str2, "//")){
                     continue;

@@ -178,21 +178,37 @@ inline void split(CString pat, CString text, std::vector<String>& out){
 inline std::vector<std::string> split2(CString pat, const std::string& str)
 {
     std::vector<std::string> result;
-    const int size = str.size();
-    for (int i = 0; ;)
-    {
+    std::vector<int> poss;
+    const int patLen = pat.length();
+    for(int i = 0 ;;){
         int pos = str.find(pat, i);
-        if (pos >= 0 && pos < size)
-        {
-            std::string s = str.substr(i, pos - i);
-            result.push_back(s);
-            i = pos + pat.size() - 1;
+        if(pos >= 0){
+            poss.push_back(pos);
+            i = pos + patLen;
         }else{
             break;
         }
     }
-    if(result.empty()){
-        result.push_back(str);
+    if(poss.empty()){
+        return {str};
+    }
+    if(poss[0] > 0){
+        result.push_back(str.substr(0, poss[0]));
+    }else{
+        result.push_back("");
+    }
+    if(poss.size() >= 2){
+        for(int i = 0 ; i < (int)poss.size() - 1 ; ++i){
+            int p1 = poss[i];
+            int p2 = poss[i + 1];
+            String str2 = str.substr(p1 + patLen, p2 - p1 - 1);
+            result.push_back(str2);
+        }
+    }
+    if(poss[(int)poss.size()-1] < (int)str.length() - 1){
+        result.push_back(str.substr(poss[poss.size()-1] + 1));
+    }else{
+        result.push_back("");
     }
     return result;
 }

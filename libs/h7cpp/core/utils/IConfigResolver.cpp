@@ -55,6 +55,10 @@ struct WrappedResolver: public IWrappedResolver{
         }
         return m_base->resolveSuper(curDir, name, errorMsg);
     }
+//    std::vector<ConfigItemHolder> resolveSupers(String curDir,
+//                                                CString name, String& errorMsg) override{
+
+//    }
     String resolveValue(CString name, String& errorMsg) override{
         auto it = kv.find(name);
         if(it != kv.end()){

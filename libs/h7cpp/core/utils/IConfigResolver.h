@@ -68,6 +68,8 @@ struct IConfigResolver{
     virtual ~IConfigResolver(){}
     virtual ConfigItemHolder resolveInclude(String curDir, CString name, String& errorMsg) = 0;
     virtual ConfigItemHolder resolveSuper(String curDir, CString name, String& errorMsg) = 0;
+    //virtual std::vector<ConfigItemHolder> resolveSupers(String curDir,
+   //                                                     CString name, String& errorMsg) = 0;
     virtual String resolveValue(CString name, String& errorMsg) = 0;
 
     static bool getRealValue(String& val, IConfigResolver* reso, String& errorMsg);
