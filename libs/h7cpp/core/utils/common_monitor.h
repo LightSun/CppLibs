@@ -57,10 +57,12 @@ struct MonitorTask{
 template<typename IMap = std::map<String,std::shared_ptr<MonitorTask>>>
 struct RuntimeCategoryItem{
     using Func_StateProcessor = std::function<void(void*, MonitorTask*)>;
+    using Func_AlarmProcessor = std::function<void(void*, MonitorTask*)>;
 
     String name;
     IMap m_map;
     mutable std::shared_mutex m_mutex;
+    Func_AlarmProcessor m_funcAlarm;
 
     RuntimeCategoryItem(CString name): name(name){}
 
@@ -109,9 +111,7 @@ struct RuntimeCategoryItem{
                     auto delta = sysTime - it->second->startTime;
                     if(delta >= it->second->cate->alarmDurationMs){
                         ++ it->second->alarmCount;
-                        fprintf(stderr, "[WARN] CommonMonitor >> Alarm-OverTime: cate,uid ="
-                                        "(%s, %s)\n",
-                                name.data(),it->second->uid.data());
+                        doAlarm(it->second.get());
                     }
                     if(it->second->alarmCount >= it->second->cate->maxAlarmCount){
                         rmUids.push_back(it->second->uid);
@@ -132,8 +132,24 @@ struct RuntimeCategoryItem{
             }
         }
     }
+
+private:
+    void doAlarm(MonitorTask* alarm){
+        if(m_funcAlarm){
+            m_funcAlarm(alarm->cate->ctx, alarm);
+        }else{
+            String& uid = alarm->uid;
+            fprintf(stderr, "[WARN] CommonMonitor >> Alarm-OverTime: cate,uid ="
+                            "(%s, %s)\n",
+                    name.data(),uid.data());
+        }
+    }
 };
 
+/**
+ * common monitor used to listen some event,
+ * like func-blocking, when occurs we have chance to known it.
+ */
 template<typename IMap = std::map<String,std::shared_ptr<MonitorTask>>>
 class CommonMonitor{
 public:
@@ -142,6 +158,7 @@ public:
     using SPMTask = std::shared_ptr<MonitorTask>;
     using KUMap_ = std::unordered_map<String, MonitorCategoryItem>;
     using Func_StateProcessor = std::function<void(void*, MonitorTask*)>;
+    using Func_AlarmProcessor = std::function<void(void*, MonitorTask*)>;
 
     ~CommonMonitor(){
         stop();
@@ -159,6 +176,9 @@ public:
         MonitorCategoryItem* ci = getCategoryItem(cateName);
         ci->ctx = ctx;
         ci->funcState = cb;
+    }
+    void setAlarmCallback(Func_AlarmProcessor fp){
+        m_funcAlarm = fp;
     }
     MonitorCategoryItem& getDefaultCategoryItem(){
         return m_defaultCate;
@@ -184,6 +204,11 @@ public:
             m_stopLock.wait();
         }
     }
+    /**
+     * @brief reportStart
+     * @param cate empty means default category
+     * @param uid unique id of this event.
+     */
     void reportStart(CString cate, CString uid){
         MonitorCategoryItem* ci = getCategoryItem(cate);
         auto task = std::make_shared<MonitorTask>();
@@ -194,13 +219,13 @@ public:
         item->reportStart(task);
     }
     void reportEnd(CString cate, CString uid){
-        auto item = getRuntimeCategoryItem(cate, false);
+        auto item = getRuntimeCategoryItem(cate.empty() ? m_defaultCate.name : cate, false);
         if(item != nullptr){
             item->reportEnd(uid);
         }
     }
     void reportOther(CString cate, CString uid, int state){
-        auto item = getRuntimeCategoryItem(cate, false);
+        auto item = getRuntimeCategoryItem(cate.empty() ? m_defaultCate.name : cate, false);
         if(item != nullptr){
             item->reportOther(uid, state);
         }
@@ -225,11 +250,11 @@ private:
             auto it = m_runtimeMap.find(cate);
             if(it != m_runtimeMap.end()){
                 return it->second.get();
-            }else if(autoCreate){
-                return m_runtimeMap.emplace(cate, std::make_unique<RTItem>(cate))
-                        ->first.get();
             }else{
-                return nullptr;
+                auto ins = m_runtimeMap.emplace(cate, std::make_unique<RTItem>(cate))
+                        ->first.get();
+                ins->m_funcAlarm = m_funcAlarm;
+                return ins;
             }
         }else{
             std::shared_lock<std::shared_mutex> lck(m_mutex);
@@ -261,9 +286,10 @@ private:
     MonitorCategoryItem m_defaultCate;
     KUMap_ m_catesMap;
     std::unordered_map<String, UPRuntimeCategoryItem> m_runtimeMap;
-    h7::MutexLock m_stopLock;
     mutable std::shared_mutex m_mutex;
+    h7::MutexLock m_stopLock;
     volatile int m_reqStop {0};
     volatile int m_started {0};
+    Func_AlarmProcessor m_funcAlarm;
 };
 }
