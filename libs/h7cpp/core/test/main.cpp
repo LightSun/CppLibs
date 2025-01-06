@@ -48,12 +48,14 @@ int main(int argc, char* argv[]){
     p2 = p1;
     printf("p = %p, p1 = %p, p2 = %p\n", p, p1, p2);
     */
-    if(argc == 1){
-        //String fir = "/home/heaven7/heaven7/work/TensorRT/libtorch_1.12.1/libtorch/lib";
-       // test_dir_files_md5(fir.data());
-        test_SuperConfig();
-        return 0;
-    }
+
+//    if(argc == 1){
+//        //String fir = "/home/heaven7/heaven7/work/TensorRT/libtorch_1.12.1/libtorch/lib";
+//       // test_dir_files_md5(fir.data());
+//        test_SuperConfig();
+//        return 0;
+//    }
+
     if(argc > 1){
         //auto ret = h7::FileUtils::isFileExists(argv[1]);
        // printf("file exists: %s\n", ret ? "true" : "false");
@@ -61,7 +63,7 @@ int main(int argc, char* argv[]){
     //test_splits();
     //test_CountDownLatch();
     //test_Barrier();
-    //test_SortedList();
+    test_SortedList();
 
     //test_XBacktrace();
     //test_Callbacks();
