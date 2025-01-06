@@ -26,6 +26,8 @@ static int findFirstNeqPos_u(unsigned int* a, int start,
 static int findFirstNeqPos_ll(long long* a, int start, int len, long long key);
 static int findFirstNeqPos_offset_u(const void* a, int ev_size,int hash_offset,
                              int start,int len, unsigned int key);
+static int findFirstNeqPos_offset_u64(const void* a, int ev_size,int hash_offset,
+                                    int start,int len, unsigned long long key);
 //-----------------------------------------
 
 int binarySearch(int* a, int start, int len, int key) {
@@ -165,7 +167,7 @@ int binarySearchOffset_u64(const void* a, int ev_size,int hash_offset,
         return ~(start + len);
     } else if (_BSOU64(high) == key) {
         if(high > start){
-            return findFirstNeqPos_offset_u(a, ev_size, hash_offset,
+            return findFirstNeqPos_offset_u64(a, ev_size, hash_offset,
                                             start, high - start, key) + 1;
         }
         return high;
