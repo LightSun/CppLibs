@@ -1,3 +1,4 @@
+#include <string.h>
 #include "ZlibUtils.h"
 #include "zlib.h"
 
