@@ -40,8 +40,11 @@ struct GroupItem
     String name;
     std::vector<ZipFileItem> children;
 
+    bool isEmpty()const{return children.empty();}
     String write(CString buffer) const;
     bool read(String& bufIn, String& bufOut);
+
+    GroupItem filter(CString ext, bool remove);
 };
 
 typedef struct GzipHelper_Ctx0 GzipHelper_Ctx0;
@@ -62,6 +65,7 @@ public:
     void setDeCompressor(FUNC_DeCompressor func);
     void setConcurrentThreadCount(int count);
     void setAttentionFileExtensions(const std::vector<String>&);
+    void setDebug(bool debug);
 
     bool compressDir(CString dir, CString outFile);
     bool compressFile(CString file, CString outFile);
