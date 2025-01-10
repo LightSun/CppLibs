@@ -80,11 +80,9 @@ std::vector<String> FileUtils::getFiles(CString path, bool recursion, CString su
               if(strcmp(ptr->d_name, ".") == 0 || strcmp(ptr->d_name, "..") == 0) {
                   continue;
               } else if (ptr->d_type == DT_REG) { /* regular file */
-                  if(suffix.length() > 0){
-                      String _file(ptr->d_name);
-                      if(h7::utils::endsWith(_file, suffix)){
-                          ret.push_back(str + std::string("/") + _file);
-                      }
+                  String _file(ptr->d_name);
+                  if(suffix.empty() || h7::utils::endsWith(_file, suffix)){
+                      ret.push_back(str + std::string("/") + _file);
                   }
               } else if (ptr->d_type == DT_DIR) { /* dir */
                   if(recursion){
@@ -110,7 +108,7 @@ std::vector<String> FileUtils::getFiles(CString path, bool recursion, CString su
             }
             else{
                 String _file(fileinfo.name);
-                if(h7::utils::endsWith(_file, suffix)){
+                if(suffix.empty() || h7::utils::endsWith(_file, suffix)){
                     ret.push_back(p.assign(path).append("\\").append(fileinfo.name));
                 }
             }

@@ -61,6 +61,7 @@ public:
     void setCompressor(FUNC_Compressor func);
     void setDeCompressor(FUNC_DeCompressor func);
     void setConcurrentThreadCount(int count);
+    void setAttentionFileExtensions(const std::vector<String>&);
 
     bool compressDir(CString dir, CString outFile);
     bool compressFile(CString file, CString outFile);

@@ -6,12 +6,13 @@
 using namespace h7_gz;
 
 static void test1();
+static void test2();
+extern void test_Gzip1();
 
 int main(int argc, const char* argv[]){
-    //test1()
-    // String f = "E:/work/HxPoc/HxPoc.zip";
-    // GzipHelper gh;
-    // gh.readZip(f, "");
+    setbuf(stdout, NULL);
+    //test1();
+    test_Gzip1();
     return 0;
 }
 
@@ -38,5 +39,5 @@ void test1(){
     std::cout << "========= DecompressString ===========" << std::endl;
     std::string out_decompress;
     MED_ASSERT(ZlibUtils::decompress(out_compress, out_decompress));
-    std::cout << "Decompress Buffer Size: " << out_decompress.size() << std::endl;
+    MED_ASSERT(buf == out_decompress);
 }

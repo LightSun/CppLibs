@@ -8,6 +8,7 @@
 #include "core/src/hash.h"
 #include "core/src/ThreadPool.h"
 #include "core/src/ConcurrentWorker.h"
+#include "ZlibUtils.h"
 
 #define DEFAUL_HASH_LEN (4 << 20) //4M
 #define DEFAUL_HASH_SEED 17
@@ -81,7 +82,7 @@ struct GroupItemState{
 struct FileWriter0: public IRandomWriter{
 
     String path_;
-    std::fstream fos_;
+    std::ofstream fos_;
 
     FileWriter0(CString path):path_(path){
         auto dir = h7::FileUtils::getFileDir(path);
@@ -152,6 +153,7 @@ struct ZipHeader0{
     }
 
     void parse(String& buf){
+        printf("parse_header: %s\n", buf.data());
         nameLens.clear();
         compressedLens.clear();
         h7::ByteBufferIO bio(&buf);
@@ -188,6 +190,7 @@ struct RandomWriteWrapper: public IRandomWriter
         impl->seekTo(pos);
     }
     bool write(const String& buf) override{
+        printf("write string: %ld\n", buf.size());
         size_t len = buf.size();
         if(!impl->write(&len, sizeof(len))){
             return false;
@@ -195,6 +198,7 @@ struct RandomWriteWrapper: public IRandomWriter
         return impl->write(buf);
     }
     bool write(const void* data, size_t len) override{
+        printf("write data: %ld\n", len);
         return impl->write(data, len);
     }
     void close() override{
@@ -221,6 +225,10 @@ struct GzipHelper_Ctx0{
         std::vector<String> exts;
         {
             auto files = h7::FileUtils::getFiles(dir, true, "");
+            if(files.empty()){
+                fprintf(stderr, "compressDir >> dir is empty. %s\n", dir.data());
+                return false;
+            }
             vec.reserve(files.size());
             exts.reserve(files.size());
             //filter
@@ -287,10 +295,10 @@ struct GzipHelper_Ctx0{
                 return false;
             }
             header.parse(headBuf);
-            if(header.compressedLens.size() != header.groupCount){
+            if((int)header.compressedLens.size() != header.groupCount){
                 return false;
             }
-            if(header.nameLens.size() != header.groupCount){
+            if((int)header.nameLens.size() != header.groupCount){
                 return false;
             }
         }
@@ -343,14 +351,14 @@ struct GzipHelper_Ctx0{
             }
         }
         //verify
-        if(header.groupCount != gitems.size()){
+        if(header.groupCount != (int)gitems.size()){
             return false;
         }
         for(int i = 0 ; i < header.groupCount ; ++i){
             if(!gitems[i]->state){
                 return false;
             }
-            if(gitems[i]->gi.name.length() != header.nameLens[i]){
+            if((int)gitems[i]->gi.name.length() != header.nameLens[i]){
                 return false;
             }
             if(gitems[i]->bufLen != header.compressedLens[i]){
@@ -375,7 +383,7 @@ private:
                 items.push_back(std::move(fi));
             }
             //category
-            if(items.size() > 1){
+            if(items.size() > 1 && func_classify){
                 func_classify(items, gitems);
             }else{
                 GroupItem gi;
@@ -408,7 +416,7 @@ private:
             int ret = h7::ThreadPool::batchRawRun(concurrentCnt, 0, gitems.size(),
                                                       [this, &gitems, &worker](int i){
                     auto& children = gitems[i].children;
-                    auto& key = gitems[i].name;
+                    //auto& key = gitems[i].name;
                     String buffer;
                     if(!func_compressor(children, &buffer)){
                         return false;
@@ -433,7 +441,7 @@ private:
         }else{
             for(auto it = gitems.begin(); it != gitems.end(); ++it){
                 auto& children = it->children;
-                auto& key = it->name;
+                //auto& key = it->name;
                 //
                 String buffer;
                 func_compressor(children, &buffer);
@@ -447,13 +455,21 @@ private:
             }
         }
         writer->seekTo(0);
-        if(!writer->write(header.str(false))){
-            return false;
+        {
+            auto hstr = header.str(false);
+            printf("write header: %s\n", hstr.data());
+            if(!writer->write(hstr)){
+                return false;
+            }
         }
+//        if(!writer->write(header.str(false))){
+//            return false;
+//        }
         writer->close();
         return true;
     }
-    bool doWrite(IRandomWriter* writer, ZipHeader0& header,GroupItem* gi, CString buffer){
+    bool doWrite(IRandomWriter* writer, ZipHeader0& header,
+                 GroupItem* gi, CString buffer){
         String data = gi->write(buffer);
         {
             std::unique_lock<std::mutex> lck(_mtx_write);
@@ -473,6 +489,34 @@ private:
 
 GzipHelper::GzipHelper(){
     m_ptr = new GzipHelper_Ctx0();
+    setCompressor([](const std::vector<ZipFileItem>& items, String* out){
+        unsigned long long mayTotalSize = sizeof(int);
+        for(auto& zi : items){
+            mayTotalSize += zi.contentLen;
+            mayTotalSize += sizeof(unsigned long long);
+        }
+        h7::ByteBufferOut bos(mayTotalSize);
+        bos.putInt(items.size());
+        for(auto& zi : items){
+            auto cs = zi.readContent();
+            bos.putString64(cs);
+        }
+        auto buffer = bos.bufferToString();
+        return ZlibUtils::compress(buffer, *out);
+    });
+    setDeCompressor([](String& _str,std::vector<String>& vecOut){
+        String str;
+        if(!ZlibUtils::decompress(_str, str)){
+            return false;
+        }
+        h7::ByteBufferIO bis(&str);
+        int size = bis.getInt();
+        vecOut.resize(size);
+        for(int i = 0 ; i < size ; ++i){
+            vecOut[i] = bis.getString64();
+        }
+        return true;
+    });
 }
 GzipHelper::~GzipHelper(){
     if(m_ptr){
@@ -492,6 +536,9 @@ void GzipHelper::setDeCompressor(FUNC_DeCompressor func){
 }
 void GzipHelper::setConcurrentThreadCount(int count){
     m_ptr->concurrentCnt = count;
+}
+void GzipHelper::setAttentionFileExtensions(const std::vector<String>& exts){
+    m_ptr->extFilters = exts;
 }
 bool GzipHelper::compressDir(CString dir, CString outFile){
     return m_ptr->compressDir(dir, outFile);

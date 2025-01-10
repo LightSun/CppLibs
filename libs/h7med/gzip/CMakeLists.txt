@@ -13,8 +13,11 @@ target_link_libraries(gzip PUBLIC zlib ModelM)
 
 ## test
 
+file(GLOB_RECURSE TEST_GZIP_SRC_CORE
+    main/*.h main/*.cpp
+    )
 add_executable(test_gzip
-main/main.cpp
+    ${TEST_GZIP_SRC_CORE}
 )
 
-target_link_libraries(test_gzip PUBLIC gzip)
+target_link_libraries(test_gzip PUBLIC gzip pthread)
