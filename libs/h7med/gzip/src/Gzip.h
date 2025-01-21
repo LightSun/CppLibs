@@ -28,11 +28,14 @@ struct IRandomWriter
 struct ZipFileItem
 {
     String name;
-    String shortName;
-    String ext;
+    String shortName;//short name by name and dir
+    String ext;      //extention of file
     size_t contentLen;
+    String content;  //content, often used for memory file
 
     String readContent()const;
+
+    static ZipFileItem ofMemoryFile(CString shortName,CString content);
 };
 
 struct GroupItem
@@ -69,6 +72,13 @@ public:
 
     bool compressDir(CString dir, CString outFile);
     bool compressFile(CString file, CString outFile);
+    bool compressMemoryFiles(const std::vector<ZipFileItem>& items,
+                             CString outFile);
+
+    bool compressDirToMemory(CString dir, String& outData);
+    bool compressFileToMemory(CString file, String& outData);
+    bool compressMemoryFilesToMemory(const std::vector<ZipFileItem>& items,
+                             String& outData);
 
     bool decompressFile(CString file, CString outDir);
 

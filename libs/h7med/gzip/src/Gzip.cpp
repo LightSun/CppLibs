@@ -29,7 +29,21 @@ using FUNC_Compressor = GzipHelper::FUNC_Compressor;
 using FUNC_DeCompressor = GzipHelper::FUNC_DeCompressor;
 
 String ZipFileItem::readContent()const{
-    return h7::FileUtils::getFileContent(name);
+    if(content.empty()){
+        return h7::FileUtils::getFileContent(name);
+    }
+    return content;
+}
+ZipFileItem ZipFileItem::ofMemoryFile(CString shortName,CString content){
+    ZipFileItem zi;
+    zi.shortName = shortName;
+    zi.content = std::move(content);
+    zi.contentLen = content.length();
+    int pos = shortName.rfind(".");
+    if(pos >= 0){
+         zi.ext = shortName.substr(pos + 1);
+    }
+    return zi;
 }
 
 String GroupItem::write(CString buffer) const{
@@ -134,6 +148,36 @@ struct FileWriter0: public IRandomWriter{
     }
 };
 
+struct MemoryWriter0: public IRandomWriter{
+
+    h7::ByteBufferOut bos {10 << 20}; //10M
+
+    ~MemoryWriter0(){}
+
+    bool open() override{
+        return true;
+    }
+    void seekTo(size_t /*pos*/) override{
+        MED_ASSERT_X(false, "unsupport seekTo for 'ByteBufferOut'");
+    }
+    bool write(const String& buf) override{
+        size_t len = buf.size();
+        if(!write(&len, sizeof(len))){
+            return false;
+        }
+        return write(buf.data(), buf.length());
+    }
+    bool write(const void* data, size_t len) override{
+        bos.putData((char*)data, len);
+        return true;
+    }
+    void close() override{
+    }
+    String getContent(){
+        return bos.bufferToString();
+    }
+};
+
 struct ZipHeader0{
     String magic {"7NEVAEH"};
     int version {1};
@@ -192,59 +236,45 @@ struct GzipHelper_Ctx0{
     bool debug_ {false};
 
     bool compressDir(CString dir, CString outFile){
-        std::vector<String> vec;
-        std::vector<String> exts;
-        {
-            auto files = h7::FileUtils::getFiles(dir, true, "");
-            if(files.empty()){
-                fprintf(stderr, "compressDir >> dir is empty. %s\n", dir.data());
-                return false;
-            }
-            vec.reserve(files.size());
-            exts.reserve(files.size());
-            //filter
-            if(!extFilters.empty()){
-                for(auto& f: files){
-                    String ext;
-                    int pos = f.rfind(".");
-                    if(pos >= 0){
-                        ext = f.substr(pos + 1);
-                    }
-                    if(_contains0(extFilters, ext)){
-                        vec.push_back(f);
-                        exts.push_back(ext);
-                    }
-                }
-            }else{
-                vec = std::move(files);
-                for(auto& f : vec){
-                    String ext;
-                    int pos = f.rfind(".");
-                    if(pos >= 0){
-                        ext = f.substr(pos + 1);
-                    }
-                    exts.push_back(ext);
-                }
-            }
-        }
         FileWriter0 fw(outFile);
-        return compressImpl0(dir, vec, exts, &fw);
+        return compressDir0(dir, &fw);
+    }
+    bool compressMemoryFiles(const std::vector<ZipFileItem>& items,
+                                         CString outFile){
+        FileWriter0 fw(outFile);
+        return compressImpl0(items, &fw);
+    }
+    bool compressFile(CString f, CString outFile){
+        FileWriter0 fw(outFile);
+        return compressFile0(f, &fw);
     }
 
-    bool compressFile(CString f, CString outFile){
-        std::vector<String> vec;
-        std::vector<String> exts;
-        String ext;
-        int pos = f.rfind(".");
-        if(pos >= 0){
-            ext = f.substr(pos + 1);
+    bool compressDirToMemory(CString dir, String& outData){
+        MemoryWriter0 mwr;
+        if(compressDir0(dir, &mwr)){
+            outData = mwr.getContent();
+            return true;
         }
-        exts.push_back(ext);
-        vec.push_back(f);
-        //
-        FileWriter0 fw(outFile);
-        return compressImpl0(h7::FileUtils::getFileDir(f), vec, exts, &fw);
+        return false;
     }
+    bool compressFileToMemory(CString file, String& outData){
+        MemoryWriter0 mwr;
+        if(compressFile0(file, &mwr)){
+            outData = mwr.getContent();
+            return true;
+        }
+        return false;
+    }
+    bool compressMemoryFilesToMemory(const std::vector<ZipFileItem>& items,
+                                     String& outData){
+        MemoryWriter0 mwr;
+        if(compressImpl0(items, &mwr)){
+            outData = mwr.getContent();
+            return true;
+        }
+        return false;
+    }
+
     bool decompressFile(CString file, CString outDir){
         const auto fileTotalLen = h7::FileUtils::getFileSize(file);
         if(fileTotalLen == 0){
@@ -371,20 +401,74 @@ struct GzipHelper_Ctx0{
     }
 
 private:
-
-    bool compressImpl0(CString dir, std::vector<String>& vec,
+    bool compressDir0(CString dir, IRandomWriter* rw){
+        std::vector<String> vec;
+        std::vector<String> exts;
+        {
+            auto files = h7::FileUtils::getFiles(dir, true, "");
+            if(files.empty()){
+                fprintf(stderr, "compressDir >> dir is empty. %s\n", dir.data());
+                return false;
+            }
+            vec.reserve(files.size());
+            exts.reserve(files.size());
+            //filter
+            if(!extFilters.empty()){
+                for(auto& f: files){
+                    String ext;
+                    int pos = f.rfind(".");
+                    if(pos >= 0){
+                        ext = f.substr(pos + 1);
+                    }
+                    if(_contains0(extFilters, ext)){
+                        vec.push_back(f);
+                        exts.push_back(ext);
+                    }
+                }
+            }else{
+                vec = std::move(files);
+                for(auto& f : vec){
+                    String ext;
+                    int pos = f.rfind(".");
+                    if(pos >= 0){
+                        ext = f.substr(pos + 1);
+                    }
+                    exts.push_back(ext);
+                }
+            }
+        }
+        return compressImpl1(dir, vec, exts, rw);
+    }
+    bool compressFile0(CString f, IRandomWriter* rw){
+        std::vector<String> vec;
+        std::vector<String> exts;
+        String ext;
+        int pos = f.rfind(".");
+        if(pos >= 0){
+            ext = f.substr(pos + 1);
+        }
+        exts.push_back(ext);
+        vec.push_back(f);
+        //
+        return compressImpl1(h7::FileUtils::getFileDir(f), vec, exts, rw);
+    }
+    bool compressImpl1(CString dir, std::vector<String>& vec,
                        std::vector<String>& exts, IRandomWriter* writer){
+        std::vector<ZipFileItem> items;
+        for(int i = 0 ; i < (int)vec.size() ; ++i){
+            ZipFileItem fi;
+            fi.ext = exts[i];
+            fi.contentLen = h7::FileUtils::getFileSize(vec[i]);
+            fi.name = vec[i];
+            fi.shortName = fi.name.substr(dir.length() + 1);
+            items.push_back(std::move(fi));
+        }
+        return compressImpl0(items, writer);
+    }
+
+    bool compressImpl0(std::vector<ZipFileItem> items, IRandomWriter* writer){
         std::vector<GroupItem> gitems;
         {
-            std::vector<ZipFileItem> items;
-            for(int i = 0 ; i < (int)vec.size() ; ++i){
-                ZipFileItem fi;
-                fi.ext = exts[i];
-                fi.contentLen = h7::FileUtils::getFileSize(vec[i]);
-                fi.name = vec[i];
-                fi.shortName = fi.name.substr(dir.length() + 1);
-                items.push_back(std::move(fi));
-            }
             if(debug_){
                 for(auto& zi : items){
                     auto cs = zi.readContent();
@@ -465,7 +549,6 @@ private:
                 }
             }
         }
-        //writer->seekTo(0);
         {
             auto hstr = header.str(false);
             //printf("write header: %s\n", hstr.data());
@@ -559,6 +642,20 @@ bool GzipHelper::compressFile(CString file, CString outFile){
 }
 bool GzipHelper::decompressFile(CString file, CString outDir){
     return m_ptr->decompressFile(file, outDir);
+}
+bool GzipHelper::compressMemoryFiles(const std::vector<ZipFileItem>& items,
+                                     CString outFile){
+    return m_ptr->compressMemoryFiles(items, outFile);
+}
+bool GzipHelper::compressDirToMemory(CString dir, String& outData){
+    return m_ptr->compressDirToMemory(dir, outData);
+}
+bool GzipHelper::compressFileToMemory(CString file, String& outData){
+    return m_ptr->compressFileToMemory(file, outData);
+}
+bool GzipHelper::compressMemoryFilesToMemory(const std::vector<ZipFileItem>& items,
+                                 String& outData){
+    return m_ptr->compressMemoryFilesToMemory(items, outData);
 }
 //
 }
