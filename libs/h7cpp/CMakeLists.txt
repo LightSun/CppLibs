@@ -13,7 +13,7 @@ endif(WIN32)
 set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fPIC -std=c11 -g -O0")
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wno-error=register")
 
-
+include(cmake/ENV.cmake)
 #platform
 SET(BUILD_ON_WIN OFF)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")

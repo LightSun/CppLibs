@@ -10,10 +10,11 @@ extern void main_chain_rule();
 extern void main_back_door_adjust();
 
 extern void main_MOE_algo();
+extern void main_MOE_algo2();
 
 
 int main(int argc, const char* argv[]){
 
-    main_MOE_algo();
+    main_MOE_algo2();
     return 0;
 }
