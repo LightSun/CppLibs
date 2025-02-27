@@ -143,6 +143,7 @@ set(SRC_TEST
     test/test_dir_files_md5.cpp
     test/test_ios.cpp
     test/test_super_config.cpp
+    test/test_regex.cpp
     )
 
 add_library(h7cpp

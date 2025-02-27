@@ -33,6 +33,7 @@ extern void test_SFINAE();
 extern void test_IOs();
 extern void test_dir_files_md5(const char* dir);
 extern void test_SuperConfig();
+extern void main_test_regex();
 
 using namespace h7;
 
@@ -63,7 +64,9 @@ int main(int argc, char* argv[]){
     //test_splits();
     //test_CountDownLatch();
     //test_Barrier();
-    test_SortedList();
+    //test_SortedList();
+
+    main_test_regex();
 
     //test_XBacktrace();
     //test_Callbacks();
