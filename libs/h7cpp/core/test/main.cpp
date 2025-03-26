@@ -34,6 +34,8 @@ extern void test_IOs();
 extern void test_dir_files_md5(const char* dir);
 extern void test_SuperConfig();
 extern void main_test_regex();
+extern void test_struct_align();
+extern void test_struct_align2();
 
 using namespace h7;
 
@@ -66,7 +68,9 @@ int main(int argc, char* argv[]){
     //test_Barrier();
     //test_SortedList();
 
-    main_test_regex();
+    //main_test_regex();
+    //test_struct_align();
+    test_struct_align2();
 
     //test_XBacktrace();
     //test_Callbacks();

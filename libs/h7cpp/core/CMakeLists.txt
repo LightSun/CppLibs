@@ -144,6 +144,9 @@ set(SRC_TEST
     test/test_ios.cpp
     test/test_super_config.cpp
     test/test_regex.cpp
+    test/test_struct_align.cpp
+    test/test_struct_align2.cpp
+    test/test_struct.h
     )
 
 add_library(h7cpp
