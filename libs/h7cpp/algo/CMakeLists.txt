@@ -16,7 +16,11 @@ endif(OpenCV_DIR)
 file(GLOB_RECURSE SRC_ALGOS
     src/*.h
     src/*.cpp
-    src/*.hpp)
+    src/*.hpp
+    op_perf/*.h
+    op_perf/*.hpp
+    op_perf/*.cpp
+    )
 
 add_library(h7Algo
     ${SRC_ALGOS}
