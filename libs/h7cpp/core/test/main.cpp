@@ -37,6 +37,8 @@ extern void main_test_regex();
 extern void test_struct_align();
 extern void test_struct_align2();
 
+extern void test_enums();
+
 using namespace h7;
 
 int main(int argc, char* argv[]){
@@ -70,7 +72,8 @@ int main(int argc, char* argv[]){
 
     //main_test_regex();
     //test_struct_align();
-    test_struct_align2();
+    //test_struct_align2();
+    test_enums();
 
     //test_XBacktrace();
     //test_Callbacks();

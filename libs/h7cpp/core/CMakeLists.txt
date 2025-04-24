@@ -121,6 +121,7 @@ file(GLOB_RECURSE SRC_CORE
     c10/*.h c10/*.hpp c10/*.cpp
     utils/*.h utils/*.hpp utils/*.cpp utils/*.c utils/*.inc
     experimental/*.h experimental/*.cpp
+    json/*.h json/*.hpp json/*.cpp
     )
 
 set(SRC_TEST
@@ -147,6 +148,7 @@ set(SRC_TEST
     test/test_struct_align.cpp
     test/test_struct_align2.cpp
     test/test_struct.h
+    test/test_enums.cpp
     )
 
 add_library(h7cpp

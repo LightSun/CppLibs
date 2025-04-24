@@ -12,9 +12,11 @@ extern void main_back_door_adjust();
 extern void main_MOE_algo();
 extern void main_MOE_algo2();
 
+extern void test_compute_quantile();
+
 
 int main(int argc, const char* argv[]){
 
-    main_MOE_algo2();
+    test_compute_quantile();
     return 0;
 }
