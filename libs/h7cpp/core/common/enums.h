@@ -48,7 +48,7 @@
     DEF_ENUM_FUNC_VAL_TO_STR(Type, ##__VA_ARGS__)\
     DEF_ENUM_FUNC_STR_TO_VAL(Type, ##__VA_ARGS__)
 
-#define DEF_ENUM_FUNCS_HEAD(T,...)\
+#define DEF_ENUM_FUNCS_HEAD(T)\
     std::string enum_val_to_str_##T(int val);\
     int enum_str_to_int_##T(const std::string& val, int def = DEFAULT_ENUM_VAL);\
 

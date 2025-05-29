@@ -3,9 +3,9 @@
 #include <memory.h>
 #include <inttypes.h>
 #include <limits>
+#include <type_traits>
 #include <cmath>
 #include <iostream>
-#include <type_traits>
 
 namespace h7 {
 

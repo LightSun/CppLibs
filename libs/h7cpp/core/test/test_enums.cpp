@@ -1,8 +1,9 @@
 #include "common/enums.h"
+#include "utils/Singleton.h"
 
 enum Color{ RED = -10, BLUE = 0, GREEN = 10 };
 
-DEF_ENUM_FUNCS_HEAD(Color, RED, BLUE, GREEN);
+DEF_ENUM_FUNCS_HEAD(Color);
 DEF_ENUM_FUNCS_IMPL(Color, RED, BLUE, GREEN);
 
 void test_enums(){
