@@ -7,6 +7,7 @@
 #include "h_atomic.h"
 
 namespace h7 {
+/*
     class Lock{
     public:
         ~Lock(){
@@ -69,6 +70,7 @@ namespace h7 {
         //volatile int m_locked {0};
         //0 means no lock or got lock. 1 means blocked by anther thread lock.
     };
+*/
 }
 
 #endif // LOCK_HPP

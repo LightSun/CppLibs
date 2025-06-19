@@ -36,6 +36,7 @@ extern void test_SuperConfig();
 extern void main_test_regex();
 extern void test_struct_align();
 extern void test_struct_align2();
+extern void test_template_var_args();
 
 extern void test_enums();
 
@@ -74,6 +75,7 @@ int main(int argc, char* argv[]){
     //test_struct_align();
     //test_struct_align2();
     test_enums();
+    //test_template_var_args();
 
     //test_XBacktrace();
     //test_Callbacks();

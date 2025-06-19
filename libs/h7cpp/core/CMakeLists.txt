@@ -149,6 +149,7 @@ set(SRC_TEST
     test/test_struct_align2.cpp
     test/test_struct.h
     test/test_enums.cpp
+    test/test_template_var_args.cpp
     )
 
 add_library(h7cpp

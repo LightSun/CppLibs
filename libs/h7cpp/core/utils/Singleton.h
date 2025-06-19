@@ -23,7 +23,7 @@ private:\
 T() = default;\
 static std::atomic<T*> instance_;\
 static std::mutex mutex_;
-
+/*
 class Singleton
 {
 public:
@@ -45,6 +45,7 @@ private:
     static std::atomic<Singleton*> instance_;
     static std::mutex mutex_;
 };
+*/
 
 }
 
