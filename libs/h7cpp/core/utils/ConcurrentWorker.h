@@ -12,7 +12,7 @@ template <typename T>
 class ConcurrentWorker
 {
 public:
-    ConcurrentWorker(int count, std::function<void(T& task)> func):m_func(func){
+    ConcurrentWorker(int count, std::function<void(T& task)> func_consumer):m_func(func_consumer){
         m_queue = std::make_unique<SaveQueue<T>>(tableSizeFor(count));
     }
     ~ConcurrentWorker(){
@@ -82,8 +82,8 @@ public:
         Callback cb;
     };
     using SItem = std::shared_ptr<Item>;
-    ConcurrentCallbackWorker(int count, std::function<R(T& task, const P& p)> func)
-        : m_func(func){
+    ConcurrentCallbackWorker(int count, std::function<R(T& task, const P& p)> func_consumer)
+        : m_func(func_consumer){
         m_queue = std::make_unique<SaveQueue<SItem>>(ConcurrentWorker<int>::tableSizeFor(count));
     }
     void start(){
