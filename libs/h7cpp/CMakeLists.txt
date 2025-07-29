@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 
 project(h7-cpp LANGUAGES C CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(WIN32)
@@ -12,6 +12,8 @@ else(WIN32)
 endif(WIN32)
 set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fPIC -std=c11 -g -O0")
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wno-error=register")
+
+###
 
 include(cmake/ENV.cmake)
 #platform
@@ -44,4 +46,4 @@ if(NOT WIN32)
 endif()
 add_subdirectory(json/)
 #add_subdirectory(stu_perfetto/)
-add_subdirectory(algo/)
+#add_subdirectory(algo/)

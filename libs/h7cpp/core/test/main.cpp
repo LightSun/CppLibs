@@ -39,6 +39,7 @@ extern void test_struct_align2();
 extern void test_template_var_args();
 
 extern void test_enums();
+extern void test_reflect();
 
 using namespace h7;
 
@@ -74,7 +75,8 @@ int main(int argc, char* argv[]){
     //main_test_regex();
     //test_struct_align();
     //test_struct_align2();
-    test_enums();
+    //test_enums();
+    test_reflect();
     //test_template_var_args();
 
     //test_XBacktrace();
