@@ -95,13 +95,17 @@ std::unordered_map<int, std::string> IntStringMap<T>::map;
 // 映射函数模板
 template<typename T>
 const std::string& int_to_str(T value, const std::string& default_str = "") {
-    using UnderlyingType = std::conditional_t<
-        std::is_enum_v<T>,
-        std::underlying_type_t<T>,
-        T
-        >;
-
-    const int int_val = static_cast<int>(static_cast<UnderlyingType>(value));
+    int int_val;
+    if constexpr (std::is_enum_v<T>){
+        using UnderlyingType = std::conditional_t<
+            std::is_enum_v<T>,
+            std::underlying_type_t<T>,
+            T
+            >;
+        int_val = static_cast<int>(static_cast<UnderlyingType>(value));
+    }else{
+        int_val = static_cast<int>(value);
+    }
     auto& m = IntStringMap<T>::map;
     auto it = m.find(int_val);
 

@@ -22,7 +22,7 @@ file(GLOB_RECURSE SRC_ALGOS
     op_perf/*.cpp
     )
 
-add_library(h7Algo
+add_executable(h7Algo
     ${SRC_ALGOS}
     )
 
