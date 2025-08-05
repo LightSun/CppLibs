@@ -1,4 +1,5 @@
 
+add_subdirectory(func_trait/)
 #platform
 SET(BUILD_ON_WIN OFF)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")

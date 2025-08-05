@@ -7,6 +7,7 @@
 #define _XH_QUALIFIER_H_
 
 #include <type_traits>
+#include <inttypes.h>
 
 namespace xh {
  
@@ -153,11 +154,11 @@ FUNCQUAL_OF(const volatile&& noexcept, cv_rref_noexcept)
 template <class T>
 inline constexpr qualifier_id qualifier_of_v = qualifier_of<T>::value;
 template <class T>
-using qualifier_decay_t = qualifier_of<T>::decay_type;
+using qualifier_decay_t = typename qualifier_of<T>::decay_type;
 template <class T>
 inline constexpr funcqual_id funcqual_of_v = funcqual_of<T>::value;
 template <class T>
-using funcqual_decay_t = funcqual_of<T>::decay_type;
+using funcqual_decay_t = typename funcqual_of<T>::decay_type;
 
 } // namespace xh
 

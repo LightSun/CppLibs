@@ -10,7 +10,8 @@ if(WIN32)
 else(WIN32)
     set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fPIC -g -O0 -rdynamic")
 endif(WIN32)
-set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fPIC -std=c11 -g -O0")
+#-std=c11
+set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fPIC -g -O0")
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wno-error=register")
 
 ###

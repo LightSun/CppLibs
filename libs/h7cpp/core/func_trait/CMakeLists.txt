@@ -1,8 +1,15 @@
 cmake_minimum_required(VERSION 3.28)
 project(XH-CppTools)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
-add_executable(${PROJECT_NAME}  main.cpp )
+file(GLOB_RECURSE SRC_FUNC_TRAIT
+    include/*.h
+    )
+
+add_executable(${PROJECT_NAME}
+    ${SRC_FUNC_TRAIT}
+    main.cpp
+    )

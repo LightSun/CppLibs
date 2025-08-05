@@ -48,6 +48,43 @@ void test() {
     visit(variant, callback);
 }
 
+
+//----------------------------------
+
+template <typename T>
+struct has_const_iterator {
+private:
+    typedef char yes[1];
+    typedef char no[2];
+
+    template <typename C>
+    static yes& test(typename C::const_iterator*);
+
+    template <typename C>
+    static no& test(...);
+
+public:
+    static const bool value = sizeof(test<T>(nullptr)) == sizeof(yes);
+};
+
+template <typename Container>
+typename std::enable_if<has_const_iterator<Container>::value>::type
+print(const Container& c) {
+    for (auto it = c.begin(); it != c.end(); ++it) {
+        std::cout << *it << " ";
+    }
+    std::cout << std::endl;
+}
+
+template <typename Container>
+typename std::enable_if<!has_const_iterator<Container>::value>::type
+print(const Container& c) {
+    for (auto it = c.begin(); it != c.end(); ++it) {
+        std::cout << *it << " ";
+    }
+    std::cout << std::endl;
+}
+
 }
 }
 

@@ -15,6 +15,11 @@ namespace xh {
 
 using namespace std;
 
+template <typename...>
+struct make_void { using type = void; };
+template <typename... Ts>
+using void_t = typename make_void<Ts...>::type;
+
 template <class T>
 struct is_function : std::is_function<T> {};
 
@@ -46,7 +51,7 @@ template <size_t N, class... T>
 struct nth_of : tuple_element<N, tuple<T...>> {};
 
 template <size_t N, class... T>
-using nth_of_t = nth_of<N, T...>::type;
+using nth_of_t = typename nth_of<N, T...>::type;
 
 // function traits
 
@@ -65,6 +70,7 @@ struct _functor_traits<T C::*> : _function_traits<T> {};
 template <class T>
 struct _memfunc_traits;
 
+// 普通函数特化
 template <class Ret, class... Args>
 struct _function_traits<Ret(Args...)> {
   using        type = Ret(Args...);
@@ -75,6 +81,7 @@ struct _function_traits<Ret(Args...)> {
   inline static constexpr size_t arity = sizeof...(Args);
 };
 
+// 可变参数函数特化
 template <class Ret, class... Args>
 struct _function_traits<Ret(Args..., ...)> {
   using        type = Ret(Args..., ...);
@@ -85,6 +92,7 @@ struct _function_traits<Ret(Args..., ...)> {
   inline static constexpr size_t arity = sizeof...(Args);
 };
 
+// 成员函数指针特化
 template <class T, class C>
 struct _memfunc_traits<T C::*> : _function_traits<T> {
   using          type = T C::*;
@@ -92,44 +100,72 @@ struct _memfunc_traits<T C::*> : _function_traits<T> {
   using function_type = T;
 };
 
+//template <class T>
+//struct _function_traits_helper
+//  : conditional_t<is_function_v<T>, _function_traits<T>,
+//      conditional_t<is_funcptr_v<T>, _funcptr_traits<T>,
+//        conditional_t<is_functor_v<T>, _functor_traits<T>,
+//          conditional_t<is_memfunc_v<T>, _memfunc_traits<T>, false_type>>>> {};
+
+// 替换复杂的 conditional_t 嵌套
+template <class T, bool = is_function_v<T>, bool = is_funcptr_v<T>,
+          bool = is_functor_v<T>, bool = is_memfunc_v<T>>
+struct _function_traits_helper;
+
+// 普通函数版本
 template <class T>
-struct _function_traits_helper
-  : conditional_t<is_function_v<T>, _function_traits<T>,
-      conditional_t<is_funcptr_v<T>, _funcptr_traits<T>,
-        conditional_t<is_functor_v<T>, _functor_traits<T>,
-          conditional_t<is_memfunc_v<T>, _memfunc_traits<T>, false_type>>>> {};
+struct _function_traits_helper<T, true, false, false, false>
+  : _function_traits<T> {};
+
+// 函数指针版本
+template <class T>
+struct _function_traits_helper<T, false, true, false, false>
+  : _funcptr_traits<T> {};
+
+// 函数对象版本
+template <class T>
+struct _function_traits_helper<T, false, false, true, false>
+  : _functor_traits<T> {};
+
+// 成员函数版本
+template <class T>
+struct _function_traits_helper<T, false, false, false, true>
+  : _memfunc_traits<T> {};
 
 template <class T>
 using function_traits = _function_traits_helper<decay_t<T>>;
 
+// 别名模板
 template <class T>
-using function_traits_t = function_traits<T>::type;
+using function_traits_t = typename function_traits<T>::type;
 template <class T>
-using functraits_t = function_traits<T>::type;
+using functraits_t = typename function_traits<T>::type;
 template <class T>
-using function_return_t = function_traits<T>::return_type;
+using function_return_t = typename function_traits<T>::return_type;
 template <class T>
-using funcret_t = function_traits<T>::return_type;
+using funcret_t = typename function_traits<T>::return_type;
 template <class T>
-using function_arg_tuple = function_traits<T>::arg_tuple;
+using function_arg_tuple = typename function_traits<T>::arg_tuple;
 template <class T>
-using funcarg_tuple = function_traits<T>::arg_tuple;
+using funcarg_tuple = typename function_traits<T>::arg_tuple;
 template <class T, size_t N>
-using function_arg_t = function_traits<T>::template arg_type<N>;
+using function_arg_t = typename function_traits<T>::template arg_type<N>;
 template <class T, size_t N>
-using funcarg_t = function_traits<T>::template arg_type<N>;
+using funcarg_t = typename function_traits<T>::template arg_type<N>;
+
+template <class T>
+using memfunc_class_t = typename function_traits<T>::class_type;
+template <class T>
+using mfclass_t = typename function_traits<T>::class_type;
+template <class T>
+using memfunc_function_t = typename function_traits<T>::function_type;
+template <class T>
+using mffunction_t = typename function_traits<T>::function_type;
+
 template <class T>
 inline constexpr size_t function_arity_v = function_traits<T>::arity;
 template <class T>
 inline constexpr size_t funcarity_v = function_traits<T>::arity;
-template <class T>
-using memfunc_class_t = function_traits<T>::class_type;
-template <class T>
-using mfclass_t = function_traits<T>::class_type;
-template <class T>
-using memfunc_function_t = function_traits<T>::function_type;
-template <class T>
-using mffunction_t = function_traits<T>::function_type;
 
 }; // namespace xh
 

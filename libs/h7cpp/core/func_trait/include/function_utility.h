@@ -21,8 +21,10 @@ using namespace std;
 template <class>
 class function;
 
-template <class MFP> requires is_memfunc_v<MFP>
-class function<MFP> {
+template <class MFP>  //requires is_memfunc_v<MFP>
+class function{
+    static_assert(is_memfunc_v<MFP>, "MFP must be a member function pointer");
+
  public:
   function(MFP mfp) noexcept : _mfp(mfp) {}
   function() noexcept = default;
@@ -34,13 +36,28 @@ class function<MFP> {
   function &operator=(MFP mfp) noexcept { _mfp = mfp; return *this; }
   operator bool() const noexcept { return _mfp; }
 
-  template <class Arg0, class... Args>
-    requires is_invocable_v<MFP, Arg0, Args...>
+//  template <class Arg0, class... Args>
+//    requires is_invocable_v<MFP, Arg0, Args...>
+//  funcret_t<MFP> operator()(Arg0 &&arg0, Args &&...args) const
+//    noexcept(funcqual_of_v<mffunction_t<MFP>> & funcqual_mask::noexcept_mask) {
+//    if constexpr (is_pointer_v<decay_t<Arg0>>)
+//      return (forward<Arg0>(arg0)->*_mfp)(forward<Args>(args)...);
+//    else return (forward<Arg0>(arg0).*_mfp)(forward<Args>(args)...);
+//  }
+
+  // 使用 SFINAE 替代 requires
+  template <class Arg0, class... Args,
+           typename = enable_if_t<is_invocable_v<MFP, Arg0, Args...>>>
   funcret_t<MFP> operator()(Arg0 &&arg0, Args &&...args) const
-    noexcept(funcqual_of_v<mffunction_t<MFP>> & funcqual_mask::noexcept_mask) {
-    if constexpr (is_pointer_v<decay_t<Arg0>>)
-      return (forward<Arg0>(arg0)->*_mfp)(forward<Args>(args)...);
-    else return (forward<Arg0>(arg0).*_mfp)(forward<Args>(args)...);
+      noexcept(funcqual_of_v<mffunction_t<MFP>> & funcqual_mask::noexcept_mask) {
+
+      // 指针调用与对象成员调用分离
+      if (is_pointer_v<decay_t<Arg0>>) {
+          return (forward<Arg0>(arg0)->*_mfp)(forward<Args>(args)...);
+      }
+      else {
+          return (forward<Arg0>(arg0).*_mfp)(forward<Args>(args)...);
+      }
   }
  private:
   MFP _mfp = nullptr;
@@ -49,7 +66,10 @@ class function<MFP> {
 template <class Ret, class... Args>
 class function<Ret(Args...)> {
  public:
-  template <class T> requires (!is_same_v<decay_t<T>, function>)
+//  template <class T> requires (!is_same_v<decay_t<T>, function>)
+//  function(T &&f) noexcept : fbp(new funcimpl<decay_t<T>>(forward<T>(f))) {}
+
+  template <class T, typename = enable_if_t<!is_same_v<decay_t<T>, function>>>
   function(T &&f) noexcept : fbp(new funcimpl<decay_t<T>>(forward<T>(f))) {}
 
   function() noexcept = default;
@@ -70,11 +90,18 @@ class function<Ret(Args...)> {
     return *this;
   }
 
-  template <class T> requires (!is_same_v<decay_t<T>, function>)
+//  template <class T> requires (!is_same_v<decay_t<T>, function>)
+//  function &operator=(T &&f) noexcept {
+//    delete fbp;
+//    fbp = new funcimpl<decay_t<T>>(forward<T>(f));
+//    return *this;
+//  }
+
+  template <class T, typename = enable_if_t<!is_same_v<decay_t<T>, function>>>
   function &operator=(T &&f) noexcept {
-    delete fbp;
-    fbp = new funcimpl<decay_t<T>>(forward<T>(f));
-    return *this;
+      delete fbp;
+      fbp = new funcimpl<decay_t<T>>(forward<T>(f));
+      return *this;
   }
 
   operator bool() const noexcept { return fbp; }
@@ -90,15 +117,31 @@ class function<Ret(Args...)> {
     virtual ~funcbase() noexcept = default;
   } *fbp = nullptr;
 
-  template <class T> requires (is_funcptr_v<T> || is_functor_v<T>)
-  struct funcimpl : funcbase {
-    T f;
-    template <class F> requires is_same_v<decay_t<F>, T>
-    funcimpl(F &&f) : f(forward<F>(f)) {}
+//  template <class T> requires (is_funcptr_v<T> || is_functor_v<T>)
+//  struct funcimpl : funcbase {
+//    T f;
+//    template <class F> requires is_same_v<decay_t<F>, T>
+//    funcimpl(F &&f) : f(forward<F>(f)) {}
 
-    Ret call(Args... args) const override { return f(forward<Args>(args)...); }
-    funcimpl *copy() const noexcept override { return new funcimpl(f); }
-    ~funcimpl() noexcept override = default;
+//    Ret call(Args... args) const override { return f(forward<Args>(args)...); }
+//    funcimpl *copy() const noexcept override { return new funcimpl(f); }
+//    ~funcimpl() noexcept override = default;
+//  };
+
+  // 使用 SFINAE 替代 requires
+  template <class T>
+  struct funcimpl : funcbase {
+      T f;
+      template <class F, typename = enable_if_t<is_same_v<decay_t<F>, T>>>
+      funcimpl(F &&f) : f(forward<F>(f)) {}
+      Ret call(Args... args) const override {
+        return f(forward<Args>(args)...);
+      }
+      funcimpl *copy() const noexcept override {
+        return new funcimpl(f);
+      }
+
+      ~funcimpl() noexcept override = default;
   };
 };
 
@@ -116,10 +159,17 @@ struct multifunctor : T... {
 template <class... T>
 class multifunc {
  public:
-  template <class... F>
-    requires (sizeof...(F) > 1 || (sizeof...(F) == 1 &&
-      !is_same_v<decay_t<nth_of_t<0, F...>>, multifunc>))
-  multifunc(F &&...f) noexcept : ftuple(forward<F>(f)...) {}
+//  template <class... F>
+//    requires (sizeof...(F) > 1 || (sizeof...(F) == 1 &&
+//      !is_same_v<decay_t<nth_of_t<0, F...>>, multifunc>))
+//  multifunc(F &&...f) noexcept : ftuple(forward<F>(f)...) {}
+
+ template <class... F, typename = enable_if_t<
+                          (sizeof...(F) > 1 ||
+   (sizeof...(F) == 1 &&
+    !is_same_v<decay_t<nth_of_t<0, F...>>, multifunc>))>>
+ multifunc(F &&...f) noexcept : ftuple(forward<F>(f)...) {}
+
   
   multifunc() noexcept = default;
   multifunc(const multifunc &) noexcept = default;
@@ -128,12 +178,20 @@ class multifunc {
   multifunc &operator=(const multifunc &) noexcept = default;
   multifunc &operator=(multifunc &&) noexcept = default;
 
-  template <class... F>
-    requires (sizeof...(F) > 1 || (sizeof...(F) == 1 &&
-      !is_same_v<decay_t<nth_of_t<0, F...>>, multifunc>))
+//  template <class... F>
+//    requires (sizeof...(F) > 1 || (sizeof...(F) == 1 &&
+//      !is_same_v<decay_t<nth_of_t<0, F...>>, multifunc>))
+//  multifunc &operator=(F &&...f) {
+//    ftuple = {forward<F>(f)...};
+//    return *this;
+//  }
+  template <class... F, typename = enable_if_t<
+                           (sizeof...(F) > 1 ||
+       (sizeof...(F) == 1 &&
+        !is_same_v<decay_t<nth_of_t<0, F...>>, multifunc>))>>
   multifunc &operator=(F &&...f) {
-    ftuple = {forward<F>(f)...};
-    return *this;
+      ftuple = tuple<function<T>...>{forward<F>(f)...};
+      return *this;
   }
 
  private:
@@ -153,9 +211,13 @@ class multifunc {
   template <class... Args>
   static constexpr bool is_match_v = match<0, true, Args...>();
 
-  template <class... Args> requires is_match_v<Args...>
+//  template <class... Args> requires is_match_v<Args...>
+//  decltype(auto) operator()(Args &&...args) const {
+//    return call<0, true>(forward<Args>(args)...);
+//  }
+  template <class... Args, typename = enable_if_t<is_match_v<Args...>>>
   decltype(auto) operator()(Args &&...args) const {
-    return call<0, true>(forward<Args>(args)...);
+      return call<0, true>(forward<Args>(args)...);
   }
 
  private:
@@ -192,7 +254,10 @@ class funcchain;
 template <class Ret, class... Args>
 class funcchain<Ret(Args...)> {
  public:
-  template <class T> requires (!is_same_v<decay_t<T>, funcchain>)
+//  template <class T> requires (!is_same_v<decay_t<T>, funcchain>)
+//  funcchain(T &&f) : fc(forward<T>(f)) {}
+
+  template <class T, typename = enable_if_t<!is_same_v<decay_t<T>, funcchain>>>
   funcchain(T &&f) : fc(forward<T>(f)) {}
 
   funcchain() noexcept = default;
@@ -202,24 +267,43 @@ class funcchain<Ret(Args...)> {
   funcchain &operator=(const funcchain &) noexcept = default;
   funcchain &operator=(funcchain &&) noexcept = default;
 
-  template <class T> requires (!is_same_v<decay_t<T>, funcchain>)
+//  template <class T> requires (!is_same_v<decay_t<T>, funcchain>)
+//  funcchain &operator=(T &&f) {
+//    fc = forward<T>(f);
+//    return *this;
+//  }
+  template <class T, typename = enable_if_t<!is_same_v<decay_t<T>, funcchain>>>
   funcchain &operator=(T &&f) {
-    fc = forward<T>(f);
-    return *this;
+      fc = forward<T>(f);
+      return *this;
   }
   
   operator bool() const noexcept { return fc; }
   Ret operator()(Args... args) const { return fc(forward<Args>(args)...); }
 
-  template <class T> requires (is_invocable_v<T, Ret> || (funcarity_v<T> == 0))
-  funcchain<funcret_t<T>(Args...)> then(T &&f) const {
-    return {[f = move(f), fc = this->fc](Args... args) {
-      if constexpr (is_void_v<Ret>) {
-        fc(forward<Args>(args)...);
-        return f();
-      } else return f(fc(forward<Args>(args)...));
-    }};
+//  template <class T> requires (is_invocable_v<T, Ret> || (funcarity_v<T> == 0))
+//  funcchain<funcret_t<T>(Args...)> then(T &&f) const {
+//    return {[f = move(f), fc = this->fc](Args... args) {
+//      if constexpr (is_void_v<Ret>) {
+//        fc(forward<Args>(args)...);
+//        return f();
+//      } else return f(fc(forward<Args>(args)...));
+//    }};
+//  }
+  template <class T, typename = enable_if_t<is_invocable_v<T, Ret> ||
+                                           (funcarity_v<T> == 0)>>
+  funcchain<function_traits_t<decay_t<T>>(Args...)> then(T &&f) const {
+      using NewRet = function_return_t<decay_t<T>>;
+      return [f = move(f), fc = this->fc](Args... args) -> NewRet {
+          if constexpr (is_void_v<Ret>) {
+              fc(forward<Args>(args)...);
+              return f();
+          } else {
+              return f(fc(forward<Args>(args)...));
+          }
+      };
   }
+
  private:
   std::function<Ret(Args...)> fc;
 };
@@ -233,7 +317,10 @@ class funcpipe;
 template <class Ret, class Arg0, class... Args>
 class funcpipe<Ret(Arg0, Args...)> {
  public:
-  template <class T> requires (!is_same_v<decay_t<T>, funcpipe>)
+//  template <class T> requires (!is_same_v<decay_t<T>, funcpipe>)
+//  funcpipe(T &&f) : fp(forward<T>(f)) {}
+
+  template <class T, typename = enable_if_t<!is_same_v<decay_t<T>, funcpipe>>>
   funcpipe(T &&f) : fp(forward<T>(f)) {}
 
   funcpipe() noexcept = default;
@@ -243,10 +330,15 @@ class funcpipe<Ret(Arg0, Args...)> {
   funcpipe &operator=(const funcpipe &) noexcept = default;
   funcpipe &operator=(funcpipe &&) noexcept = default;
 
-  template <class T> requires (!is_same_v<decay_t<T>, funcpipe>)
+//  template <class T> requires (!is_same_v<decay_t<T>, funcpipe>)
+//  funcpipe &operator=(T &&f) {
+//    fp = forward<T>(f);
+//    return *this;
+//  }
+  template <class T, typename = enable_if_t<!is_same_v<decay_t<T>, funcpipe>>>
   funcpipe &operator=(T &&f) {
-    fp = forward<T>(f);
-    return *this;
+      fp = forward<T>(f);
+      return *this;
   }
 
   funcpipe &operator()(Args... args) {
@@ -271,7 +363,8 @@ funcpipe(T) -> funcpipe<functraits_t<T>>;
 template <class Ret>
 class getter {
  public:
-  template <class T> requires (!is_same_v<decay_t<T>, getter>)
+  //template <class T> requires (!is_same_v<decay_t<T>, getter>)
+  template <class T, typename = enable_if_t<!is_same_v<decay_t<T>, getter>>>
   getter(T &&f) : g(forward<T>(f)) {}
 
   getter() = delete;
@@ -291,7 +384,8 @@ getter(T) -> getter<funcret_t<T>>;
 template <class Arg>
 class setter {
  public:
-  template <class T> requires (!is_same_v<decay_t<T>, setter>)
+  //template <class T> requires (!is_same_v<decay_t<T>, setter>)
+  template <class T, typename = enable_if_t<!is_same_v<decay_t<T>, getter>>>
   setter(T &&s) : s(forward<T>(s)) {}
 
   setter() = delete;

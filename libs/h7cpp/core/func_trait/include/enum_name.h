@@ -8,6 +8,8 @@
 
 #include <string_view>
 #include <type_traits>
+#include <string>
+#include <array>
 
 namespace xh {
 
@@ -37,14 +39,35 @@ constexpr auto enum_max() {
   return N;
 }
 
-template<typename T> requires is_enum_v<T>
-constexpr auto enum_name(T value) {
-  constexpr auto num = enum_max<T>();
-  constexpr auto names = []<size_t... N>(index_sequence<N...>) {
-    return array<string_view, num>{enum_name<static_cast<T>(N)>()...};
-  }(make_index_sequence<num>{});
-  return names[static_cast<size_t>(value)];
+// C++17 解决方案：独立模板函数
+template <typename T, std::size_t... N>
+constexpr auto make_enum_names_array(std::index_sequence<N...>) {
+    return std::array<std::string_view, sizeof...(N)>{
+        enum_name<static_cast<T>(N)>()...
+    };
 }
+
+template<typename T> //requires is_enum_v<T>
+constexpr auto enum_name(T value) {
+    // 静态断言确保 T 是枚举类型（替代 requires 子句）
+    static_assert(std::is_enum_v<T>, "T must be an enum type");
+    constexpr auto num = enum_max<T>(); // 获取枚举项数量
+
+    // 生成索引序列并创建名称数组
+    constexpr auto names = make_enum_names_array<T>(
+        std::make_index_sequence<num>{} );
+
+    return names[static_cast<std::size_t>(value)]; // 返回对应名称
+}
+
+//template<typename T> requires is_enum_v<T>
+//constexpr auto enum_name(T value) {
+//    constexpr auto num = enum_max<T>();
+//    constexpr auto names = []<size_t... N>(std::index_sequence<N...>) {
+//        return std::array<string_view, num>{enum_name<static_cast<T>(N)>()...};
+//    }(make_index_sequence<num>{});
+//    return names[static_cast<size_t>(value)];
+//}
 
 };
 
