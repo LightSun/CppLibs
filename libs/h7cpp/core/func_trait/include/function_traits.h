@@ -11,9 +11,11 @@
 
 #include "qualifier.h"
 
-namespace xh {
+//std::decay_t 是 C++ 标准库中的一个类型转换工具模板，
+//  用于将给定类型转换为其“自然”形式。它会移除引用、CV 限定符（const 和 volatile）
+//std::remove_pointer_t 去除指针后的类型
 
-using namespace std;
+namespace xh {
 
 template <typename...>
 struct make_void { using type = void; };
@@ -25,16 +27,16 @@ struct is_function : std::is_function<T> {};
 
 template <class T>
 struct is_funcptr
-  : conjunction<is_pointer<T>, is_function<remove_pointer_t<T>>> {};
+    : std::conjunction<std::is_pointer<T>, std::is_function<std::remove_pointer_t<T>>> {};
 
 template <class, class = void>
-struct is_functor : false_type {};
+struct is_functor : std::false_type {};
 
 template <class T>
-struct is_functor<T, void_t<decltype(&T::operator())>> : true_type {};
+struct is_functor<T, void_t<decltype(&T::operator())>> : std::true_type {};
 
 template <class T>
-struct is_memfunc : is_member_function_pointer<T> {};
+struct is_memfunc : std::is_member_function_pointer<T> {};
 
 template <class T>
 inline constexpr bool is_function_v = is_function<T>::value;
@@ -47,9 +49,11 @@ inline constexpr bool is_memfunc_v = is_memfunc<T>::value;
 
 // nth_of
 
+//tuple ele
 template <size_t N, class... T>
-struct nth_of : tuple_element<N, tuple<T...>> {};
+struct nth_of : std::tuple_element<N, std::tuple<T...>> {};
 
+//tuple ele-type
 template <size_t N, class... T>
 using nth_of_t = typename nth_of<N, T...>::type;
 
@@ -59,7 +63,7 @@ template <class T>
 struct _function_traits : _function_traits<funcqual_decay_t<T>> {};
 
 template <class T>
-struct _funcptr_traits : _function_traits<remove_pointer_t<T>> {};
+struct _funcptr_traits : _function_traits<std::remove_pointer_t<T>> {};
 
 template <class T>
 struct _functor_traits : _functor_traits<decltype(&T::operator())> {};
@@ -73,12 +77,12 @@ struct _memfunc_traits;
 // 普通函数特化
 template <class Ret, class... Args>
 struct _function_traits<Ret(Args...)> {
-  using        type = Ret(Args...);
+  using        type = Ret(Args...); //相当于: 函数签名
   using return_type = Ret;
-  using   arg_tuple = tuple<Args...>;
+  using   arg_tuple = std::tuple<Args...>;
   template <size_t N>
   using    arg_type = nth_of_t<N, Args...>;
-  inline static constexpr size_t arity = sizeof...(Args);
+  inline static constexpr size_t arity = sizeof...(Args);//param cnt
 };
 
 // 可变参数函数特化
@@ -86,7 +90,7 @@ template <class Ret, class... Args>
 struct _function_traits<Ret(Args..., ...)> {
   using        type = Ret(Args..., ...);
   using return_type = Ret;
-  using   arg_tuple = tuple<Args...>;
+  using   arg_tuple = std::tuple<Args...>;
   template <size_t N>
   using    arg_type = nth_of_t<N, Args...>;
   inline static constexpr size_t arity = sizeof...(Args);
@@ -133,7 +137,7 @@ struct _function_traits_helper<T, false, false, false, true>
   : _memfunc_traits<T> {};
 
 template <class T>
-using function_traits = _function_traits_helper<decay_t<T>>;
+using function_traits = _function_traits_helper<std::decay_t<T>>;
 
 // 别名模板
 template <class T>

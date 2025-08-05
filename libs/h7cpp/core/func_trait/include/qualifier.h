@@ -11,8 +11,6 @@
 
 namespace xh {
  
-using namespace std;
-
 struct qualifier {
   enum mask : uint8_t {
        const_mask = 0x01,
@@ -80,7 +78,7 @@ using funcqual_mask = funcqual::mask;
 using funcqual_id   = funcqual::id;
 
 template <class T>
-struct qualifier_of : integral_constant<qualifier_id, qualifier_id::value> {
+struct qualifier_of : std::integral_constant<qualifier_id, qualifier_id::value> {
   using       type = T;
   using decay_type = T;
 };
@@ -88,7 +86,7 @@ struct qualifier_of : integral_constant<qualifier_id, qualifier_id::value> {
 #define QUALIFIER_OF(cv, ref, id)                         \
   template <class T>                                      \
   struct qualifier_of<cv T ref>                           \
-    : integral_constant<qualifier_id, qualifier_id::id> { \
+    : std::integral_constant<qualifier_id, qualifier_id::id> { \
     using       type = cv T ref;                          \
     using decay_type = T;                                 \
   };
@@ -97,10 +95,12 @@ QUALIFIER_OF(const, , const_value)
 QUALIFIER_OF(volatile, , volatile_value)
 QUALIFIER_OF(const volatile, , cv_value)
 QUALIFIER_OF(, &, lref)
+
 QUALIFIER_OF(const, &, const_lref)
 QUALIFIER_OF(volatile, &, volatile_lref)
 QUALIFIER_OF(const volatile, &, cv_lref)
 QUALIFIER_OF(, &&, rref)
+
 QUALIFIER_OF(const, &&, const_rref)
 QUALIFIER_OF(volatile, &&, volatile_rref)
 QUALIFIER_OF(const volatile, &&, cv_rref)
@@ -113,13 +113,13 @@ struct funcqual_of;
 #define FUNCQUAL_OF(qual, id)                           \
   template <class Ret, class... Args>                   \
   struct funcqual_of<Ret(Args...) qual>                 \
-    : integral_constant<funcqual_id, funcqual_id::id> { \
+    : std::integral_constant<funcqual_id, funcqual_id::id> { \
     using       type = Ret(Args...) qual;               \
     using decay_type = Ret(Args...);                    \
   };                                                    \
   template <class Ret, class... Args>                   \
   struct funcqual_of<Ret(Args..., ...) qual>            \
-    : integral_constant<funcqual_id, funcqual_id::id> { \
+    : std::integral_constant<funcqual_id, funcqual_id::id> { \
     using       type = Ret(Args..., ...) qual;          \
     using decay_type = Ret(Args..., ...);               \
   };
@@ -155,10 +155,11 @@ template <class T>
 inline constexpr qualifier_id qualifier_of_v = qualifier_of<T>::value;
 template <class T>
 using qualifier_decay_t = typename qualifier_of<T>::decay_type;
+
 template <class T>
 inline constexpr funcqual_id funcqual_of_v = funcqual_of<T>::value;
 template <class T>
-using funcqual_decay_t = typename funcqual_of<T>::decay_type;
+using funcqual_decay_t = typename funcqual_of<T>::decay_type; //no const/noexcept/&/&&
 
 } // namespace xh
 

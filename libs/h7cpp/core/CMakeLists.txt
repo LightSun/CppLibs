@@ -123,7 +123,7 @@ file(GLOB_RECURSE SRC_CORE
     utils/*.h utils/*.hpp utils/*.cpp utils/*.c utils/*.inc
     experimental/*.h experimental/*.cpp
     json/*.h json/*.hpp json/*.cpp
-    reflect/*.h reflect/*.tpp reflect/*.cpp
+    #reflect/*.h reflect/*.tpp reflect/*.cpp
     )
 
 set(SRC_TEST
@@ -152,7 +152,7 @@ set(SRC_TEST
     test/test_struct.h
     test/test_enums.cpp
     test/test_template_var_args.cpp
-    test/test_reflect.cpp
+    #test/test_reflect.cpp
     )
 
 add_library(h7cpp

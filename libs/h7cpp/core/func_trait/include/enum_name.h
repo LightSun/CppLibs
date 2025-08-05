@@ -13,23 +13,22 @@
 
 namespace xh {
 
-using namespace std;
-
 // enum name
 
 template<auto>
 constexpr auto enum_name() {
+//__PRETTY_FUNCTION__ 提供了函数的完整签名，包括类名、命名空间和参数类型。例如：
 #if __GNUC__ || __clang__
-  string_view name = __PRETTY_FUNCTION__;
+  std::string_view name = __PRETTY_FUNCTION__;
   size_t start = name.find('=') + 2, end = name.size() - 1;
 #elif _MSC_VER
-  string_view name = __FUNCSIG__;
+  std::string_view name = __FUNCSIG__;
   size_t start = name.find('<') + 1, end = name.rfind('>');
 #endif
-  name = string_view{name.data() + start, end - start};
-  if ((start = name.rfind("::")) != string_view::npos)
-    name = string_view{name.data() + start + 2, name.size() - start - 2};
-  return name.find(')') == string_view::npos ? name : "";
+  name = std::string_view{name.data() + start, end - start};
+  if ((start = name.rfind("::")) != std::string_view::npos)
+    name = std::string_view{name.data() + start + 2, name.size() - start - 2};
+  return name.find(')') == std::string_view::npos ? name : "";
 }
 
 template<typename T, size_t N = 0>
@@ -39,7 +38,7 @@ constexpr auto enum_max() {
   return N;
 }
 
-// C++17 解决方案：独立模板函数
+// 辅助模板：生成枚举名称数组（替代 C++20 的模板化 lambda）
 template <typename T, std::size_t... N>
 constexpr auto make_enum_names_array(std::index_sequence<N...>) {
     return std::array<std::string_view, sizeof...(N)>{

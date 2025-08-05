@@ -76,7 +76,7 @@ int main(int argc, char* argv[]){
     //test_struct_align();
     //test_struct_align2();
     //test_enums();
-    test_reflect();
+    //test_reflect();
     //test_template_var_args();
 
     //test_XBacktrace();
