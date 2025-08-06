@@ -20,6 +20,7 @@ int fun(int) { return 0; }
 char cfun(int) { return 'a'; }
 
 namespace xh {
+
 class A {
 public:
     int num;
@@ -39,19 +40,44 @@ public:
     int num;
     A2(int n) : num(n) {}
 
-    int add(int n) /*volatile*/ {
+    int add(int n) volatile {
         num += n;
         return num;
     }
 };
 
+class A3 {
+public:
+    int num;
+};
+
 int reload_fun(int) { return 0; }
 char reload_fun(char) { return 'a'; }
+
+// 安全的成员函数代理
+template <class C, typename Ret, typename... Args>
+auto make_member_proxy(Ret (C::*mfp)(Args...), C* obj) {
+    return [=](Args... args) -> Ret {
+        return (obj->*mfp)(std::forward<Args>(args)...);
+    };
+}
+
+// 带自定义逻辑的代理
+template <class C, typename Ret, typename... Args, typename Func>
+auto make_custom_member_proxy(Ret (C::*)(Args...), C* obj, Func&& func) {
+    return [=](auto&&... args) {
+        return func(obj, std::forward<decltype(args)>(args)...);
+    };
+}
 }
 
 //-----------------------
-
+extern void test_tuple_select();
 static void test_multi_func();
+static void test_func_chain();
+static void test_func_pipe();
+static void test_func_proxy();
+static void test_func_proxy2();
 
 int main() {
     //  xh::multifunc f = {[](int) { return 0; }, [](char) { return 1; }};
@@ -82,18 +108,58 @@ int main() {
 }
 
 void test_multi_func(){
-//    xh::multifunc multi_fun = {
-//        [](int) { return 0; },
-//        [](char) { return 'a'; }
-//    };
-//    assert(multi_fun(1) == reload_fun(1));
-    //assert(multi_fun('a') == reload_fun('a'));
-    //assert(multi_fun((short)'a') == reload_fun((short)'a'));
+    xh::multifunc multi_fun = {
+        [](int) { return 0; },
+        [](char) { return 'a'; }
+    };
+    auto a = multi_fun('a');
+    assert(multi_fun(1) == reload_fun(1));
+    assert(a == reload_fun('a'));
+    assert(multi_fun((short)'a') == reload_fun((short)'a'));
+
+//    return 0;
+    //test_tuple_select();
+}
+void test_func_chain(){
     xh::funcchain fn([](int a, int b) { return a + b; });
         fn.then([](int a) { return a * 2; })
         .then([](int res) { assert(res == (1 + 2) * 2); })
             (1, 2);
-
-    return 0;
 }
+void test_func_pipe(){
+    xh::funcpipe pf1 = [](int a, int b) { return a + b; };
+    xh::funcpipe pf2 = [](int a) { return a * 2; };
+    xh::funcpipe pf3 = [](int res) { assert(res == (1 + 2) * 2); };
+    1 | pf1(2) | pf2 | pf3;
+}
+void test_func_proxy(){
+    A3 a;
+    int (A3::*ptr)(int);
+    MEMFUNC_PROXY(ptr,(int n),{
+        proxy->num += n;
+        return proxy->num;
+    });
+    a.num = 10;
+    assert((a.*ptr)(2) == 12);
+}
+void test_func_proxy2(){
+    A3 a;
+    a.num = 10;
 
+//    auto simple_proxy = make_member_proxy(&A3::num, &a);
+//    simple_proxy = 20;
+//    assert(simple_proxy() == 20);
+
+//    auto custom_proxy = make_custom_member_proxy(
+//        static_cast<int(A3::*)(int)>(nullptr),  // 类型提示
+//        &a,
+//        [](A3* obj, int n) {
+//            obj->num += n;
+//            return obj->num;
+//        }
+//        );
+
+//    assert(custom_proxy(2) == 22);
+//    assert(a.num == 22);
+
+}

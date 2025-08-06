@@ -9,6 +9,8 @@
 #include <functional>
 #include <tuple>
 #include <type_traits>
+#include <variant>
+#include <memory>
 
 #include "function_traits.h"
 
@@ -134,79 +136,114 @@ struct multifunctor : T... {
 
 template <class... T>
 class multifunc {
- public:
+public:
 
- template <class... F, typename = std::enable_if_t<
-                          (sizeof...(F) > 1 ||
-   (sizeof...(F) == 1 &&
-    !std::is_same_v<std::decay_t<nth_of_t<0, F...>>, multifunc>))>>
- multifunc(F &&...f) noexcept : ftuple(std::forward<F>(f)...) {
- }
+    template <class... F, typename = std::enable_if_t<
+                             (sizeof...(F) == sizeof...(T)) &&
+                             (std::is_constructible_v<std::function<T>, F> && ...)>>
+    multifunc(F &&...f) noexcept
+        : ftuple(std::function<T>(std::forward<F>(f))...) {}
 
-  
-  multifunc() noexcept = default;
-  multifunc(const multifunc &) noexcept = default;
-  multifunc(multifunc &&) noexcept = default;
-  ~multifunc() noexcept = default;
-  multifunc &operator=(const multifunc &) noexcept = default;
-  multifunc &operator=(multifunc &&) noexcept = default;
+    multifunc() noexcept = default;
+    multifunc(const multifunc &) noexcept = default;
+    multifunc(multifunc &&) noexcept = default;
+    ~multifunc() noexcept = default;
+    multifunc &operator=(const multifunc &) noexcept = default;
+    multifunc &operator=(multifunc &&) noexcept = default;
 
-  template <class... F, typename = std::enable_if_t<
-                           (sizeof...(F) > 1 ||
-       (sizeof...(F) == 1 &&
-        !std::is_same_v<std::decay_t<nth_of_t<0, F...>>, multifunc>))>>
-  multifunc &operator=(F &&...f) {
-      ftuple = std::tuple<function<T>...>{std::forward<F>(f)...};
-      return *this;
-  }
-
- private:
-  template <size_t N, bool Strict, class... Args>
-  static constexpr bool match() {
-    if constexpr (Strict)
-      if constexpr (N == sizeof...(T))
-          return match<0, false, Args...>();
-      else if constexpr (std::is_same_v<std::tuple<Args...>, funcarg_tuple<fn_t<N>>>)
-          return true;
-      else
-          return match<N + 1, true, Args...>();
-    else if (N >= sizeof...(T)) return false;
-    else if constexpr (std::is_invocable_v<fn_t<N>, Args...>) return true;
-    else return match<N + 1, false, Args...>();
-  }
-
- public:
-  template <class... Args>
-  static constexpr bool is_match_v = match<0, true, Args...>();
-
-  template <class... Args, typename = std::enable_if_t<is_match_v<Args...>>>
-  decltype(auto) operator()(Args &&...args) const {
-      return call<0, true>(std::forward<Args>(args)...);
-  }
-
- private:
-  std::tuple<std::function<T>...> ftuple;
-
-  //static constexpr size_t COUNT = sizeof...(T);
-
-  template <size_t N>
-  using fn_t = nth_of_t<N, T...>;
-
-  template <size_t N, bool Strict, class... Args>
-  decltype(auto) call(Args &&...args) const {
-    if constexpr (Strict)
-      if constexpr (N >= sizeof...(T))
-        return call<0, false>(std::forward<Args>(args)...);
-      else if constexpr (std::is_same_v<std::tuple<Args...>, funcarg_tuple<fn_t<N>>>)
-        return std::get<N>(ftuple)(std::forward<Args>(args)...);
-      else return call<N + 1, true>(std::forward<Args>(args)...);
-    else {
-      static_assert(N < sizeof...(T), "No matching function for call");
-      if constexpr (std::is_invocable_v<fn_t<N>, Args...>)
-        return std::get<N>(ftuple)(std::forward<Args>(args)...);
-      else return call<N + 1, false>(std::forward<Args>(args)...);
+    template <class... F, typename = std::enable_if_t<
+                             (sizeof...(F) > 1 ||
+                              (sizeof...(F) == 1 &&
+                               !std::is_same_v<std::decay_t<nth_of_t<0, F...>>, multifunc>))>>
+    multifunc &operator=(F &&...f) {
+        ftuple = std::tuple<function<T>...>{std::forward<F>(f)...};
+        return *this;
     }
-  }
+
+private:
+    // 使用迭代代替递归
+//    template <size_t N, class... Args>
+//    static constexpr bool match_impl() {
+//        if constexpr (N < sizeof...(T)) {
+//            return std::is_invocable_v<fn_t<N>, Args...> ||
+//                   match_impl<N + 1, Args...>();
+//        } else {
+//            return false;
+//        }
+//    }
+//    template <size_t N, class... Args>
+//    static constexpr bool match() {
+//        return match_impl<N, Args...>();
+//    }
+
+    template <size_t N, bool Strict, class... Args>
+    static constexpr bool match() {
+        //#warning "match()..."
+        if constexpr (Strict)
+            if constexpr (N == sizeof...(T)) return match<0, false, Args...>();
+            else if constexpr (std::is_same_v<std::tuple<Args...>, funcarg_tuple<fn_t<N>>>){
+                //#warning "is_same_v"
+                return true;
+            }
+            else return match<N + 1, true, Args...>();
+        else if (N >= sizeof...(T)) return false;
+        else if constexpr (std::is_invocable_v<fn_t<N>, Args...>) return true;
+        else return match<N + 1, false, Args...>();
+    }
+
+public:
+    template <class... Args>
+    static constexpr bool is_match_v = match<0, true, Args...>();
+    static constexpr int CNT = sizeof ...(T);
+
+    template <class... Args, typename = std::enable_if_t<is_match_v<Args...>>>
+    decltype(auto) operator()(Args &&...args) const {
+        // 使用迭代查找匹配项
+//        return call_impl(std::make_index_sequence<sizeof...(T)>{},
+//                         std::forward<Args>(args)...);
+        return call_impl2<0, true>(std::forward<Args>(args)...);
+    }
+
+private:
+    std::tuple<std::function<T>...> ftuple;
+
+    template <size_t N>
+    using fn_t = nth_of_t<N, T...>;
+
+    // 使用索引序列迭代代替递归
+    template <size_t... Is, class... Args>
+    decltype(auto) call_impl(std::index_sequence<Is...>, Args &&...args) const {
+        return call_impl_helper<Is...>(std::forward<Args>(args)...);;
+    }
+
+    template <size_t I, size_t... Is, class... Args>
+    decltype(auto) call_impl_helper(Args &&...args) const {
+        if constexpr (std::is_invocable_v<fn_t<I>, Args...>) {
+            return std::get<I>(ftuple)(std::forward<Args>(args)...);
+        } else {
+            // 继续尝试下一个函数
+            if constexpr (sizeof...(Is) > 0) {
+                return call_impl_helper<Is...>(std::forward<Args>(args)...);
+            } else {
+                static_assert(I != I, "No matching function found in tuple");
+            }
+        }
+    }
+    template <size_t N, bool Strict, class... Args>
+    decltype(auto) call_impl2(Args &&...args) const {
+        if constexpr (Strict)
+            if constexpr (N >= sizeof...(T))
+                return call_impl2<0, false>(std::forward<Args>(args)...);
+            else if constexpr (std::is_same_v<std::tuple<Args...>, funcarg_tuple<fn_t<N>>>)
+                return std::get<N>(ftuple)(std::forward<Args>(args)...);
+            else return call_impl2<N + 1, true>(std::forward<Args>(args)...);
+        else {
+            static_assert(N < sizeof...(T), "No matching function for call");
+            if constexpr (std::is_invocable_v<fn_t<N>, Args...>)
+                return std::get<N>(ftuple)(std::forward<Args>(args)...);
+            else return call_impl2<N + 1, false>(std::forward<Args>(args)...);
+        }
+    }
 };
 
 template <class... T>
@@ -221,7 +258,8 @@ template <class Ret, class... Args>
 class funcchain<Ret(Args...)> {
  public:
 
-  template <class T, typename = std::enable_if_t<!std::is_same_v<std::decay_t<T>, funcchain>>>
+  template <class T, typename = std::enable_if_t<
+                           !std::is_same_v<std::decay_t<T>, funcchain>>>
      funcchain(T &&f) : fc(std::forward<T>(f)) {}
 
   funcchain() noexcept = default;
@@ -231,7 +269,8 @@ class funcchain<Ret(Args...)> {
   funcchain &operator=(const funcchain &) noexcept = default;
   funcchain &operator=(funcchain &&) noexcept = default;
 
-  template <class T, typename = std::enable_if_t<!std::is_same_v<std::decay_t<T>, funcchain>>>
+  template <class T, typename = std::enable_if_t<
+                        !std::is_same_v<std::decay_t<T>, funcchain>>>
   funcchain &operator=(T &&f) {
       fc = std::forward<T>(f);
       return *this;
@@ -240,19 +279,44 @@ class funcchain<Ret(Args...)> {
   operator bool() const noexcept { return fc; }
   Ret operator()(Args... args) const { return fc(std::forward<Args>(args)...); }
 
-  template <class T, typename = std::enable_if_t<std::is_invocable_v<T, Ret> ||
-                                           (funcarity_v<T> == 0)>>
-  funcchain<function_traits_t<std::decay_t<T>>(Args...)> then(T &&f) const {
-      using namespace std;
-      using NewRet = function_return_t<std::decay_t<T>>;
-      return [f = std::move(f), fc = this->fc](Args... args) -> NewRet {
-          if constexpr (is_void_v<Ret>) {
-              fc(std::forward<Args>(args)...);
-              return f();
-          } else {
-              return f(fc(std::forward<Args>(args)...));
-          }
-      };
+//  template <class T, typename = std::enable_if_t<
+//                        std::is_invocable_v<T, Ret> || (funcarity_v<T> == 0)>>
+//  funcchain<function_traits_t<std::decay_t<T>>(Args...)> then(T &&f) const {
+//      using namespace std;
+//      using NewRet = function_return_t<std::decay_t<T>>;
+//      return [f = std::move(f), fc = this->fc](Args... args) -> NewRet {
+//          if constexpr (is_void_v<Ret>) {
+//              fc(std::forward<Args>(args)...);
+//              return f();
+//          } else {
+//              return f(fc(std::forward<Args>(args)...));
+//          }
+//      };
+//  }
+  template <class F, typename = std::enable_if_t<
+                        std::is_invocable_v<F, std::conditional_t<
+                                                   std::is_void_v<Ret>,
+                                                   std::monostate, Ret>> >>
+  auto then(F&& f) const {
+      using NewRet = std::invoke_result_t<F,
+            std::conditional_t<std::is_void_v<Ret>, std::monostate, Ret>
+                                          >;
+      // 创建新的函数类型
+      using NewFuncType = NewRet(Args...);
+
+      // 使用共享指针避免多次复制 fc
+      auto shared_fc = std::make_shared<std::function<Ret(Args...)>>(fc);
+
+      return funcchain<NewFuncType>([shared_fc, f = std::forward<F>(f)]
+                (Args... args) -> NewRet {
+
+                    if constexpr (std::is_void_v<Ret>) {
+                        (*shared_fc)(std::forward<Args>(args)...);
+                        return std::invoke(f);
+                    } else {
+                        return std::invoke(f, (*shared_fc)(std::forward<Args>(args)...));
+                    }
+                });
   }
 
  private:
@@ -375,7 +439,7 @@ struct auto_return_t {
 
 #define auto_return return xh::auto_return_t{};
 
-// member function proxy
+// member function proxy(ptr, sig, func)
 #define MEMFUNC_PROXY(mfp, signature, ...)                       \
   {                                                              \
     using class_type = xh::mfclass_t<decltype(mfp)>;             \
@@ -386,8 +450,9 @@ struct auto_return_t {
       }                                                          \
     };                                                           \
     auto proxy = &memfunc_proxy::proxy;                          \
-    memfunc_ptr = reinterpret_cast<                              \
+    auto memfunc_ptr = reinterpret_cast<                              \
       xh::mffunction_t<decltype(proxy)> class_type::*>(proxy);   \
+    (void)(memfunc_ptr);\
   };
 
 } // namespace xh

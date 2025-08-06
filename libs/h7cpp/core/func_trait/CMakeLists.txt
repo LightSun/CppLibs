@@ -7,9 +7,9 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 
 file(GLOB_RECURSE SRC_FUNC_TRAIT
     include/*.h
+    *.cpp
     )
 
 add_executable(${PROJECT_NAME}
     ${SRC_FUNC_TRAIT}
-    main.cpp
     )
