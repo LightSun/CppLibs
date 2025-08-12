@@ -2,9 +2,82 @@
 
 #include <atomic>
 #include <mutex>
+#include <list>
+#include <algorithm>
 #include <condition_variable>
 
 namespace h7 {
+
+class ConditionVariableImpl {
+public:
+    ConditionVariableImpl() = default;
+    ConditionVariableImpl(const ConditionVariableImpl&) = delete;
+    ConditionVariableImpl& operator=(const ConditionVariableImpl&) = delete;
+
+    void wait(std::unique_lock<std::mutex>& lock) {
+        waiter w;
+        {
+            std::lock_guard<std::mutex> internal_lock(internal_mutex_);
+            waiters_.push_back(&w);
+            wait_count_++;
+        }
+        lock.unlock();
+        try {
+            w.mtx.lock();
+        } catch (...) {
+            // 异常时从队列中安全移除
+            remove_waiter(&w);
+            throw;
+        }
+        lock.lock();
+    }
+
+    void notify_one() {
+        std::lock_guard<std::mutex> lock(internal_mutex_);
+        if (wait_count_ == 0) return;
+
+        waiter* w = waiters_.front();
+        waiters_.pop_front();
+        wait_count_--;
+        w->mtx.unlock();
+    }
+
+    void notify_all() {
+        std::lock_guard<std::mutex> lock(internal_mutex_);
+        for (auto* w : waiters_) {
+            w->mtx.unlock();
+        }
+        waiters_.clear();
+        wait_count_ = 0;
+    }
+
+private:
+    struct waiter {
+        std::mutex mtx;
+        waiter() { mtx.lock(); }
+        waiter(const waiter&) = delete;
+        waiter& operator=(const waiter&) = delete;
+    };
+
+    // 安全移除waiter的辅助函数
+    void remove_waiter(waiter* w) {
+        std::lock_guard<std::mutex> lock(internal_mutex_);
+        auto it = std::find(waiters_.begin(), waiters_.end(), w);
+        if (it != waiters_.end()) {
+            waiters_.erase(it);
+            wait_count_--;
+            // 确保互斥锁在异常情况下解锁
+            if (w->mtx.try_lock()) {
+                w->mtx.unlock();
+            }
+        }
+    }
+
+    std::mutex internal_mutex_;
+    std::list<waiter*> waiters_;
+    uint32_t wait_count_ {0};
+};
+
 class CppLock {
  public:
   void lock() {

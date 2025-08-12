@@ -40,21 +40,12 @@ extern void test_template_var_args();
 
 extern void test_enums();
 extern void test_reflect();
+extern void test_self_condition_variable();
 
 using namespace h7;
 
 int main(int argc, char* argv[]){
     setbuf(stdout, NULL);
-    /* //check if p2 = p1, p is changed or not.
-    int a = 1;
-    int b = 1;
-
-    int* p = &a;
-    int* p1 = &b;
-    int* p2 = p;
-    p2 = p1;
-    printf("p = %p, p1 = %p, p2 = %p\n", p, p1, p2);
-    */
 
 //    if(argc == 1){
 //        //String fir = "/home/heaven7/heaven7/work/TensorRT/libtorch_1.12.1/libtorch/lib";
@@ -132,6 +123,7 @@ int main(int argc, char* argv[]){
 //    ConfigUtils::resolveProperties(prop.m_map);
 //    printf("thy::thread_count = %d\n", prop.getInt("thy::thread_count"));
    // return test_main0(argc, argv);
+    test_self_condition_variable();
     return 0;
 }
 //void test_select_file(){
