@@ -1,5 +1,4 @@
-#ifndef COMMON_BASE_H
-#define COMMON_BASE_H
+#pragma once
 
 #if defined(_WIN32) || defined(WIN32)
 #define CMD_LINE "\r\n"
@@ -84,4 +83,12 @@ do{\
     } while (0)
 #endif
 
-#endif // COMMON_BASE_H
+#define H7_STD_PRINT(T)\
+    void printTo(std::ostream& ss)const;\
+    void print(){\
+        std::cout << *this << std::endl;\
+    }\
+    friend std::ostream& operator<<(std::ostream& os, const T& bni){\
+        bni.printTo(os);\
+        return os;\
+    }
