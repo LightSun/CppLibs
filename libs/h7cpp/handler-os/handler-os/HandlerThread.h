@@ -21,6 +21,9 @@ public:
     HandlerThread(CString name = "", int priority = 0):
         mName(name), mPriority(priority){
     }
+    void setFriendCpuId(int cpuId){
+        mFriendCpuId = cpuId;
+    }
     void setOnPreparedCallback(std::function<void()> func){
         mOnPrepared = std::make_shared<PkgTask>(func);
     }
@@ -55,8 +58,8 @@ private:
     String mName;
     std::atomic_bool mDestroied {false};
     bool mDeleteAfterQuit {false};
-    int mPriority;
-
+    int mPriority {0};
+    int mFriendCpuId {-1};
 };
 
 }

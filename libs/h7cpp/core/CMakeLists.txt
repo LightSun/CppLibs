@@ -154,6 +154,7 @@ set(SRC_TEST
     test/test_template_var_args.cpp
     #test/test_reflect.cpp
     test/test_self_conv.cpp
+    test/test_span.cpp
     )
 
 add_library(h7cpp

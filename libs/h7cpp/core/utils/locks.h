@@ -25,11 +25,16 @@ public:
         try {
             w.mtx.lock();
         } catch (...) {
-            // 异常时从队列中安全移除
             remove_waiter(&w);
             throw;
         }
         lock.lock();
+    }
+    template<typename _Predicate>
+    void wait(std::unique_lock<std::mutex>& __lock, _Predicate __p){
+        while (!__p()){
+            wait(__lock);
+        }
     }
 
     void notify_one() {
@@ -54,22 +59,19 @@ public:
 private:
     struct waiter {
         std::mutex mtx;
-        waiter() { mtx.lock(); }
+        waiter(){
+            mtx.lock();
+        }
         waiter(const waiter&) = delete;
         waiter& operator=(const waiter&) = delete;
     };
 
-    // 安全移除waiter的辅助函数
     void remove_waiter(waiter* w) {
         std::lock_guard<std::mutex> lock(internal_mutex_);
         auto it = std::find(waiters_.begin(), waiters_.end(), w);
         if (it != waiters_.end()) {
             waiters_.erase(it);
             wait_count_--;
-            // 确保互斥锁在异常情况下解锁
-            if (w->mtx.try_lock()) {
-                w->mtx.unlock();
-            }
         }
     }
 

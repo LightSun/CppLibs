@@ -1,6 +1,9 @@
 #include <map>
+
+#ifdef BUILD_WITH_QT
 #include <QApplication>
 #include <QTimer>
+#endif
 #include "handler-os/qt_pri.h"
 #include "handler-os/MessageQueue.h"
 #include "handler-os/Message.h"

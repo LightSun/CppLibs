@@ -12,17 +12,17 @@ bool data_ready = false;
 void consumer(int id) {
     std::unique_lock<std::mutex> lock(mtx);
     while (!data_ready) {
-        std::cout << "Consumer " << id << " waiting...\n";
+        std::cout << "Consumer " << id << " waiting...\n" << std::endl;
         cv.wait(lock);
     }
-    std::cout << "Consumer " << id << " processed data\n";
+    std::cout << "Consumer " << id << " processed data\n" << std::endl;
 }
 
 void producer() {
     {
         std::lock_guard<std::mutex> lock(mtx);
         data_ready = true;
-        std::cout << "Producer signals ready\n";
+        std::cout << "Producer signals ready\n" << std::endl;
     }
     cv.notify_all();
 }

@@ -199,6 +199,7 @@ Message::String Message::toString(){
 }
 
 void Message::logDebugInfo(){
+#ifdef _DEBUG
     unsigned int create;
     unsigned int del;
     unsigned int poolSize;
@@ -208,7 +209,6 @@ void Message::logDebugInfo(){
         del = _C_DELETE;
         poolSize = sOBJ.sPoolSize;
     }
-#ifdef _DEBUG
     char buf[1024];
     snprintf(buf, 1024, "Message >> size: (create, delete, pool) = (%d, %d, %d)",
              create, del, poolSize);

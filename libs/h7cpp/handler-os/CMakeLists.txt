@@ -1,6 +1,6 @@
 
 
-set(BUILD_WITH_QT ON)
+#set(BUILD_WITH_QT ON)
 #
 if(BUILD_WITH_QT)
     message(STATUS " build BUILD_WITH_QT ON.")

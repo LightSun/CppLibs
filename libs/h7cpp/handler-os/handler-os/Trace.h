@@ -8,6 +8,8 @@ namespace h7_handler_os{
     public:
         using CString = const std::string&;
 
+        virtual ~Trace(){}
+
         virtual bool isTagEnabled(long long traceTag) {
             // TODO Auto-generated method stub
             return false;

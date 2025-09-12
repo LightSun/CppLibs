@@ -1,4 +1,5 @@
 
+#include <iostream>
 #include "handler-os/QTApplication.h"
 
 extern void testTime();

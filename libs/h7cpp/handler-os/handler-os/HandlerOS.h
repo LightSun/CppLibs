@@ -19,7 +19,7 @@ public:
     }
 
     void start(std::shared_ptr<HandlerCallback> cb){
-        m_ht = std::shared_ptr<HandlerThread>(new HandlerThread());
+        m_ht = std::unique_ptr<HandlerThread>(new HandlerThread());
         m_ht->setAfterQuitCallback([this](){
             delete this;
         });
@@ -50,7 +50,7 @@ public:
     }
 
 private:
-    std::shared_ptr<HandlerThread> m_ht;
+    std::unique_ptr<HandlerThread> m_ht;
     std::shared_ptr<Handler> m_handler;
 };
 }

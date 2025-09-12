@@ -41,6 +41,7 @@ extern void test_template_var_args();
 extern void test_enums();
 extern void test_reflect();
 extern void test_self_condition_variable();
+extern void test_span();
 
 using namespace h7;
 
@@ -123,7 +124,9 @@ int main(int argc, char* argv[]){
 //    ConfigUtils::resolveProperties(prop.m_map);
 //    printf("thy::thread_count = %d\n", prop.getInt("thy::thread_count"));
    // return test_main0(argc, argv);
-    test_self_condition_variable();
+    //test_self_condition_variable();
+
+    test_span();
     return 0;
 }
 //void test_select_file(){

@@ -29,7 +29,6 @@ public:
     MessageQueue* getQueue() {
         return mQueue;
     };
-
     virtual void quit();
 
     virtual void quitSafely();

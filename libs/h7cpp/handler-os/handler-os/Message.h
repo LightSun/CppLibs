@@ -103,7 +103,7 @@ public:
 
 
 private:
-    int flags;
+    int flags {0};
     long long when;
 
     Object data;
