@@ -22,7 +22,7 @@ void test_span(){
         printf("v = %d\n", v);
     }
     {
-        std::initializer_list<int> a = {1,2,3,4,5};
+        std::vector<int> a = {1,2,3,4,5};
 
         Span<int> span(a);
         auto v = span.back();

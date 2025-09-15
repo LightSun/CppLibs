@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <iostream>
 #include <algorithm>
+#include "common/span_internal.h"
 
 #define ASSERT_ERROR(expr)\
     if(!(expr)){\
@@ -36,31 +37,128 @@ public:
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
     using size_type = size_t;
+private:
+    // Used to determine whether a Span can be constructed from a container of
+    // type C.
+    template <typename C>
+    using EnableIfConvertibleFrom =
+        std::enable_if_t<!std::is_same_v<Span, std::remove_reference_t<C>> &&
+                         span_internal::HasData<T, C>::value &&
+                         span_internal::HasSize<C>::value>;
 
-    Span(T* data, size_type len){
-        ptr_ = (value_type*)data;
-        len_ = len;
+    // Used to SFINAE-enable a function when the slice elements are const.
+    template <typename U>
+    using EnableIfValueIsConst =
+        typename std::enable_if<std::is_const<T>::value, U>::type;
+
+    // Used to SFINAE-enable a function when the slice elements are mutable.
+    template <typename U>
+    using EnableIfValueIsMutable =
+        typename std::enable_if<!std::is_const<T>::value, U>::type;
+
+public:
+    constexpr Span() noexcept : Span(nullptr, 0) {}
+    constexpr Span(pointer array,size_type length) noexcept
+        : ptr_(array), len_(length) {}
+
+    // Implicit conversion constructors
+    template <size_t N>
+    constexpr Span(T(  // NOLINT(google-explicit-constructor)
+        &a)[N]) noexcept
+        : Span(a, N) {}
+
+    // Explicit reference constructor for a mutable `Span<T>` type. Can be
+    // replaced with MakeSpan() to infer the type parameter.
+    template <typename V, typename = EnableIfConvertibleFrom<V>,
+             typename = EnableIfValueIsMutable<V>,
+             typename = span_internal::EnableIfNotIsView<V>>
+    /*explicit*/ Span(
+        V& v) noexcept  // NOLINT(runtime/references)
+        : Span(span_internal::GetData(v), v.size()) {}
+
+    // Implicit reference constructor for a read-only `Span<const T>` type
+    template <typename V, typename = EnableIfConvertibleFrom<V>,
+             typename = EnableIfValueIsConst<V>,
+             typename = span_internal::EnableIfNotIsView<V>>
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    constexpr Span(const V& v) noexcept
+        : Span(span_internal::GetData(v), v.size()) {}
+
+    // Overloads of the above two functions that are only enabled for view types.
+    // This is so we can drop the ABSL_ATTRIBUTE_LIFETIME_BOUND annotation. These
+    // overloads must be made unique by using a different template parameter list
+    // (hence the = 0 for the IsView enabler).
+    template <typename V, typename = EnableIfConvertibleFrom<V>,
+             typename = EnableIfValueIsMutable<V>,
+             span_internal::EnableIfIsView<V> = 0>
+    /*explicit*/ Span(V& v) noexcept  // NOLINT(runtime/references)
+        : Span(span_internal::GetData(v), v.size()) {}
+
+    template <typename V, typename = EnableIfConvertibleFrom<V>,
+             typename = EnableIfValueIsConst<V>,
+             span_internal::EnableIfIsView<V> = 0>
+    constexpr Span(const V& v) noexcept  // NOLINT(google-explicit-constructor)
+        : Span(span_internal::GetData(v), v.size()) {}
+
+    // Implicit constructor from an initializer list, making it possible to pass a
+    // brace-enclosed initializer list to a function expecting a `Span`. Such
+    // spans constructed from an initializer list must be of type `Span<const T>`.
+    //
+    //   void Process(absl::Span<const int> x);
+    //   Process({1, 2, 3});
+    //
+    // Note that as always the array referenced by the span must outlive the span.
+    // Since an initializer list constructor acts as if it is fed a temporary
+    // array (cf. C++ standard [dcl.init.list]/5), it's safe to use this
+    // constructor only when the `std::initializer_list` itself outlives the span.
+    // In order to meet this requirement it's sufficient to ensure that neither
+    // the span nor a copy of it is used outside of the expression in which it's
+    // created:
+    //
+    //   // Assume that this function uses the array directly, not retaining any
+    //   // copy of the span or pointer to any of its elements.
+    //   void Process(absl::Span<const int> ints);
+    //
+    //   // Okay: the std::initializer_list<int> will reference a temporary array
+    //   // that isn't destroyed until after the call to Process returns.
+    //   Process({ 17, 19 });
+    //
+    //   // Not okay: the storage used by the std::initializer_list<int> is not
+    //   // allowed to be referenced after the first line.
+    //   absl::Span<const int> ints = { 17, 19 };
+    //   Process(ints);
+    //
+    //   // Not okay for the same reason as above: even when the elements of the
+    //   // initializer list expression are not temporaries the underlying array
+    //   // is, so the initializer list must still outlive the span.
+    //   const int foo = 17;
+    //   absl::Span<const int> ints = { foo };
+    //   Process(ints);
+    //
+    template <typename LazyT = T,
+             typename = EnableIfValueIsConst<LazyT>>
+    Span(std::initializer_list<value_type> v) noexcept  // NOLINT(runtime/explicit)
+        : Span(v.begin(), v.size()) {}
+
+    Span(const Span<T>& span){
+        ptr_ = span.ptr_;
+        len_ = span.len_;
     }
-    Span(iterator begin, iterator end){
-        ptr_ = (value_type*)begin;
-        len_ = end - begin;
+    Span(Span<T>& span){
+        ptr_ = span.ptr_;
+        len_ = span.len_;
     }
-    Span(const_iterator begin, const_iterator end){
-        ptr_ = (value_type*)begin;
-        len_ = end - begin;
+    Span& operator=(const Span<T>& span){
+        ptr_ = span.ptr_;
+        len_ = span.len_;
+        return *this;
     }
-    Span(const std::vector<T>& vec){
-        ptr_ = (value_type*)vec.data();
-        len_ = vec.size();
+    Span& operator=(Span<T>& span){
+        ptr_ = span.ptr_;
+        len_ = span.len_;
+        return *this;
     }
-    Span(std::vector<T>& vec){
-        ptr_ = (value_type*)vec.data();
-        len_ = vec.size();
-    }
-    Span(const std::initializer_list<T>& vec){
-        ptr_ = (value_type*)vec.begin();
-        len_ = vec.size();
-    }
+
 
     constexpr pointer data() const noexcept { return ptr_; }
 
@@ -85,7 +183,7 @@ public:
     // Span::operator[]
     //
     // Returns a reference to the i'th element of this span.
-    constexpr reference operator[](size_type i) const noexcept {
+    reference operator[](size_type i) const {
         ASSERT_ERROR_X(i < size(), "index out if range. index = "
                                        << i << ",size = " << size());
         return ptr_[i];
@@ -94,7 +192,7 @@ public:
     // Span::at()
     //
     // Returns a reference to the i'th element of this span.
-    constexpr reference at(size_type i) const {
+    reference at(size_type i) const {
         ASSERT_ERROR_X(i < size(), "index out if range. index = "
                                        << i << ",size = " << size());
         return *(data() + i);
@@ -104,7 +202,7 @@ public:
     //
     // Returns a reference to the first element of this span. The span must not
     // be empty.
-    constexpr reference front() const noexcept {
+    reference front() const {
         ASSERT_ERROR(size() > 0);
         return *data();
     }
@@ -113,7 +211,7 @@ public:
     //
     // Returns a reference to the last element of this span. The span must not
     // be empty.
-    constexpr reference back() const noexcept {
+    reference back() const {
         ASSERT_ERROR(size() > 0);
         return *(data() + size() - 1);
     }
@@ -179,7 +277,7 @@ public:
     // Span::remove_prefix()
     //
     // Removes the first `n` elements from the span.
-    void remove_prefix(size_type n) noexcept {
+    void remove_prefix(size_type n) {
         ASSERT_ERROR(size() >= n);
         ptr_ += n;
         len_ -= n;
@@ -188,7 +286,7 @@ public:
     // Span::remove_suffix()
     //
     // Removes the last `n` elements from the span.
-    void remove_suffix(size_type n) noexcept {
+    void remove_suffix(size_type n) {
         ASSERT_ERROR(size() >= n);
         len_ -= n;
     }
@@ -247,12 +345,8 @@ public:
         return Span(size() - len + data(), len);
     }
 
-    std::vector<T> toVector(){
-        std::vector<T> vec;
-        vec.resize(size());
-        for(auto& v: *this){
-            vec.push_back(v);
-        }
+    std::vector<T> toVector()const{
+        std::vector<T> vec(ptr_, ptr_ + len_);
         return vec;
     }
 
@@ -333,7 +427,7 @@ public:
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
     using size_type = size_t;
 
-    Spans(const std::vector<Span<T>>& spans):spans_(spans){
+    Spans(const std::vector<Span<std::remove_cv_t<T>>>& spans):spans_(spans){
         compute0();
     }
 
@@ -344,6 +438,13 @@ public:
     constexpr size_type length() const noexcept { return size(); }
 
     constexpr bool empty() const noexcept { return size() == 0; }
+    //
+    reference front() const {
+        return spans_.front().front();
+    }
+    reference back() const {
+        return spans_.back().back();
+    }
 
     //
     constexpr iterator begin() const noexcept { return iterator(this); }
@@ -365,7 +466,7 @@ public:
     constexpr const_reverse_iterator crend() const noexcept { return rend(); }
 
     //
-    constexpr reference operator[](size_type index) const noexcept {
+    reference operator[](size_type index) const {
         ASSERT_ERROR_X(index < size(), "index out if range. index = "
                                        << index << ",size = " << size());
         const int cnt = spans_.size();
@@ -376,9 +477,14 @@ public:
         }
         return spans_[cnt-1][index - span_offsets_[cnt-1]];
     }
+    reference at(size_type index) const {
+        return operator[](index);
+    }
 
     void remove_prefix(size_type n) noexcept {
-        ASSERT_ERROR(size() >= n);
+        if(n > size()){
+            n = size();
+        }
         std::vector<int> rm_spanIds;
         int cnt = spans_.size();
         for(int i = 0 ; i < cnt && n > 0; ++i){
@@ -399,8 +505,10 @@ public:
         }
         compute0();
     }
-    void remove_suffix(size_type n) noexcept {
-        ASSERT_ERROR(size() >= n);
+    void remove_suffix(size_type n) noexcept{
+        if(n > size()){
+            n = size();
+        }
         std::vector<int> rm_spanIds;
         int cnt = spans_.size();
         for(int i = cnt - 1; i >= 0 && n > 0; --i){
@@ -480,11 +588,12 @@ public:
         return Spans(kspans);
     }
 
-    std::vector<T> toVector(){
+    std::vector<T> toVector()const{
         std::vector<T> vec;
-        vec.resize(size());
-        for(auto& v: *this){
-            vec.push_back(v);
+        vec.reserve(size());
+        for(auto& sp: spans_){
+            auto svec = sp.toVector();
+            vec.insert(vec.end(), svec.begin(), svec.end());
         }
         return vec;
     }
