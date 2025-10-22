@@ -6,6 +6,12 @@
 
 namespace h7 {
 
+struct FixedQueueInfo{
+    int size {0};
+    int capacity {0};
+    long long headSize {0};
+};
+
 //h7::NullLock, h7::mutex
 template <typename T>
 class FixedQueue{
@@ -15,6 +21,9 @@ public:
     }
     int capacity(){
         return m_buffer.size();
+    }
+    void push_back(const T& t){
+        push(t);
     }
     bool push(const T& t){
         std::unique_lock<std::mutex> lck(m_lock);
@@ -27,10 +36,13 @@ public:
                 m_nextPullPos = 0;
             }
         }else if(m_nextPushPos >= m_buffer.size()){
-            MED_ASSERT(m_nextPullPos == 0);
+            //MED_ASSERT(m_nextPullPos == 0);
             T* data = m_buffer.data();
             std::memmove(data, data + 1, sizeof(T) * (validSize()-1));
             m_buffer[m_buffer.size() - 1] = t;
+            if(m_nextPullPos > 0){
+                m_nextPullPos --;
+            }
         }
         else{
             m_buffer[m_nextPushPos ++ ] = t;
@@ -71,8 +83,40 @@ public:
         }
         return ret;
     }
+    T& front(){
+        std::unique_lock<std::mutex> lck(m_lock);
+        return m_buffer[m_nextPullPos];
+    }
+    bool empty(){
+        std::unique_lock<std::mutex> lck(m_lock);
+        return validSize() == 0;
+    }
+    template<typename Cb>
+    void travel(Cb cb){
+        std::unique_lock<std::mutex> lck(m_lock);
+        int s = validSize();
+        for(int i = 0 ; i < s ; ++i){
+            if(cb(m_buffer[i + m_nextPullPos])){
+                break;
+            }
+        }
+    }
+    template<typename Cb>
+    FixedQueueInfo getInfo(Cb cb){
+        FixedQueueInfo info;
+        info.capacity = capacity();
+        {
+            std::unique_lock<std::mutex> lck(m_lock);
+            int s = validSize();
+            if(s > 0){
+                info.size = s;
+                info.headSize = cb(m_buffer[m_nextPullPos]);
+            }
+        }
+        return info;
+    }
 private:
-    size_t validSize(){
+    size_t validSize()const{
         return m_nextPushPos - m_nextPullPos;
     }
 
@@ -82,5 +126,6 @@ private:
     int m_nextPushPos {0};
     int m_nextPullPos {0};
 };
+
 
 }

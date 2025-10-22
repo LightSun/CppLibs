@@ -13,8 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#ifndef ABSL_TYPES_INTERNAL_SPAN_H_
-#define ABSL_TYPES_INTERNAL_SPAN_H_
+#pragma once
 
 #include <algorithm>
 #include <cstddef>
@@ -133,5 +132,4 @@ using EnableIfNotIsView = std::enable_if_t<!IsView<T>::value, int>;
 //ABSL_NAMESPACE_END
 }  // namespace absl
 
-#endif  // ABSL_TYPES_INTERNAL_SPAN_H_
 

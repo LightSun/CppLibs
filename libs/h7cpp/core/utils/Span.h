@@ -481,7 +481,7 @@ public:
         return operator[](index);
     }
 
-    void remove_prefix(size_type n) noexcept {
+    void remove_prefix(size_type n){
         if(n > size()){
             n = size();
         }
@@ -505,7 +505,7 @@ public:
         }
         compute0();
     }
-    void remove_suffix(size_type n) noexcept{
+    void remove_suffix(size_type n){
         if(n > size()){
             n = size();
         }
