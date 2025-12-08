@@ -7,7 +7,7 @@
 #include <functional>
 
 namespace h7 {
-
+//
 template<typename Key, typename Value>
 class InsertionOrderMap {
 private:

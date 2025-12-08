@@ -35,5 +35,5 @@ add_executable(h7AlgoMain
     ${SRC_ALGOS_MAIN}
     )
 if(OpenCV_DIR)
-    target_link_libraries(h7AlgoMain ${OpenCV_LIBS})
+    target_link_libraries(h7AlgoMain ${OpenCV_LIBS} pthread)
 endif(OpenCV_DIR)

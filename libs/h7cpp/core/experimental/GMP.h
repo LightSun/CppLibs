@@ -6,16 +6,29 @@
 #include <vector>
 #include <memory>
 #include <shared_mutex>
+#include <functional>
 
 namespace h7 {
 
 template<typename T>
 struct Queue{
+    virtual ~Queue(){}
+
     virtual int size() = 0;
+
     virtual bool next(T& out) = 0;
+
+    virtual bool get(T& out, std::function<bool(T&)> predicate) = 0;
+
+    virtual T* get(std::function<bool(T&)> predicate) = 0;
+
     virtual void add(const T& t) = 0;
+
+    virtual void sort(std::function<bool(const T&,const T&)> func) = 0;
+
+    virtual T* back() = 0;
 };
-//lock
+//may need lock
 template<typename T>
 struct ArrayQueue: public Queue<T>
 {
@@ -28,8 +41,33 @@ struct ArrayQueue: public Queue<T>
         m_vec.erase(m_vec.begin());
         return true;
     }
+    bool get(T& out, std::function<bool(T&)> predicate) override{
+        auto it = m_vec.begin();
+        for(; it != m_vec.end(); ++it){
+            auto& t = *it;
+            if(predicate(t)){
+                out = t;
+                return true;
+            }
+        }
+        return false;
+    }
+    T* get(std::function<bool(T&)> predicate)override{
+        for(auto& t: m_vec){
+            if(predicate(t)){
+                return &t;
+            }
+        }
+        return nullptr;
+    }
     void add(const T& t) override{
         m_vec.push_back(t);
+    }
+    void sort(std::function<bool(const T&,const T&)> func)override{
+        std::sort(m_vec.begin(), m_vec.end(), func);
+    }
+    T* back()override{
+        return !m_vec.empty() ? &m_vec.back() : nullptr;
     }
     std::vector<T> m_vec;
 };
@@ -46,8 +84,33 @@ struct LinkListQueue: public Queue<T>
         m_vec.pop_front();
         return true;
     }
+    bool get(T& out, std::function<bool(T&)> predicate) override{
+        auto it = m_vec.begin();
+        for(; it != m_vec.end(); ++it){
+            auto& t = *it;
+            if(predicate(t)){
+                out = t;
+                return true;
+            }
+        }
+        return false;
+    }
+    T* get(std::function<bool(T&)> predicate)override{
+        for(auto& t: m_vec){
+            if(predicate(t)){
+                return &t;
+            }
+        }
+        return nullptr;
+    }
     void add(const T& t) override{
         m_vec.push_back(t);
+    }
+    void sort(std::function<bool(const T&,const T&)> func)override{
+        m_vec.sort(func);
+    }
+    T* back()override{
+        return !m_vec.empty() ? &m_vec.back() : nullptr;
     }
     std::list<T> m_vec;
 };
@@ -58,25 +121,28 @@ struct IGlobalManager;
 template<typename T, typename Q>
 struct ILocalManager;
 
-template<typename T>
-struct IScheduler;
+//template<typename T>
+//struct IScheduler;
 
 //think: T often be a task. we want schedule task to target work-flow(like thread.).
-template<typename T>
-struct IScheduler{
+//template<typename T>
+//struct IScheduler{
 
 
-};
+//};
 
 template<typename T,typename Q = ArrayQueue<T>>
 struct ILocalManager
 {
-    void attach(IGlobalManager<T,Q>* gm){
+    void attach(IGlobalManager<T,Q>* gm, bool manageLMByGlobal = false){
         m_global = gm;
-        m_global->attachLocal(this);
+        m_global->attachLocal(this, manageLMByGlobal);
     }
     void detach(){
         m_global->detachLocal(this);
+    }
+    void detachRightNow(){
+        m_global->detachLocalRightNow(this);
     }
     Queue<T>* getQueue(){
         return &m_queue;
@@ -87,6 +153,46 @@ struct ILocalManager
             return true;
         }
         return m_global && m_global->nextElement(out, this);
+    }
+    bool nextElementByGlobal(T& out){
+        return m_global && m_global->nextElement(out, this);
+    }
+    bool nextElementByLocal(T& out){
+        return m_queue.next(out);
+    }
+    //
+
+    bool getElement(T& out, std::function<bool(T&)> predicate){
+        if(m_queue.get(out, predicate)){
+            return true;
+        }
+        return m_global && m_global->getElement(out, predicate, this);
+    }
+    T* getElement(std::function<bool(T&)> predicate){
+        T* ptr = m_queue.get(predicate);
+        if(ptr == nullptr && m_global){
+            ptr = m_global->getElement(predicate, this);
+        }
+        return ptr;
+    }
+    bool getElementByGlobal(T& out, std::function<bool(T&)> predicate){
+        return m_global && m_global->getElement(out, predicate, this);
+    }
+    T* getElementByGlobal(std::function<bool(T&)> predicate){
+        if(m_global){
+            return m_global->getElement(predicate, this);
+        }
+        return nullptr;
+    }
+    T* getElementByLocal(std::function<bool(T&)> predicate){
+        return m_queue.get(predicate);
+    }
+    bool getElementByLocal(T& out, std::function<bool(T&)> predicate){
+        return m_queue.get(out, predicate);
+    }
+
+    void resizeQueue(size_t size){
+        m_queue.resize(size);
     }
 
 private:
@@ -122,7 +228,7 @@ public:
         return &m_queue;
     }
 
-    bool nextElement(T& out,ILocalManager<T, Q>* except = nullptr){
+    bool nextElement(T& out, ILocalManager<T, Q>* except = nullptr){
         if(m_queue.next(out)){
             return true;
         }
@@ -133,11 +239,70 @@ public:
             std::shared_lock<std::shared_mutex> lck(m_mutex);
             for(auto& _lm : m_localMs){
                 auto lm = _lm.lm;
-                if(lm != except && lm->nextElement(out)){
+                if(lm != except && lm->nextElementByLocal(out)){
                     return true;
                 }
             }
             return false;
+        }
+    }
+    bool getElement(T& out, std::function<bool(T&)> predicate, ILocalManager<T, Q>* except = nullptr){
+        if(m_queue.get(out, predicate)){
+            return true;
+        }
+        if(h_atomic_get(&m_trimed) == 0){
+            trimLocal();
+        }
+        {
+            std::shared_lock<std::shared_mutex> lck(m_mutex);
+            for(auto& _lm : m_localMs){
+                auto lm = _lm.lm;
+                if(lm != except && lm->getElementByLocal(out, predicate)){
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+    T* getElement(std::function<bool(T&)> predicate, ILocalManager<T, Q>* except = nullptr){
+        T* findEle = m_queue.get(predicate);
+        if(findEle != nullptr){
+            return findEle;
+        }
+        if(h_atomic_get(&m_trimed) == 0){
+            trimLocal();
+        }
+        {
+            std::shared_lock<std::shared_mutex> lck(m_mutex);
+            for(auto& _lm : m_localMs){
+                auto lm = _lm.lm;
+                if(lm != except){
+                    findEle = lm->getElementByLocal(predicate);
+                    if(findEle != nullptr){
+                        return findEle;
+                    }
+                }
+            }
+            return nullptr;
+        }
+    }
+    T* getElementWithoutSelf(std::function<bool(T&)> predicate, ILocalManager<T, Q>* except = nullptr){
+        T* findEle = nullptr;
+        if(h_atomic_get(&m_trimed) == 0){
+            trimLocal();
+        }
+        {
+            std::shared_lock<std::shared_mutex> lck(m_mutex);
+            for(auto& _lm : m_localMs){
+                auto lm = _lm.lm;
+                if(lm != except){
+                    findEle = lm->getElementByLocal(predicate);
+                    if(findEle != nullptr){
+                        return findEle;
+                    }
+                }
+            }
+            return nullptr;
         }
     }
 private:
@@ -152,6 +317,17 @@ private:
             }
         }
         h_atomic_cas(&m_trimed, 1, 0);
+    }
+    void detachLocalRightNow(ILocalManager<T, Q>* lm){
+        {
+            std::unique_lock<std::shared_mutex> lck(m_mutex);
+            for(int i = m_localMs.size() ; i >= 0 ; --i){
+                if(m_localMs[i] == lm){
+                    m_localMs.erase(m_localMs.begin() + i);
+                    break;
+                }
+            }
+        }
     }
     void attachLocal(ILocalManager<T, Q>* lm, bool manageLM){
         {

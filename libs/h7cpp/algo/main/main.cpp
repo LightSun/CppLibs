@@ -13,10 +13,13 @@ extern void main_MOE_algo();
 extern void main_MOE_algo2();
 
 extern void test_compute_quantile();
+extern void main_test_const_pool();
+extern void main_test_const_pool2();
+extern void main_test_mesi();
 
 
 int main(int argc, const char* argv[]){
 
-    test_compute_quantile();
+    main_test_mesi();
     return 0;
 }

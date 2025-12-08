@@ -65,7 +65,7 @@ public:
             return 1;
         };
         std::function<bool(const Key1*, Value1*)> func_reCreate;      //must
-        std::function<void(const Key1*, const Value1*)> func_insert; //must
+        std::function<void(const Key1*, const Value1*)> func_insert;  //must
         std::function<void(const Key1*, const Value1*)> func_remove;
     };
 

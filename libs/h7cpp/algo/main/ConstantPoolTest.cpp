@@ -43,12 +43,13 @@ union ConstantValue {
 class StringInternPool {
 private:
     struct StringEntry {
-        const char* data;
-        size_t length;
+        std::string data;
         uint32_t hash;
         bool occupied;
 
-        StringEntry() : data(nullptr), length(0), hash(0), occupied(false) {}
+        StringEntry() : data(""), hash(0), occupied(false) {}
+        StringEntry(const char* data, size_t len, uint32_t hash, bool occupied)
+            : data(data ? std::string(data, len) : ""), hash(hash), occupied(occupied) {}
     };
 
     std::vector<StringEntry> table_;
@@ -77,7 +78,7 @@ private:
 
         for (const auto& entry : old_table) {
             if (entry.occupied) {
-                insertInternal(entry.data, entry.length, entry.hash);
+                insertInternal(entry.data.data(), entry.data.length(), entry.hash);
             }
         }
     }
@@ -89,12 +90,7 @@ private:
 
         while (true) {
             if (!table_[index].occupied) {
-                // 分配内存并复制字符串
-                char* stored_data = new char[length + 1];
-                std::memcpy(stored_data, data, length);
-                stored_data[length] = '\0';
-
-                table_[index] = {stored_data, length, hash, true};
+                table_[index] = StringEntry(data, length, hash, true);
                 ++size_;
                 return;
             }
@@ -102,9 +98,8 @@ private:
             // Robin Hood: 如果当前探测距离小于已有项的探测距离，则交换
             size_t existing_distance = (index - (table_[index].hash % capacity_)) % capacity_;
             if (probe_distance > existing_distance) {
-                std::swap(table_[index].data, const_cast<char*&>(data));
-                std::swap(table_[index].length, length);
-                std::swap(table_[index].hash, hash);
+                table_[index].data = data ? std::string(data,length) : "";
+                table_[index].hash = hash;
                 probe_distance = existing_distance;
             }
 
@@ -126,11 +121,6 @@ public:
     }
 
     ~StringInternPool() {
-        for (auto& entry : table_) {
-            if (entry.occupied) {
-                delete[] entry.data;
-            }
-        }
     }
 
     // 获取或插入字符串
@@ -145,14 +135,14 @@ public:
             if (!table_[index].occupied) {
                 // 未找到，插入新字符串
                 insertInternal(data, length, hash);
-                return table_[index].data;
+                return table_[index].data.data();
             }
 
             // 检查是否已存在
             if (table_[index].hash == hash &&
-                table_[index].length == length &&
-                std::memcmp(table_[index].data, data, length) == 0) {
-                return table_[index].data;
+                table_[index].data.length() == length &&
+                std::memcmp(table_[index].data.data(), data, length) == 0) {
+                return table_[index].data.data();
             }
 
             index = (index + 1) % capacity_;
