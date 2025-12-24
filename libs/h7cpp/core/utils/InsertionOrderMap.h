@@ -21,12 +21,23 @@ public:
         }
         data[key] = value;
     }
-
     Value& operator[](const Key& key) {
         if (data.find(key) == data.end()) {
             insertion_order.push_back(key);
         }
         return data[key];
+    }
+    Value* get(const Key& key){
+        auto it = data.find(key);
+        return it != data.end() ? it->second: nullptr;
+    }
+    bool get(const Key& key,Value& out){
+        auto it = data.find(key);
+        if(it != data.end()){
+            out = it->second;
+            return true;
+        }
+        return false;
     }
     const Value& at(const Key& key) const {
         return data.at(key);

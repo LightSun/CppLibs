@@ -17,9 +17,11 @@ extern void main_test_const_pool();
 extern void main_test_const_pool2();
 extern void main_test_mesi();
 
+extern void test_attn_all();
+
 
 int main(int argc, const char* argv[]){
 
-    main_test_mesi();
+    test_attn_all();
     return 0;
 }
