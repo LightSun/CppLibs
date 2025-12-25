@@ -18,10 +18,12 @@ extern void main_test_const_pool2();
 extern void main_test_mesi();
 
 extern void test_attn_all();
+extern void main_test_reinforce();
+extern void main_test_page_attn2();
 
 
 int main(int argc, const char* argv[]){
 
-    test_attn_all();
+    main_test_page_attn2();
     return 0;
 }
