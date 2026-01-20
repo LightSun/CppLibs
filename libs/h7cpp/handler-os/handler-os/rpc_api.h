@@ -11,7 +11,7 @@ class IRemoteGRpc{
 public:
     virtual ~IRemoteGRpc(){}
 
-    virtual bool invoke(int code, CString inData, String* outData);
+    virtual bool invoke(int code, CString inData, String* outData) = 0;
 };
 
 class IRpcCacheDelegate{
