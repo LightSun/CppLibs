@@ -56,6 +56,7 @@ public:
 
 struct Task{
     struct GrpcInfo{
+        //if one failed, will req next addr. until success or all failed.
         List<String> addrs; //with port xxx:1009, permit multi hosts.
         int type;           //req type
         size_t timeoutMs {500};
@@ -126,7 +127,6 @@ private:
     CmdTask(){}
 };
 
-//callback, id-limit
 typedef class TaskFlow_Ctx TaskFlow_Ctx;
 class TaskFlow{
 public:
