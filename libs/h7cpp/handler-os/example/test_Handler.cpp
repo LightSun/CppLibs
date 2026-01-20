@@ -81,17 +81,17 @@ static void _testHandler1_free(const std::string& tag, void* ptr){
     delete stu;
 }
 
-static void* _testHandler1_copy(const std::string& tag, void* ptr,
+static SpPtr _testHandler1_copy(const std::string& tag, SpPtr ptr,
                                std::string* out_tag){
     _LOG_INFO(" func >> _testHandler1_copy");
-    Student* stu = (Student*)ptr;
+    Student* stu = (Student*)ptr.get();
     _HANDLER_ASSERT(stu->name == "Heaven7");
     _HANDLER_ASSERT(tag == "stu1");
     Student* s2 = new Student();
     s2->age = stu->age;
     s2->name = stu->name;
     *out_tag = "stu2";
-    return s2;
+    return make_shared_void_ptr(s2);
 }
 
 static bool _testHandler1_eq(const Object* o1, const Object* o2){
@@ -124,8 +124,8 @@ void testHandler1(){
 
     man->handler = std::shared_ptr<Handler>(new Handler(ht->getLooper(), hc));
 
-    auto obj = Object::makeCopyEqual("stu1", new Student("Heaven7"),
-                          _testHandler1_free,
+    auto stu = make_shared_void_ptr(new Student("Heaven7"));
+    auto obj = Object::makeCopyEqual("stu1", stu,
                           _testHandler1_copy,
                           _testHandler1_eq);
     man->handler->obtainMessage(MSG_testHandler1, &obj)->sendToTarget();

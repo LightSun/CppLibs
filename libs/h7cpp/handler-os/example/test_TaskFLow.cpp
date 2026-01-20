@@ -8,6 +8,9 @@ struct TaskFlowTester{
     void test1(){
         auto t1 = flow.createTask();
         t1->tag = "test1";
+//        t1->func = [](){
+
+//        };
     }
 };
 

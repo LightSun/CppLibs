@@ -3,8 +3,27 @@
 #include "handler-os/TaskFlow.h"
 #include "core/utils/locks.h"
 #include "core/utils/SaveQueue.h"
+#include "handler-os/src/rpc/RemoteGRpc.h"
 
 namespace h7_task {
+
+class RpcCacheDelegateImpl : public IRpcCacheDelegate{
+public:
+    IRemoteGRpc* get(CString addr, size_t timeoutMs) override{
+        std::unique_lock<std::mutex> lck(m_mtx);
+        auto it = m_cache.find(addr);
+        if(it != m_cache.end()){
+            return it->second.get();
+        }
+        auto ptr = std::make_unique<RemoteGRpc>(addr, timeoutMs);
+        auto retPtr = ptr.get();
+        m_cache[addr] = std::move(ptr);
+        return retPtr;
+    }
+private:
+    std::unordered_map<String, std::unique_ptr<RemoteGRpc>> m_cache;
+    std::mutex m_mtx;
+};
 
 //callback, id-limit
 class TaskFlow_Ctx{
@@ -26,6 +45,7 @@ class TaskFlow_Ctx{
 public:
     TaskFlow_Ctx(size_t bufCnt = 128){
         m_cmds = std::make_unique<h7::SaveQueue<SpCmdTask>>(tableSizeFor(bufCnt));
+        m_rpcCacheDelegate = std::make_unique<RpcCacheDelegateImpl>();
     }
     ~TaskFlow_Ctx(){
         stop();
@@ -67,6 +87,12 @@ public:
     //[0] is the trigger task id. SpTask may be null, of not pending
     void setOnBatchTaskReqCancel(std::function<void(CList<ID>, SpTask)> func){
         m_cb_batchTaskReqCancel = func;
+    }
+    void setOnBatchTaskFailed(std::function<void(CList<ID>, SpTask)> func){
+        m_cb_batchTaskFailed = func;
+    }
+    void setRpcCacheDelegate(std::shared_ptr<IRpcCacheDelegate> del){
+        m_rpcCacheDelegate = del;
     }
 
 private:
@@ -123,6 +149,8 @@ private:
     std::function<void(SpTask,int,int)> m_cb_stateChanged;
     //for batch cancel. SpTask may be null. if not pending
     std::function<void(CList<ID>,SpTask)> m_cb_batchTaskReqCancel;
+    std::function<void(CList<ID>,SpTask)> m_cb_batchTaskFailed;
+    std::shared_ptr<IRpcCacheDelegate> m_rpcCacheDelegate;
     //
     h7::MutexLock m_stopLock;
     std::atomic_bool m_started {0};

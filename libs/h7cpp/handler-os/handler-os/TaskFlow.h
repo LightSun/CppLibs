@@ -9,6 +9,7 @@
 #include <memory>
 #include <atomic>
 #include <shared_mutex>
+#include "handler-os/rpc_api.h"
 
 namespace h7_task {
 
@@ -29,10 +30,16 @@ enum TaskState{
     kState_RUNING,
     kState_DONE,
     kState_CANCELED,
+    kState_FAILED,
 };
-using SpData = std::shared_ptr<void*>;
+class RemoteGRpc;
+struct Task;
+struct CmdTask;
 
+using SpData = std::shared_ptr<void>;
 using ID = size_t;
+using SpTask = std::shared_ptr<Task>;
+using SpCmdTask = std::shared_ptr<CmdTask>;
 
 class IScheduler{
 public:
@@ -41,15 +48,28 @@ public:
 };
 
 struct Task{
+    struct GrpcInfo{
+        List<String> addrs; //with port xxx:1009, permit multi hosts.
+        int type;           //req type
+        size_t timeoutMs {500};
+        //[0] is context,[1] is req-type
+        std::function<String(void*,int,const std::map<int,SpData>& in)> cvtReq;
+        std::function<bool(void*,int,CString in, SpData* out)> cvtRes;
+    };
+
     String tag;
-    std::function<SpData(const std::map<int,SpData>& in)> func;
+    //[0] is context
+    std::function<bool(void*,const std::map<int,SpData>& in, SpData* out)> func;
     //effect the all tasks which dep this.
     int publicNoticePeriodMs {500};
+    void* context {nullptr};
     IScheduler* scheduler {nullptr};
+    std::unique_ptr<GrpcInfo> rpc;
 
-    void run(){
-        result = func(input);
+    static inline std::unique_ptr<GrpcInfo> makeGrpcInfo(){
+        return std::make_unique<GrpcInfo>();
     }
+
     bool isDone(){
         return getState() == kState_DONE;
     }
@@ -77,7 +97,7 @@ private:
     void setInputAt(int index, SpData data){
         input[index] = data;
     }
-
+    bool run(IRpcCacheDelegate* del);
 private:
     friend class TaskFlow_Ctx;
     //
@@ -87,7 +107,6 @@ private:
     std::atomic_bool reqStop {false};
     ID id {0};
 };
-using SpTask = std::shared_ptr<Task>;
 struct CmdTask{
     List<SpTask> depTasks;
     SpTask curTask;
@@ -99,7 +118,6 @@ struct CmdTask{
 private:
     CmdTask(){}
 };
-using SpCmdTask = std::shared_ptr<CmdTask>;
 
 //callback, id-limit
 typedef class TaskFlow_Ctx TaskFlow_Ctx;
@@ -127,6 +145,8 @@ public:
     //calcel is trigged by the first task
     //[0] is the trigger task id. SpTask may be null, of not pending
     void setOnBatchTaskReqCancel(std::function<void(CList<ID>, SpTask)> func);
+
+    void setRpcCacheDelegate(std::shared_ptr<IRpcCacheDelegate> del);
 
 private:
     TaskFlow(TaskFlow&) = delete;

@@ -3,6 +3,7 @@
 
 #include "handler-os/src/TaskFlowImpl.h"
 #include "handler-os/src/_time.h"
+#include "handler-os/src/rpc/RemoteGRpc.h"
 
 using namespace h7_task;
 
@@ -10,6 +11,38 @@ using namespace h7_task;
 #define ERROR(fmt, ...) fprintf(stderr,fmt, ##__VA_ARGS__)
 #define WARN(fmt, ...) fprintf(stderr,fmt, ##__VA_ARGS__)
 
+bool Task::run(IRpcCacheDelegate* del){
+    if(rpc){
+        assert(del);
+        for(auto& addr: rpc->addrs){
+            auto rpcApi = del->get(addr, rpc->timeoutMs);
+            if(rpcApi != nullptr){
+                String data = rpc->cvtReq(context, rpc->type, input);
+                String outData;
+                if(rpcApi->invoke(rpc->type, data, &outData)){
+                    if(rpc->cvtRes(context, rpc->type, outData, &result)){
+                        return true;
+                    }else{
+                        INFO("Task(%s) >> run with rpc(%s) failed. caused by call cvtRes(...) failed.\n",
+                             tag.data(), addr.data());
+                    }
+                }else{
+                    INFO("Task(%s) >> run with rpc(%s) failed. caused by invoke rpc failed.\n",
+                         tag.data(), addr.data());
+                }
+            }
+        }
+        WARN("Task(%s) >> run with rpc failed. caused by call cvtRes(...) failed.\n",
+             tag.data());
+        return false;
+    }else{
+        if(func(context, input, &result)){
+            return true;
+        }
+        WARN("Task(%s) >> run with local func failed.\n", tag.data());
+        return false;
+    }
+}
 
 SpTask TaskFlow_Ctx::createTask(){
     auto old = m_Id.fetch_add(1, std::memory_order_relaxed);
@@ -85,7 +118,7 @@ void TaskFlow_Ctx::processPendingTask(SpCmdTask cmd){
 }
 void TaskFlow_Ctx::scheduleTasks(IScheduler* sch){
     for(auto& [id, spt]: m_taskMap){
-        if(isAllDepFinished(id)){
+        if(isAllDepFinished(id) && spt->getState() == kState_PENDING){
             setTaskState(spt, kState_SCHEDULE);
             SpTask st = spt;
             //
@@ -93,11 +126,14 @@ void TaskFlow_Ctx::scheduleTasks(IScheduler* sch){
             schImpl->schedule(spt->tag, [this, st](){
                 if(!st->isReqStop()){
                     setTaskState(st, kState_RUNING);
-                    st->run();
-                    if(!st->isReqStop()){
-                        setTaskState(st, kState_DONE);
+                    if(st->run(m_rpcCacheDelegate.get())){
+                        if(!st->isReqStop()){
+                            setTaskState(st, kState_DONE);
+                        }else{
+                            setTaskState(st, kState_CANCELED);
+                        }
                     }else{
-                        setTaskState(st, kState_CANCELED);
+                        setTaskState(st, kState_FAILED);
                     }
                 }else{
                     setTaskState(st, kState_CANCELED);
@@ -109,10 +145,30 @@ void TaskFlow_Ctx::scheduleTasks(IScheduler* sch){
     }
 }
 void TaskFlow_Ctx::processRunFinish(){
+    std::set<ID> totalRmIds;
     for(auto& [id, spt]: m_taskMap){
-        if(spt->isDone()){
+        switch (spt->getState()) {
+        case kState_DONE:{
             onRunDone0(spt);
+        }break;
+
+        case kState_FAILED:{
+            List<ID> rmids;
+            rmids.push_back(id);
+            computeRemoveIds(id, rmids);
+            totalRmIds.insert(totalRmIds.begin(), totalRmIds.end());
+            if(m_cb_batchTaskFailed){
+                m_cb_batchTaskFailed(rmids, spt);
+            }
+        }break;
         }
+    }
+    //process failed.
+    for(auto& id : totalRmIds){
+        m_taskMap.erase(id);
+        m_doneIdMap.erase(id);
+        m_depMap.erase(id);
+        m_beDepMap.erase(id);
     }
 }
 void TaskFlow_Ctx::onRunDone0(SpTask t){
@@ -176,8 +232,8 @@ void TaskFlow_Ctx::doCancel(CList<ID> rmids){
         auto tit = m_taskMap.find(id);
         if(tit != m_taskMap.end()){
             tit->second->stop();
+            m_taskMap.erase(tit);
         }
-        m_taskMap.erase(id);
         m_doneIdMap.erase(id);
         m_depMap.erase(id);
         m_beDepMap.erase(id);

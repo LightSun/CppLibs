@@ -46,3 +46,6 @@ void TaskFlow::setOnTaskStateChanged(std::function<void(SpTask,int,int)> func){
 void TaskFlow::setOnBatchTaskReqCancel(std::function<void(CList<ID>, SpTask)> func){
     m_ctx->setOnBatchTaskReqCancel(func);
 }
+void TaskFlow::setRpcCacheDelegate(std::shared_ptr<IRpcCacheDelegate> del){
+    m_ctx->setRpcCacheDelegate(del);
+}
