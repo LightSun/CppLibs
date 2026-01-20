@@ -41,6 +41,13 @@ using ID = size_t;
 using SpTask = std::shared_ptr<Task>;
 using SpCmdTask = std::shared_ptr<CmdTask>;
 
+template<typename T>
+std::shared_ptr<void> make_shared_void_ptr(T* ptr) {
+    return std::shared_ptr<void>(ptr, [](void* p) {
+        delete static_cast<T*>(p);
+    });
+}
+
 class IScheduler{
 public:
     virtual ~IScheduler(){};
@@ -145,6 +152,8 @@ public:
     //calcel is trigged by the first task
     //[0] is the trigger task id. SpTask may be null, of not pending
     void setOnBatchTaskReqCancel(std::function<void(CList<ID>, SpTask)> func);
+
+    void setOnBatchTaskFailed(std::function<void(CList<ID>, SpTask)> func);
 
     void setRpcCacheDelegate(std::shared_ptr<IRpcCacheDelegate> del);
 
