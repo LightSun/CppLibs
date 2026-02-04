@@ -48,7 +48,7 @@ struct TaskFlowTester{
         t1->func = [](void*,const std::map<int,SpData>& in, SpData* out){
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
             auto ptr = new String("Hello-Heaven7");
-            *out = make_shared_void_ptr(ptr);
+            out->data = make_shared_void_ptr(ptr);
             return true;
         };
         flow.addTask(t1);
@@ -59,17 +59,32 @@ struct TaskFlowTester{
         t1->func = [](void*,const std::map<int,SpData>& in, SpData* out){
             for(auto& [k,v] : in){
                 printf("test_dep1 >> index = %d, data = %s\n",
-                       k, ((String*)v.get())->data());
+                       k, ((String*)v.getPtr())->data());
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
             auto ptr = new String("Hello-Heaven7");
-            *out = make_shared_void_ptr(ptr);
+            out->data = make_shared_void_ptr(ptr);
             return true;
         };
         auto task = CmdTask::New();
         task->depTasks.push_back(ceateSimpleTask("task_0"));
         task->curTask = t1;
         flow.addCmdTask(task);
+    }
+    void test_builder(){
+        TaskBuilder b(&flow);
+        b.root([](TaskFlow* f){
+            return ceateTask(f, "task1");
+         })
+        .child([](TaskFlow* f){
+            return ceateTask(f, "task2");
+           })
+        .children([](TaskFlow* f){
+                auto t1 = ceateTask(f, "task31");
+                auto t2 = ceateTask(f, "task32");
+                return List<SpTask>({t1, t2});
+            })
+        .build();
     }
 
 private:
@@ -79,19 +94,44 @@ private:
         t1->func = [tag](void*,const std::map<int,SpData>& in, SpData* out){
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
             auto ptr = new String(tag + "__ret");
-            *out = make_shared_void_ptr(ptr);
+            out->data = make_shared_void_ptr(ptr);
             return true;
         };
         flow.addTask(t1);
         return t1;
     }
+    static SpTask ceateTask(TaskFlow* f, CString tag){
+        auto t1 = f->createTask();
+        t1->tag = tag;
+        t1->func = [tag](void*,const std::map<int,SpData>& in, SpData* out){
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            auto ptr = new String(tag + "__ret");
+            out->data = make_shared_void_ptr(ptr);
+            return true;
+        };
+        f->addTask(t1);
+        return t1;
+    }
 };
 
 }
-
+/**
+    onnx:
+    1, read shape(in and out).
+    2, dynamic modify shape or onnxsim-simplify (OPT)
+    3, pkg onnx.
+    4, cvt model (may need check is support).
+    runtime:
+        provide c/c++ api for load model and infer (no preProcess and postProcess).
+    dep-plan:
+        1, onnx-full-flow
+        2, common-infer
+        3, full-work-flow.
+*/
 void test_TaskFlow(){
     h7_task::TaskFlowTester tester;
    // tester.test_no_dep();
-    tester.test_dep1();
+    //tester.test_dep1();
+    tester.test_builder();
     h7_handler_os::HandlerOS::loopMain();
 }

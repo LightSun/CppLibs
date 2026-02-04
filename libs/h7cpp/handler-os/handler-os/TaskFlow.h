@@ -32,11 +32,23 @@ enum TaskState{
     kState_CANCELED,
     kState_FAILED,
 };
+enum TDataType{
+    kTDataType_DEFAULT,
+};
+struct TData{
+    std::shared_ptr<void> data;
+    int type {kTDataType_DEFAULT};
+
+    void* getPtr()const{
+        return data.get();
+    }
+};
+
 class RemoteGRpc;
 struct Task;
 struct CmdTask;
-
-using SpData = std::shared_ptr<void>;
+//
+using SpData = TData;
 using ID = size_t;
 using SpTask = std::shared_ptr<Task>;
 using SpCmdTask = std::shared_ptr<CmdTask>;
@@ -165,6 +177,90 @@ private:
 private:
     TaskFlow_Ctx* m_ctx {nullptr};
 
+};
+
+//used for simple task builder
+class TaskBuilder{
+    struct Node{
+        List<SpTask> tasks;
+        Node* next {nullptr};
+
+        void release(){
+            tasks.clear();
+            if(next){
+                next->release();
+                delete next;
+                next = nullptr;
+            }
+        }
+        void addTask(SpTask t){
+            tasks.push_back(t);
+        }
+    };
+public:
+    TaskBuilder(TaskFlow* tf):m_flow(tf){
+    }
+    ~TaskBuilder(){
+        release();
+    }
+    template<typename Func>
+    TaskBuilder& root(Func f){
+        if(m_root != nullptr){
+            abort();
+        }
+        m_root = m_cur = new Node();
+        m_root->addTask(f(m_flow));
+        return *this;
+    }
+    template<typename Func>
+    TaskBuilder& child(Func f){
+        auto nNode = new Node();
+        nNode->addTask(f(m_flow));
+        m_cur->next = nNode;
+        m_cur = nNode;
+        return *this;
+    }
+
+    template<typename FuncList>
+    TaskBuilder& children(FuncList f){
+        auto nNode = new Node();
+        nNode->tasks = f(m_flow);
+        //
+        m_cur->next = nNode;
+        m_cur = nNode;
+        return *this;
+    }
+    void build(){
+        Node* cur = m_root;
+        while (cur != nullptr) {
+            List<SpTask> nextTs;
+            if(cur->next){
+                nextTs = cur->next->tasks;
+            }
+            for(auto& t: cur->tasks){
+                auto ct = CmdTask::New();
+                ct->curTask = t;
+                ct->depTasks = nextTs;
+                m_flow->addCmdTask(ct);
+            }
+            cur = cur->next;
+        }
+        release();
+    }
+private:
+    void release(){
+        if(m_root){
+            m_root->release();
+            delete m_root;
+            m_root = nullptr;
+            m_cur = nullptr;
+        }
+    }
+
+private:
+    TaskFlow* m_flow {nullptr};
+    Node* m_root {nullptr};
+    Node* m_cur {nullptr};
 };
 
 }
