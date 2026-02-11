@@ -42,6 +42,7 @@ extern void test_enums();
 extern void test_reflect();
 extern void test_self_condition_variable();
 extern void test_span();
+extern void main_test_fast_queue();
 
 using namespace h7;
 
@@ -126,7 +127,7 @@ int main(int argc, char* argv[]){
    // return test_main0(argc, argv);
     //test_self_condition_variable();
 
-    test_span();
+    main_test_fast_queue();
     return 0;
 }
 //void test_select_file(){

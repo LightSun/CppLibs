@@ -123,6 +123,8 @@ file(GLOB_RECURSE SRC_CORE
     utils/*.h utils/*.hpp utils/*.cpp utils/*.c utils/*.inc
     experimental/*.h experimental/*.cpp
     json/*.h json/*.hpp json/*.cpp
+    fastqueue/*.h fastqueue/*.hpp fastqueue/*.cpp
+    std_study/*.h std_study/*.cpp
     #reflect/*.h reflect/*.tpp reflect/*.cpp
     )
 
@@ -155,6 +157,7 @@ set(SRC_TEST
     #test/test_reflect.cpp
     test/test_self_conv.cpp
     test/test_span.cpp
+    test/test_fast_queue.cpp
     )
 
 add_library(h7cpp

@@ -1,0 +1,411 @@
+
+#include <iostream>
+#include <thread>
+#include <new>
+#include "fastqueue/fast_queue.h"
+#include "fastqueue/MPSCQueue.h"
+
+#define QUEUE_MASK 0b1111111111
+#define L1_CACHE_LINE 64
+#define TEST_TIME_DURATION_SEC 20
+//Run the consumer on CPU
+#define CONSUMER_CPU 1
+//Run the producer on CPU
+#define PRODUCER_CPU 3
+
+#if __cplusplus >= 202300L
+#define CPP23_ENABLED 1
+#endif
+
+std::atomic<uint64_t> gActiveConsumer = 0;
+std::atomic<uint64_t> gCounter = 0;
+bool gStartBench = false;
+bool gActiveProducer = true;
+
+
+class MyObject {
+public:
+    uint64_t mIndex;
+};
+
+using MPSCQueue = h7::MPSCQueue<MyObject*, 1024>;
+/// -----------------------------------------------------------
+///
+/// DroSPSC section Start
+///
+/// -----------------------------------------------------------
+
+#ifdef CPP23_ENABLED
+void droSPSCProducer(dro::SPSCQueue<MyObject*> *pQueue, int32_t aCPU) {
+    if (!pinThread(aCPU)) {
+        std::cout << "Pin CPU fail. " << std::endl;
+        return;
+    }
+    while (!gStartBench) {
+#ifdef _MSC_VER
+        __nop();
+#else
+        asm volatile ("NOP");
+#endif
+    }
+    uint64_t lCounter = 0;
+    while (gActiveProducer) {
+        auto lTheObject = new MyObject();
+        lTheObject->mIndex = lCounter++;
+        pQueue->emplace(lTheObject);
+    }
+    pQueue->emplace(nullptr); //Signal end
+}
+
+void droSPSCConsumer(dro::SPSCQueue<MyObject*> *pQueue, int32_t aCPU) {
+    if (!pinThread(aCPU)) {
+        std::cout << "Pin CPU fail. " << std::endl;
+        --gActiveConsumer;
+        return;
+    }
+    uint64_t lCounter = 0;
+    while (true) {
+        MyObject* lResult = nullptr;
+        pQueue->pop(lResult);
+        if (lResult == nullptr) {
+            break;
+        }
+        if (lResult->mIndex != lCounter) {
+            std::cout << "Queue item error" << std::endl;
+        }
+        lCounter++;
+        delete lResult;
+    }
+    gCounter += lCounter;
+    --gActiveConsumer;
+}
+#endif
+
+/// -----------------------------------------------------------
+///
+/// DroSPSC section End
+///
+/// -----------------------------------------------------------
+
+/// -----------------------------------------------------------
+///
+/// deaodSPSC section Start
+///
+/// -----------------------------------------------------------
+
+
+void deaodSPSCProducer(deaod::spsc_queue<MyObject*, QUEUE_MASK, 6> *pQueue, int32_t aCPU) {
+    if (!pinThread(aCPU)) {
+        std::cout << "Pin CPU fail. " << std::endl;
+        return;
+    }
+    while (!gStartBench) {
+#ifdef _MSC_VER
+        __nop();
+#else
+        asm volatile ("NOP");
+#endif
+    }
+    uint64_t lCounter = 0;
+    while (gActiveProducer) {
+        auto lTheObject = new MyObject();
+        lTheObject->mIndex = lCounter++;
+        bool lAbleToPush = false;
+        while (!lAbleToPush && gActiveProducer) {
+            lAbleToPush = pQueue->push(lTheObject);
+        }
+    }
+}
+
+void deaodSPSCConsumer(deaod::spsc_queue<MyObject*, QUEUE_MASK, 6> *pQueue, int32_t aCPU) {
+    if (!pinThread(aCPU)) {
+        std::cout << "Pin CPU fail. " << std::endl;
+        gActiveConsumer--;
+        return;
+    }
+    uint64_t lCounter = 0;
+    while (true) {
+
+        MyObject* lResult = nullptr;
+        bool lAbleToPop = false;
+        while (!lAbleToPop && gActiveProducer) {
+            lAbleToPop = pQueue->pop(lResult);
+        }
+        if (lResult == nullptr) {
+            break;
+        }
+        if (lResult->mIndex != lCounter) {
+            std::cout << "Queue item error" << std::endl;
+        }
+        lCounter++;
+        delete lResult;
+    }
+    gCounter += lCounter;
+    gActiveConsumer--;
+}
+
+/// -----------------------------------------------------------
+///
+/// deaodSPSC section End
+///
+/// -----------------------------------------------------------
+
+
+/// -----------------------------------------------------------
+///
+/// FastQueue section Start
+///
+/// -----------------------------------------------------------
+
+void fastQueueProducer(FastQueue<MyObject*, QUEUE_MASK, L1_CACHE_LINE> *pQueue, int32_t aCPU) {
+    if (!pinThread(aCPU)) {
+        std::cout << "Pin CPU fail. " << std::endl;
+        return;
+    }
+    while (!gStartBench) {
+#ifdef _MSC_VER
+        __nop();
+#else
+        asm volatile ("NOP");
+#endif
+    }
+    uint64_t lCounter = 0;
+    while (gActiveProducer) {
+        auto lTheObject = new MyObject();
+        lTheObject->mIndex = lCounter++;
+        pQueue->push(lTheObject);
+    }
+    pQueue->stopQueue();
+}
+
+void fastQueueConsumer(FastQueue<MyObject*, QUEUE_MASK, L1_CACHE_LINE> *pQueue, int32_t aCPU) {
+    if (!pinThread(aCPU)) {
+        std::cout << "Pin CPU fail. " << std::endl;
+        --gActiveConsumer;
+        return;
+    }
+    uint64_t lCounter = 0;
+    while (true) {
+        MyObject* pResult = nullptr;
+        pQueue->pop(pResult);
+        if (pResult == nullptr) {
+            break;
+        }
+        if (pResult->mIndex != lCounter) {
+            std::cout << "Queue item error. got: " << pResult->mIndex << " expected: " << lCounter << std::endl;
+        }
+        lCounter++;
+        delete pResult;
+    }
+    gCounter += lCounter;
+    --gActiveConsumer;
+}
+
+/// -----------------------------------------------------------
+///
+/// FastQueue section End
+///
+/// -----------------------------------------------------------
+
+void fastQueueProducer2(MPSCQueue *pQueue, int32_t aCPU) {
+    if (!pinThread(aCPU)) {
+        std::cout << "Pin CPU fail. " << std::endl;
+        return;
+    }
+    while (!gStartBench) {
+#ifdef _MSC_VER
+        __nop();
+#else
+        asm volatile ("NOP");
+#endif
+    }
+    uint64_t lCounter = 0;
+    while (gActiveProducer) {
+        auto lTheObject = new MyObject();
+        lTheObject->mIndex = lCounter++;
+        pQueue->push(lTheObject);
+    }
+    //pQueue->stopQueue();
+    pQueue->shutdown();
+}
+
+void fastQueueConsumer2(MPSCQueue *pQueue, int32_t aCPU) {
+    if (!pinThread(aCPU)) {
+        std::cout << "Pin CPU fail. " << std::endl;
+        --gActiveConsumer;
+        return;
+    }
+    uint64_t lCounter = 0;
+    while (true) {
+        MyObject* pResult = nullptr;
+        if(!pQueue->pop(pResult)){
+            break;
+        }
+//        if (pResult == nullptr) {
+//            break;
+//        }
+        if (pResult->mIndex != lCounter) {
+            std::cout << "Queue item error. got: " << pResult->mIndex << " expected: " << lCounter << std::endl;
+        }
+        lCounter++;
+        delete pResult;
+    }
+    gCounter += lCounter;
+    --gActiveConsumer;
+}
+
+
+//---------------
+void main_test_fast_queue() {
+
+    ///
+    /// Dro test ->
+    ///
+
+    // Create the queue
+#ifdef CPP23_ENABLED
+    auto droSPSC = new dro::SPSCQueue<MyObject*>(QUEUE_MASK);
+
+    // Start the consumer(s) / Producer(s)
+    gActiveConsumer++;
+
+    std::thread([droSPSC] { droSPSCConsumer(droSPSC, CONSUMER_CPU); }).detach();
+    std::thread([droSPSC] { droSPSCProducer(droSPSC, PRODUCER_CPU); }).detach();
+
+    // Wait for the OS to actually get it done.
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Start the test
+    std::cout << "DroSPSC pointer test started." << std::endl;
+    gStartBench = true;
+    std::this_thread::sleep_for(std::chrono::seconds(TEST_TIME_DURATION_SEC));
+
+    // End the test
+    gActiveProducer = false;
+    std::cout << "DroSPSC pointer test ended." << std::endl;
+
+    // Wait for the consumers to 'join'
+    // Why not the classic join? I prepared for a multi thread case I need this function for.
+    while (gActiveConsumer) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    // Garbage collect the queue
+    delete droSPSC;
+
+    // Print the result.
+    std::cout << "DroSPSC Transactions -> " << gCounter / TEST_TIME_DURATION_SEC << "/s" << std::endl;
+#endif
+    // Zero the test parameters.
+    gStartBench = false;
+    gActiveProducer = true;
+    gCounter = 0;
+    gActiveConsumer = 0;
+
+    ///
+    /// DeaodSPSC test ->
+    ///
+
+    // Create the queue
+    auto deaodSPSC = new deaod::spsc_queue<MyObject*, QUEUE_MASK, 6>();
+
+    // Start the consumer(s) / Producer(s)
+    gActiveConsumer++;
+
+    std::thread([deaodSPSC] { deaodSPSCConsumer(deaodSPSC, CONSUMER_CPU); }).detach();
+    std::thread([deaodSPSC] { deaodSPSCProducer(deaodSPSC, PRODUCER_CPU); }).detach();
+
+    // Wait for the OS to actually get it done.
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Start the test
+    std::cout << "DeaodSPSC pointer test started." << std::endl;
+    gStartBench = true;
+    std::this_thread::sleep_for(std::chrono::seconds(TEST_TIME_DURATION_SEC));
+
+    // End the test
+    gActiveProducer = false;
+    std::cout << "DeaodSPSC pointer test ended." << std::endl;
+
+    // Wait for the consumers to 'join'
+    // Why not the classic join? I prepared for a multi thread case I need this function for.
+    while (gActiveConsumer) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    // Garbage collect the queue
+    delete deaodSPSC;
+
+    // Print the result.
+    std::cout << "DeaodSPSC Transactions -> " << gCounter / TEST_TIME_DURATION_SEC << "/s" << std::endl;
+
+    // Zero the test parameters.
+    gStartBench = false;
+    gActiveProducer = true;
+    gCounter = 0;
+    gActiveConsumer = 0;
+
+    ///
+    /// FastQueue test ->
+    ///
+
+    // Create the queue
+    auto lFastQueue = new FastQueue<MyObject*, QUEUE_MASK, L1_CACHE_LINE>();
+
+    // Start the consumer(s) / Producer(s)
+    gActiveConsumer++;
+    std::thread([lFastQueue] { return fastQueueConsumer(lFastQueue, CONSUMER_CPU); }).detach();
+    std::thread([lFastQueue] { return fastQueueProducer(lFastQueue, PRODUCER_CPU); }).detach();
+
+    // Wait for the OS to actually get it done.
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+    // Start the test
+    std::cout << "FastQueue pointer test started." << std::endl;
+    gStartBench = true;
+    std::this_thread::sleep_for(std::chrono::seconds(TEST_TIME_DURATION_SEC));
+
+    // End the test
+    gActiveProducer = false;
+    std::cout << "FastQueue pointer test ended." << std::endl;
+
+    // Wait for the consumers to 'join'
+    // Why not the classic join? I prepared for a multi thread case I need this function for.
+    while (gActiveConsumer) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    // Garbage collect the queue
+    delete lFastQueue;
+
+    // Print the result.
+    std::cout << "FastQueue Transactions -> " << gCounter / TEST_TIME_DURATION_SEC << "/s" << std::endl;
+
+    // Zero the test parameters.
+    gStartBench = false;
+    gActiveProducer = true;
+    gCounter = 0;
+    gActiveConsumer = 0;
+
+    // --------------------
+
+    auto lObject = std::make_unique<MPSCQueue>();
+    auto lObjectPtr = lObject.get();
+    gActiveConsumer++;
+    std::thread([lObjectPtr] { return fastQueueConsumer2(lObjectPtr, CONSUMER_CPU); }).detach();
+    std::thread([lObjectPtr] { return fastQueueProducer2(lObjectPtr, PRODUCER_CPU); }).detach();
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+    std::cout << "MPSCQueue pointer test started." << std::endl;
+    gStartBench = true;
+    std::this_thread::sleep_for(std::chrono::seconds(TEST_TIME_DURATION_SEC));
+
+    gActiveProducer = false;
+    std::cout << "MPSCQueue pointer test ended." << std::endl;
+
+    while (gActiveConsumer) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    std::cout << "MPSCQueue Transactions -> " << gCounter / TEST_TIME_DURATION_SEC << "/s" << std::endl;
+}
