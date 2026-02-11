@@ -23,8 +23,8 @@ class MPSCQueue {
         Ready,
         Reading
     };
-    struct alignas(CACHE_LINE_SIZE) Slot {
-        union {
+    struct alignas(CACHE_LINE_SIZE) Slot{
+        union  {
             T data;
             uint8_t storage[sizeof(T)];
         };
