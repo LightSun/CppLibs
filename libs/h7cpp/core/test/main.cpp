@@ -42,7 +42,10 @@ extern void test_enums();
 extern void test_reflect();
 extern void test_self_condition_variable();
 extern void test_span();
+
 extern void main_test_fast_queue();
+extern void test_BoundedLifoQueue();
+extern void test_cpp_backward();
 
 using namespace h7;
 
@@ -127,7 +130,7 @@ int main(int argc, char* argv[]){
    // return test_main0(argc, argv);
     //test_self_condition_variable();
 
-    main_test_fast_queue();
+    test_BoundedLifoQueue();
     return 0;
 }
 //void test_select_file(){

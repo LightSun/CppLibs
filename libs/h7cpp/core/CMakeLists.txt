@@ -158,6 +158,8 @@ set(SRC_TEST
     test/test_self_conv.cpp
     test/test_span.cpp
     test/test_fast_queue.cpp
+    test/test_cpp_backward.cpp
+    test/test_bound_LIFO_queue.cpp
     )
 
 add_library(h7cpp
@@ -182,6 +184,13 @@ target_link_libraries(unittest PUBLIC h7cpp)
 if(CPPAST_BUILD_H7CPP)
     target_link_libraries(unittest PUBLIC cppast)
 endif()
+if(USE_CPP_BACKWARD)
+    target_link_libraries(unittest PUBLIC
+        backward
+        ${LIBDW_LIBRARY}
+    )
+endif(USE_CPP_BACKWARD)
+
 
 ##
 install(TARGETS h7cpp DESTINATION

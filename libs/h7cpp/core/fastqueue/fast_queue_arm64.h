@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <atomic>
 #include <bitset>
+#include <array>
+#include <inttypes.h>
 //#include <arm_acle.h>
 
 template<typename T, uint64_t RING_BUFFER_SIZE, uint64_t L1_CACHE_LNE>
