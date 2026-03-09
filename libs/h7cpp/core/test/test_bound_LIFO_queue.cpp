@@ -1,7 +1,7 @@
 #include <thread>
 #include <iostream>
 #include "core/common/common.h"
-#include "fastqueue/BoundedLifoQueue.h"
+#include "fastqueue/BoundedLIFOQueue.h"
 #include "core/utils/CountDownLatch.h"
 
 #define QUEUE_SIZE 16
@@ -20,7 +20,7 @@ struct Object{
 
 void test_BoundedLifoQueue(){
     using Object = h7_test::Object;
-    using Queue = h7::BoundedLifoQueue<Object, QUEUE_SIZE>;
+    using Queue = h7::BoundedLIFOQueue<Object, QUEUE_SIZE>;
     h7::CountDownLatch cdt(2);
     bool producerDone = false;
     Queue queue;

@@ -8,7 +8,7 @@
 #include <new>
 
 namespace h7 {
-
+//TODO release memory
 //Capacity: 2^N
 template<typename T, size_t Capacity, size_t CACHE_LINE_SIZE = 64>
 class MPSCQueue {

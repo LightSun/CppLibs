@@ -10,8 +10,9 @@
 namespace h7 {
 
 //T is pointer
+//LIFO
 template<typename T, size_t Capacity, size_t LI_CACHE_SIZE = 64>
-class BoundedLifoQueue {
+class BoundedLIFOQueue {
     static_assert(Capacity > 0, "Capacity must be positive");
     static_assert((Capacity & (Capacity - 1)) == 0, "Capacity must be power of two for efficient masking");
 
@@ -22,16 +23,16 @@ class BoundedLifoQueue {
     };
 
 public:
-    BoundedLifoQueue(std::function<void(T*)> func_release):func_release_(func_release){
+    BoundedLIFOQueue(std::function<void(T*)> func_release):func_release_(func_release){
         assert(func_release, "func_release must be valid");
     };
-    BoundedLifoQueue(){
+    BoundedLIFOQueue(){
         func_release_ = [](T* p){
             delete p;
         };
     }
 
-    ~BoundedLifoQueue() {
+    ~BoundedLIFOQueue() {
         size_t h = head_.load(std::memory_order_acquire);
         size_t t = tail_.load(std::memory_order_acquire);
         for (size_t i = h; i < t; ++i) {
