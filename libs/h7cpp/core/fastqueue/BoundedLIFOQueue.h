@@ -124,8 +124,8 @@ public:
 #endif
     }
 
-    BoundedLifoQueue(const BoundedLifoQueue&) = delete;
-    BoundedLifoQueue& operator=(const BoundedLifoQueue&) = delete;
+    BoundedLIFOQueue(const BoundedLIFOQueue&) = delete;
+    BoundedLIFOQueue& operator=(const BoundedLIFOQueue&) = delete;
 
 private:
     PTR ptr_at(size_t i) {

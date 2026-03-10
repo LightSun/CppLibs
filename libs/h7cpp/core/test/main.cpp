@@ -45,6 +45,7 @@ extern void test_span();
 
 extern void main_test_fast_queue();
 extern void test_BoundedLifoQueue();
+extern void test_SPMCQueue();
 extern void test_cpp_backward();
 
 using namespace h7;
@@ -130,7 +131,7 @@ int main(int argc, char* argv[]){
    // return test_main0(argc, argv);
     //test_self_condition_variable();
 
-    test_BoundedLifoQueue();
+    test_SPMCQueue();
     return 0;
 }
 //void test_select_file(){

@@ -127,8 +127,6 @@ struct ILocalManager;
 //think: T often be a task. we want schedule task to target work-flow(like thread.).
 //template<typename T>
 //struct IScheduler{
-
-
 //};
 
 template<typename T,typename Q = ArrayQueue<T>>
@@ -224,7 +222,7 @@ template<typename T, typename Q = ArrayQueue<T>>
 struct IGlobalManager
 {
 public:
-    Queue<T>* getQueue(){
+    Q* getQueue(){
         return &m_queue;
     }
 

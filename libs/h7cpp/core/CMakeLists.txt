@@ -160,6 +160,7 @@ set(SRC_TEST
     test/test_fast_queue.cpp
     test/test_cpp_backward.cpp
     test/test_bound_LIFO_queue.cpp
+    test/test_SPMC.cpp
     )
 
 add_library(h7cpp
