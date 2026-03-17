@@ -25,7 +25,7 @@ void test_SPMCQueue() {
             while (true) {
                 int* value = nullptr;
                 // 尝试出队
-                if ( (value = queue.dequeue()) != nullptr) {
+                if ( queue.pop(value)) {
                     delete value;
                     // 模拟消费处理（微秒级延迟，模拟真实业务）
                     std::this_thread::sleep_for(std::chrono::microseconds(1));
@@ -51,7 +51,7 @@ void test_SPMCQueue() {
             // 尝试入队（队列满时重试）
             auto val = new int();
             *val = produced + 1;
-            if (queue.enqueue(val)) {
+            if (queue.push(val)) {
                 produced++;
                 // 每生产10万条打印进度
                 if (produced % 100000 == 0) {

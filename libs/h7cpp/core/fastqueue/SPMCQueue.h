@@ -39,7 +39,7 @@ public:
     SPMCQueue(SPMCQueue&&) = delete;
     SPMCQueue& operator=(SPMCQueue&&) = delete;
 
-    bool enqueue(T* value) {
+    bool push(T* value) {
         const uint64_t current_write = write_idx_.load(std::memory_order_relaxed);
         const uint64_t next_write = current_write + 1;
 
@@ -55,12 +55,12 @@ public:
         return true;
     }
 
-    T* dequeue() {
+    bool pop(T*& value) {
         uint64_t current_read = read_idx_.load(std::memory_order_relaxed);
         uint64_t current_write = write_idx_.load(std::memory_order_acquire);
         // empty
         if (current_read == current_write) {
-            return nullptr;
+            return false;
         }
 
         const uint64_t next_read = current_read + 1;
@@ -70,11 +70,11 @@ public:
                 std::memory_order_release,  // success-memory-order： update read index
                 std::memory_order_relaxed   // fail-memory-order: no need
                 )) {
-            return nullptr; //CAS failed
+            return false; //CAS failed
         }
-        auto value = buffer_[next_read & mask_].ptr;
+        value = buffer_[next_read & mask_].ptr;
         buffer_[next_read & mask_].ptr = nullptr;
-        return value;
+        return true;
     }
 
     size_t size() const {
