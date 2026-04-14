@@ -45,6 +45,7 @@ extern void test_span();
 
 extern void main_test_fast_queue();
 extern void test_BoundedLifoQueue();
+extern void test_BoundedFifoQueue();
 extern void test_SPMCQueue();
 extern void test_cpp_backward();
 
@@ -131,7 +132,7 @@ int main(int argc, char* argv[]){
    // return test_main0(argc, argv);
     //test_self_condition_variable();
 
-    test_SPMCQueue();
+    test_BoundedFifoQueue();
     return 0;
 }
 //void test_select_file(){

@@ -9,13 +9,9 @@
 
 namespace h7 {
 
-//T is pointer
 //LIFO
-template<typename T, size_t Capacity, size_t LI_CACHE_SIZE = 64>
+template<typename T, size_t LI_CACHE_SIZE = 64>
 class BoundedLIFOQueue {
-    static_assert(Capacity > 0, "Capacity must be positive");
-    static_assert((Capacity & (Capacity - 1)) == 0, "Capacity must be power of two for efficient masking");
-
     using PTR = T*;
 
     struct alignas(LI_CACHE_SIZE) Slot {
@@ -23,10 +19,13 @@ class BoundedLIFOQueue {
     };
 
 public:
-    BoundedLIFOQueue(std::function<void(T*)> func_release):func_release_(func_release){
-        assert(func_release, "func_release must be valid");
+    BoundedLIFOQueue(size_t capacity, std::function<void(T*)> func_release)
+        :capacity_(nextPowerOfTwo(capacity)),func_release_(func_release){
+        //assert(func_release, "func_release must be valid");
+        slots_.resize(capacity);
     };
-    BoundedLIFOQueue(){
+    BoundedLIFOQueue(size_t capacity):capacity_(nextPowerOfTwo(capacity)){
+        slots_.resize(capacity);
         func_release_ = [](T* p){
             delete p;
         };
@@ -42,6 +41,10 @@ public:
             }
         }
     }
+    void setFuncDrop(void* context, std::function<bool(void*, T*)> func){
+        context_ = context;
+        func_drop_ = func;
+    }
 
     // push to tail , if full drop head
     void push(PTR ptr) {
@@ -49,7 +52,7 @@ public:
         size_t t = tail_.load(std::memory_order_relaxed);
         size_t count = t - h;
 
-        if (count < Capacity) {
+        if (count < capacity_) {
             // not full
             ptr_set(t, ptr);
             tail_.store(t + 1, std::memory_order_release);
@@ -60,14 +63,14 @@ public:
         h = head_.load(std::memory_order_acquire);
         t = tail_.load(std::memory_order_acquire);
         count = t - h;
-        if (count < Capacity) {
+        if (count < capacity_) {
             // not full
             ptr_set(t, ptr);
             tail_.store(t + 1, std::memory_order_release);
             return;
         }
 
-        // full drop head
+        // full, drop head
         // head and tail: t == h + Capacity. assign to the same
         // set new
         ptr_set(h, ptr);
@@ -112,13 +115,13 @@ public:
     }
 
     bool empty() const { return size() == 0; }
-    bool full() const { return size() == Capacity; }
+    bool full() const { return size() == capacity_; }
 
     static inline void yield(){
 #ifdef __x86_64__
         __builtin_ia32_pause(); //_mm_pause
-#elif defined(__aarch64__)
-        asm volatile("yield" ::: "memory");
+//#elif defined(__aarch64__)
+//        asm volatile("yield" ::: "memory");
 #else
         std::this_thread::yield();
 #endif
@@ -129,30 +132,48 @@ public:
 
 private:
     PTR ptr_at(size_t i) {
-        return slots_[i % Capacity].ptr;
+        return slots_[i % capacity_].ptr;
     }
     PTR ptr_get_set(size_t i, PTR v) {
-        auto& slot = slots_[i % Capacity];
+        auto& slot = slots_[i % capacity_];
         auto ret = slot.ptr;
         slot.ptr = v;
         return ret;
     }
     const PTR ptr_at(size_t i)const {
-        return slots_[i % Capacity].ptr;
+        return slots_[i % capacity_].ptr;
     }
     void ptr_set(size_t i, PTR p) {
-        auto& slot = slots_[i % Capacity];
+        auto& slot = slots_[i % capacity_];
         if(slot.ptr != nullptr){
-            func_release_(slot.ptr);
+            if(func_drop_ && func_drop_(context_, slot.ptr)){
+                //empty
+            }else{
+                func_release_(slot.ptr);
+            }
         }
         slot.ptr = p;
     }
+    static size_t nextPowerOfTwo(size_t n) {
+        if (n == 0) return 1;
+        n--;
+        n |= n >> 1;
+        n |= n >> 2;
+        n |= n >> 4;
+        n |= n >> 8;
+        n |= n >> 16;
+        n |= n >> 32;
+        return n + 1;
+    }
 
 private:
-    alignas(LI_CACHE_SIZE) std::array<Slot, Capacity> slots_;
+    alignas(LI_CACHE_SIZE) std::vector<Slot> slots_;
     alignas(LI_CACHE_SIZE) std::atomic<size_t> head_{0};
     alignas(LI_CACHE_SIZE) std::atomic<size_t> tail_{0};   //idle pos
     std::function<void(T*)> func_release_;
+    std::function<bool(void*, T*)> func_drop_; //return true, means released by func_drop_.
+    void* context_ {nullptr};
+    int capacity_;
 };
 }
 

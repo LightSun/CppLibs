@@ -121,7 +121,7 @@ file(GLOB_RECURSE SRC_CORE
     cache/*.h cache/*.cpp
     c10/*.h c10/*.hpp c10/*.cpp
     utils/*.h utils/*.hpp utils/*.cpp utils/*.c utils/*.inc
-    experimental/*.h experimental/*.cpp
+    experimental/*.h experimental/*.hpp experimental/*.cpp
     json/*.h json/*.hpp json/*.cpp
     fastqueue/*.h fastqueue/*.hpp fastqueue/*.cpp
     std_study/*.h std_study/*.cpp
