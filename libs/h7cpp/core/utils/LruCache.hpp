@@ -9,31 +9,30 @@
 #include <functional>
 
 #include "common/common.h"
-#include "common/SkRefCnt.h"
 
-namespace h7 {
+namespace med {
 class NullLock {
- public:
-  void lock() {}
-  void unlock() {}
-  bool try_lock() { return true; }
+public:
+    void lock() {}
+    void unlock() {}
+    bool try_lock() { return true; }
 };
 
 template <typename K, typename V>
-struct _KeyValuePair : public SkRefCnt{
- public:
-  K key;
-  V value;
-  size_t useCount {1};
-  _KeyValuePair(K k, V v):key(std::move(k)),value(std::move(v)) {}
+struct _KeyValuePair{
+public:
+    K key;
+    V value;
+    size_t useCount {1};
+    _KeyValuePair(K k, V v):key(std::move(k)),value(std::move(v)) {}
 
-  //DESC
-  friend bool operator < (_KeyValuePair<K,V> const &a, _KeyValuePair<K,V> const &b){
-      return a.useCount > b.useCount;
-  }
-  friend bool operator > (_KeyValuePair<K,V> const &a, _KeyValuePair<K,V> const &b){
-      return a.useCount < b.useCount;
-  }
+    //DESC
+    friend bool operator < (_KeyValuePair<K,V> const &a, _KeyValuePair<K,V> const &b){
+        return a.useCount > b.useCount;
+    }
+    friend bool operator > (_KeyValuePair<K,V> const &a, _KeyValuePair<K,V> const &b){
+        return a.useCount < b.useCount;
+    }
 };
 /**
  *	The LRU Cache class templated by
@@ -48,28 +47,29 @@ struct _KeyValuePair : public SkRefCnt{
  *	thread-safe
  */
 template <class Key, class Value, class Lock = NullLock,
-          class Map = std::unordered_map<Key, sk_sp<_KeyValuePair<Key,Value>>>
-          >
-class LruCache {
+         class Map = std::unordered_map<Key, std::shared_ptr<_KeyValuePair<Key,Value>>>
+         >
+class LruCache{
 public:
     typedef _KeyValuePair<Key,Value> Pair_type0;
-    typedef sk_sp<Pair_type0> Pair_type;
+    typedef std::shared_ptr<Pair_type0> Pair_type;
     typedef std::list<Pair_type> List_type;
     typedef Lock Lock_type;
+    typedef long long size_type;
     using Guard = std::lock_guard<Lock_type>;
 
     template <class Key1, class Value1>
     struct Callback{
-        std::function<size_t(const Key1*, const Value1*)> func_kv
+        std::function<long long(const Key1*, const Value1*)> func_kv
             = [](const Key1*, const Value1* ){
-            return 1;
-        };
+                  return 1;
+              };
         std::function<bool(const Key1*, Value1*)> func_reCreate;      //must
         std::function<void(const Key1*, const Value1*)> func_insert;  //must
         std::function<void(const Key1*, const Value1*)> func_remove;
     };
 
-    explicit LruCache(size_t maxSize, Callback<Key,Value>* cb = nullptr)
+    LruCache(size_type maxSize, Callback<Key,Value>* cb = nullptr)
         :m_maxSize(maxSize){
         if(cb){
             m_callback.func_kv = cb->func_kv;
@@ -103,28 +103,28 @@ public:
         Guard g(lock_);
 
         const auto it = m_cache.find(k);
-        size_t deltaVal = 0;
-        size_t newSize = m_callback.func_kv(&k, &v);
+        size_type deltaVal = 0;
+        auto newSize = m_callback.func_kv(&k, &v);
 
         if (it != m_cache.end()) {
-           Pair_type& pt = it->second;
-           deltaVal = newSize - m_callback.func_kv(&k, &pt->value);
-           if(oldV != nullptr){
-               *oldV = pt->value;
-           }
-           if(m_callback.func_remove){
+            Pair_type& pt = it->second;
+            deltaVal = newSize - m_callback.func_kv(&k, &pt->value);
+            if(oldV != nullptr){
+                *oldV = pt->value;
+            }
+            if(m_callback.func_remove){
                 m_callback.func_remove(&k, &pt->value);
-           }
-           pt->value = v;
-           pt->useCount ++;
-           //
-           ensureSize(deltaVal);
-           //cb
-           m_callback.func_insert(&k, &v);
-           return false;
+            }
+            pt->value = v;
+            pt->useCount ++;
+            //
+            ensureSize(deltaVal);
+            //cb
+            m_callback.func_insert(&k, &v);
+            return false;
         }
         //add to list and map
-        Pair_type pt = sk_make_sp<Pair_type0>(k,v);
+        auto pt = std::make_shared<Pair_type0>(k,v);
         m_keys.push_back(pt);
         m_cache[k] = pt;
         //sort
@@ -150,17 +150,16 @@ public:
 
     bool remove(const Key& k) {
         Guard g(lock_);
-        size_t delta = 0;
         auto iter = m_cache.find(k);
         if (iter == m_cache.end()) {
-          return false;
+            return false;
         }
         //cb
         if(m_callback.func_remove){
             m_callback.func_remove(&iter->second->key, &iter->second->value);
         }
         //size
-        delta -= m_callback.func_kv(&k, &iter->second->value);
+        auto delta = m_callback.func_kv(&k, &iter->second->value);
         //remove
         auto nit = m_keys.find(iter->second);
         if(nit != m_keys.end()){
@@ -168,7 +167,11 @@ public:
         }
         m_cache.erase(iter);
         //
-        ensureSize(delta);
+        if(m_curSize >= delta){
+            m_curSize -= delta;
+        }else{
+            m_curSize = 0;
+        }
         return true;
     }
     bool contains(const Key& k) const {
@@ -200,15 +203,15 @@ protected:
         out = iter->second->value;
         return true;
     }
-    void ensureSize(size_t delta) {
-        size_t expectSize = m_curSize + delta;
+    void ensureSize(size_type delta) {
+        size_type expectSize = m_curSize + delta;
+        m_curSize += delta;
         if (expectSize <= m_maxSize) {
-           m_curSize += delta;
-           return;
+            return;
         }
         //DESC
-        size_t to_del_size = expectSize - m_maxSize;
-        size_t del_size = 0;
+        size_type to_del_size = expectSize - m_maxSize;
+        size_type del_size = 0;
         while (del_size < to_del_size) {
             if(m_keys.size() == 0){
                 break;
@@ -237,8 +240,8 @@ private:
     mutable Lock lock_;
     Map m_cache;
     List_type m_keys;
-    size_t m_maxSize;
-    size_t m_curSize {0};
+    size_type m_maxSize;
+    size_type m_curSize {0};
 
     Callback<Key,Value> m_callback;
 };
