@@ -6,13 +6,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 #-rdynamic
+set(DBG_G "-g")
 if(WIN32)
-    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fPIC -g -O0")
+    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fPIC ${DBG_G}")
 else(WIN32)
-    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fPIC -g -O0")
+    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fPIC ${DBG_G}")
 endif(WIN32)
 #-std=c11
-set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fPIC -g -O0")
+set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fPIC ${DBG_G}")
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS}")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -28,6 +29,9 @@ if(USE_CPP_BACKWARD)
     set(LIBDW_LIBRARY ${ELFUTILS_DIR}/lib/libdw.so
         )
 endif(USE_CPP_BACKWARD)
+## break pad
+set(BREAK_PAD_INC ${BREAK_PAD_DIR}/include/breakpad)
+set(BREAK_PAD_LIB ${BREAK_PAD_DIR}/lib/libbreakpad_client.a)
 
 #platform
 SET(BUILD_ON_WIN OFF)
@@ -49,7 +53,7 @@ include_directories(valgrind-headers/)
 include_directories(./)
 
 ## sub dirs
-add_subdirectory(backward-cpp-1.6)
+#add_subdirectory(backward-cpp-1.6)
 add_subdirectory(zip/)
 #add_subdirectory(gzip/)
 add_subdirectory(core/)

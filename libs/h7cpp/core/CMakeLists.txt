@@ -181,6 +181,7 @@ target_link_libraries(h7cpp_shared PUBLIC ${DEP_LIBS})
 add_executable(unittest
     ${SRC_TEST}
     )
+target_compile_definitions(unittest PUBLIC __STDC_FORMAT_MACROS) # for breakpad
 target_link_libraries(unittest PUBLIC h7cpp)
 if(CPPAST_BUILD_H7CPP)
     target_link_libraries(unittest PUBLIC cppast)
@@ -191,6 +192,8 @@ if(USE_CPP_BACKWARD)
         ${LIBDW_LIBRARY}
     )
 endif(USE_CPP_BACKWARD)
+target_include_directories(unittest PUBLIC ${BREAK_PAD_INC})
+target_link_libraries(unittest PUBLIC ${BREAK_PAD_LIB})
 
 
 ##

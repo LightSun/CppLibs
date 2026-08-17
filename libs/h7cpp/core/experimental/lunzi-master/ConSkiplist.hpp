@@ -162,7 +162,8 @@ protected:
         bool take_ = false;
         while (!take_)
         {
-            for (int step = 0; step <= 100000 && !(take_ = m_lock.compare_exchange_strong(ulock_, Lock, std::memory_order_release)); ++step)
+            for (int step = 0; step <= 100000 &&
+                               !(take_ = m_lock.compare_exchange_strong(ulock_, Lock, std::memory_order_release)); ++step)
                 ulock_ = UnLock;
             if (!take_)
                 std::this_thread::yield();

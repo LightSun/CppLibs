@@ -10,6 +10,8 @@
 
 //#include "ui_upload/pub_api.h"
 #include "common/logger.h"
+#include "client/linux/handler/exception_handler.h"
+
 
 extern int test_main0(int argc, char* argv[]);
 
@@ -51,8 +53,19 @@ extern void test_cpp_backward();
 
 using namespace h7;
 
+static bool dumpCallback(const google_breakpad::MinidumpDescriptor& descriptor,
+                         void* context, bool succeeded) {
+    printf("Dump path: %s\n", descriptor.path());
+    return succeeded;
+}
+
+void crash() { volatile int* a = (int*)(NULL); *a = 1; }
+
 int main(int argc, char* argv[]){
     setbuf(stdout, NULL);
+    String dumpDir = "/media/heaven7/Elements_SE/study/work/libs_symbol/dump";
+    google_breakpad::MinidumpDescriptor descriptor(dumpDir);
+    google_breakpad::ExceptionHandler eh(descriptor, NULL, dumpCallback, NULL, true, -1);
 
 //    if(argc == 1){
 //        //String fir = "/home/heaven7/heaven7/work/TensorRT/libtorch_1.12.1/libtorch/lib";
@@ -133,6 +146,7 @@ int main(int argc, char* argv[]){
     //test_self_condition_variable();
 
     test_BoundedFifoQueue();
+    crash();
     return 0;
 }
 //void test_select_file(){
