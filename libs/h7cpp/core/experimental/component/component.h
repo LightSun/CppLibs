@@ -9,18 +9,22 @@
 #include <mutex>
 #include <atomic>
 #include <future>
+#include "utils/ReadWriteMap.h"
 
 namespace h7_component {
 
 enum Format{
     kFormat_NONE = -1,
     kFormat_JSON,
-    kFormat_BIN,
+    kFormat_STRING,
+    kFormat_POINTER,
+    kFormat_BINARY,
 };
 
 struct ShareData{
     std::shared_ptr<void> data;
     std::string tag;
+    int dataType {-1}; //unknown.
     int format {kFormat_NONE};
 };
 typedef const ShareData& CSpContext;
@@ -120,7 +124,7 @@ public:
     std::shared_ptr<IService> base;
 
 private:
-    friend class WrapServiceHolder;
+    friend struct WrapServiceHolder;
     friend class GroupService;
     std::atomic_bool m_busy {false};
 };
@@ -160,6 +164,7 @@ struct ThreadParameter{
         kState_FAILED,
         kState_OK,
     };
+    System* system {nullptr};
     SpContext ctx;
     SpContext saveState;
     int tcnt {0};  //thread cnt
@@ -217,6 +222,8 @@ public:
 
     GroupService(System* sys, List<ServiceApi> apis): sys(sys),m_apis(apis){}
 
+    System* getSystem(){return sys;}
+
     int getServiceCnt()const{return m_apis.size();}
 
     List<ServiceApi> runAll(CSpContext ctx, CSpContext saveState){
@@ -272,10 +279,10 @@ public:
         tp->scnt = c;
         tp->serviceStates = List<int>(c, ThreadParameter::kState_UNKNOWN);
         tp->services = m_apis;
+        tp->system = sys;
         //
         auto finalTask = std::make_shared<std::packaged_task<void(SPTP)>>(final);
         auto anyFailed = std::make_shared<std::atomic_bool>(false);
-        System* sys = this->sys;
         for(int i = 0, si = 0; i < tc ; ++i){
             const int ki = si;
             const int act_count = i < left ? every + 1 : every;
@@ -289,7 +296,8 @@ public:
                 std::bind(func0, std::placeholders::_1, std::placeholders::_2)
                 );
             //
-            scheduler->schedule([sys, finalTask, task, tp, ki, act_count, anyFailed, breakIfAnyFailed](){
+            scheduler->schedule([finalTask, task, tp, ki, act_count,
+                                 anyFailed, breakIfAnyFailed](){
                 for(int k = ki, kend = ki + act_count; k < kend ; ++k){
                     if(breakIfAnyFailed && anyFailed->load()){
                         tp->addRunCnt(kend - k);
@@ -310,7 +318,7 @@ public:
                     }
                 }
                 if(tp->isAllRunned()){
-                    dispatchGroupEvent(sys, kServiceEvent_RUN_MULTI_THREAD, false);
+                    dispatchGroupEvent(tp->system, kServiceEvent_RUN_MULTI_THREAD, false);
                     (*finalTask)(tp);
                 }
             });
@@ -338,8 +346,7 @@ public:
             auto& name = service->getServiceInfo()->name;
             auto preService = getService(name);
             if(preService == nullptr){
-                std::unique_lock<std::mutex> mtx(m_serviceMapMux);
-                m_serviceMap[name] = std::make_shared<WrapService>(this, service);
+                m_serviceMap.put(name, std::make_shared<WrapService>(this, service));
             }else{
                 dispatchEvent(name, kServiceEvent_REGISTER, false, init_env);
                 return std::make_pair<>(false, name);
@@ -352,45 +359,40 @@ public:
     ServiceApi unregisterService(CString name){
         ServiceApi api;
         {
-            std::unique_lock<std::mutex> mtx(m_serviceMapMux);
-            auto it = m_serviceMap.find(name);
-            if(it != m_serviceMap.end()){
-                api = it->second->base;
-                m_serviceMap.erase(it);
+            WrapServiceApi wapi;
+            if(m_serviceMap.remove(name, wapi)){
+                api = wapi->base;
                 dispatchEvent(name, kServiceEvent_UNREGISTER, true, SpContext());
             }
         }
         return api;
     }
     ServiceApi getService(CString name){
-        std::unique_lock<std::mutex> mtx(m_serviceMapMux);
-        auto it = m_serviceMap.find(name);
-        if(it != m_serviceMap.end()){
-            return it->second->base;
+        WrapServiceApi wapi;
+        if(m_serviceMap.get(name, wapi)){
+            return wapi;
         }
         return nullptr;
     }
     GroupService group(CString group){
         List<ServiceApi> apis;
         {
-            std::unique_lock<std::mutex> mtx(m_serviceMapMux);
-            for(auto& [k,v] : m_serviceMap){
+            m_serviceMap.readAll([group, &apis](CString,WrapServiceApi& v){
                 if(v->getGroup() == group){
                     apis.push_back(v);
                 }
-            }
+            });
         }
         return GroupService(this, apis);
     }
     GroupService groupContains(CString group){
         List<ServiceApi> apis;
         {
-            std::unique_lock<std::mutex> mtx(m_serviceMapMux);
-            for(auto& [k,v] : m_serviceMap){
+            m_serviceMap.readAll([group, &apis](CString,WrapServiceApi& v){
                 if(v->getGroup().find(group) != String::npos){
                     apis.push_back(v);
                 }
-            }
+            });
         }
         return GroupService(this, apis);
     }
@@ -415,9 +417,8 @@ public:
         }
     }
 private:
-    std::unordered_map<String, WrapServiceApi> m_serviceMap;
+    h7::ReadWriteMap<String, WrapServiceApi> m_serviceMap;
     std::unique_ptr<IServiceListener> m_listener;
-    std::mutex m_serviceMapMux;
 };
 //------
 //----------------- impl ------------
