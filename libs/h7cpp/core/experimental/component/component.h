@@ -20,8 +20,8 @@ enum Format{
 
 struct ShareData{
     std::shared_ptr<void> data;
-    int format {kFormat_NONE};
     std::string tag;
+    int format {kFormat_NONE};
 };
 typedef const ShareData& CSpContext;
 typedef ShareData SpContext;
@@ -42,10 +42,16 @@ enum ServiceEventEnum{
     //
     kServiceEvent_REGISTER = 100,
     kServiceEvent_UNREGISTER,
+    //
+    kServiceEvent_RUN_ALL,
+    kServiceEvent_RUN_ONE,
+    kServiceEvent_RUN_MULTI_THREAD,
 };
 
 struct ServiceEnvent{
     int event {kServiceEvent_NONE};
+    //for simple-event, this indicate success or failed.
+    //for group-event, this indicate open or close.
     bool state {false};
     String name;
     SpContext ctx;
@@ -58,7 +64,8 @@ public:
     virtual ~IServiceListener(){}
 
     //saveState only for run event
-    void onEvent(System* sys, CServiceEnvent event);
+    virtual void onEvent(System* sys, CServiceEnvent event) = 0;
+    virtual void onGroupEvent(System*, CServiceEnvent){};
 };
 
 struct ServiceInfo{
@@ -199,7 +206,7 @@ struct ThreadParameter{
         return runnedCnt.load();
     }
     bool isAllRunned(){
-        return getRunCnt() == services.size();
+        return getRunCnt() == (int)services.size();
     }
 };
 
@@ -208,25 +215,29 @@ public:
     typedef std::shared_ptr<IService> ServiceApi;
     using SPTP = std::shared_ptr<ThreadParameter>;
 
-    GroupService(List<ServiceApi> apis): m_apis(apis){}
+    GroupService(System* sys, List<ServiceApi> apis): sys(sys),m_apis(apis){}
 
     int getServiceCnt()const{return m_apis.size();}
 
     List<ServiceApi> runAll(CSpContext ctx, CSpContext saveState){
+        dispatchGroupEvent(sys, kServiceEvent_RUN_ALL, true);
         List<ServiceApi> failedVec;
         for(auto& s : m_apis){
             if(!s->run(ctx, saveState)){
                 failedVec.push_back(s);
             }
         }
+        dispatchGroupEvent(sys, kServiceEvent_RUN_ALL, false);
         return failedVec;
     }
     bool runOne(CSpContext ctx, CSpContext saveState){
+        dispatchGroupEvent(sys, kServiceEvent_RUN_ONE, true);
         for(auto& s : m_apis){
             if(s->run(ctx, saveState)){
                 return true;
             }
         }
+        dispatchGroupEvent(sys, kServiceEvent_RUN_ONE, false);
         return false;
     }
     /**
@@ -245,6 +256,7 @@ public:
                         std::function<bool(SPTP,int,int,ServiceApi)> func,
                         std::function<void(SPTP)> final,
                         bool breakIfAnyFailed){
+        dispatchGroupEvent(sys, kServiceEvent_RUN_MULTI_THREAD, true);
         //TODO check tc > 0
         const int c = m_apis.size();
         tc = c < tc ? c : tc;
@@ -263,6 +275,7 @@ public:
         //
         auto finalTask = std::make_shared<std::packaged_task<void(SPTP)>>(final);
         auto anyFailed = std::make_shared<std::atomic_bool>(false);
+        System* sys = this->sys;
         for(int i = 0, si = 0; i < tc ; ++i){
             const int ki = si;
             const int act_count = i < left ? every + 1 : every;
@@ -276,7 +289,7 @@ public:
                 std::bind(func0, std::placeholders::_1, std::placeholders::_2)
                 );
             //
-            scheduler->schedule([finalTask, task, tp, ki, act_count, anyFailed, breakIfAnyFailed](){
+            scheduler->schedule([sys, finalTask, task, tp, ki, act_count, anyFailed, breakIfAnyFailed](){
                 for(int k = ki, kend = ki + act_count; k < kend ; ++k){
                     if(breakIfAnyFailed && anyFailed->load()){
                         tp->addRunCnt(kend - k);
@@ -297,14 +310,17 @@ public:
                     }
                 }
                 if(tp->isAllRunned()){
+                    dispatchGroupEvent(sys, kServiceEvent_RUN_MULTI_THREAD, false);
                     (*finalTask)(tp);
                 }
             });
         }
         return tp;
     }
+    inline static void dispatchGroupEvent(System* sys,int event, bool beginOrEnd);
 
 private:
+    System* sys;
     List<ServiceApi> m_apis;
 };
 
@@ -316,6 +332,7 @@ public:
         this->m_listener = std::move(l);
     }
     //register and return the service name.
+    //pair: state,msg
     std::pair<bool,String> registerService(ServiceApi service, SpContext init_env){
         if(service->init(init_env)){
             auto& name = service->getServiceInfo()->name;
@@ -363,7 +380,7 @@ public:
                 }
             }
         }
-        return GroupService(apis);
+        return GroupService(this, apis);
     }
     GroupService groupContains(CString group){
         List<ServiceApi> apis;
@@ -375,7 +392,7 @@ public:
                 }
             }
         }
-        return GroupService(apis);
+        return GroupService(this, apis);
     }
     void dispatchEvent(CString serviceName, int event, bool state,
                        CSpContext ctx, CSpContext saveState = SpContext()){
@@ -387,6 +404,14 @@ public:
             e.ctx = ctx;
             e.saveState = saveState;
             m_listener->onEvent(this, e);
+        }
+    }
+    void dispatchGroupEvent(int event, bool beginOrEnd){
+        if(m_listener){
+            ServiceEnvent e;
+            e.event = event;
+            e.state = beginOrEnd;
+            m_listener->onGroupEvent(this, e);
         }
     }
 private:
@@ -440,5 +465,9 @@ bool WrapService::run(CSpContext ctx, CSpContext saveState){
     }
     system->dispatchEvent(getName(), kServiceEvent_RUN, result, ctx, saveState);
     return result;
+}
+//----------------
+void GroupService::dispatchGroupEvent(System* sys,int event, bool beginOrEnd){
+    sys->dispatchGroupEvent(event, beginOrEnd);
 }
 }
