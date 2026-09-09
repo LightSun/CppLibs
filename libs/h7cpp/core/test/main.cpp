@@ -51,6 +51,8 @@ extern void test_BoundedFifoQueue();
 extern void test_SPMCQueue();
 extern void test_cpp_backward();
 
+extern void test_component();
+
 using namespace h7;
 
 static bool dumpCallback(const google_breakpad::MinidumpDescriptor& descriptor,
@@ -63,9 +65,9 @@ void crash() { volatile int* a = (int*)(NULL); *a = 1; }
 
 int main(int argc, char* argv[]){
     setbuf(stdout, NULL);
-    String dumpDir = "/media/heaven7/Elements_SE/study/work/libs_symbol/dump";
-    google_breakpad::MinidumpDescriptor descriptor(dumpDir);
-    google_breakpad::ExceptionHandler eh(descriptor, NULL, dumpCallback, NULL, true, -1);
+//    String dumpDir = "/media/heaven7/Elements_SE/study/work/libs_symbol/dump";
+//    google_breakpad::MinidumpDescriptor descriptor(dumpDir);
+//    google_breakpad::ExceptionHandler eh(descriptor, NULL, dumpCallback, NULL, true, -1);
 
 //    if(argc == 1){
 //        //String fir = "/home/heaven7/heaven7/work/TensorRT/libtorch_1.12.1/libtorch/lib";
@@ -145,8 +147,10 @@ int main(int argc, char* argv[]){
    // return test_main0(argc, argv);
     //test_self_condition_variable();
 
-    test_BoundedFifoQueue();
-    crash();
+    //test_BoundedFifoQueue();
+    //crash();
+
+    test_component();
     return 0;
 }
 //void test_select_file(){

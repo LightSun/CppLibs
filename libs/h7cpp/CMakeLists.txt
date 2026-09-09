@@ -20,15 +20,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 ###
 
 include(cmake/ENV.cmake)
-#
-if(USE_CPP_BACKWARD)
-    #set(BACKWARD_TESTS ON)
-    add_compile_definitions(USE_CPP_BACKWARD)
-    add_compile_definitions(BACKWARD_HAS_DW=1)
-    set(LIBDW_INCLUDE_DIR ${ELFUTILS_DIR}/include)
-    set(LIBDW_LIBRARY ${ELFUTILS_DIR}/lib/libdw.so
-        )
-endif(USE_CPP_BACKWARD)
+
 ## break pad
 set(BREAK_PAD_INC ${BREAK_PAD_DIR}/include/breakpad)
 set(BREAK_PAD_LIB ${BREAK_PAD_DIR}/lib/libbreakpad_client.a)
@@ -53,7 +45,6 @@ include_directories(valgrind-headers/)
 include_directories(./)
 
 ## sub dirs
-#add_subdirectory(backward-cpp-1.6)
 add_subdirectory(zip/)
 #add_subdirectory(gzip/)
 add_subdirectory(core/)

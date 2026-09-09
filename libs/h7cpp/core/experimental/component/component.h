@@ -43,6 +43,8 @@ enum ServiceEventEnum{
     kServiceEvent_LOAD,
     kServiceEvent_UNLOAD,
     kServiceEvent_RUN,
+    kServiceEvent_SAVE_STATE,
+    kServiceEvent_RESTORE_STATE,
     //
     kServiceEvent_REGISTER = 100,
     kServiceEvent_UNREGISTER,
@@ -51,6 +53,8 @@ enum ServiceEventEnum{
     kServiceEvent_RUN_ONE,
     kServiceEvent_RUN_MULTI_THREAD,
 };
+
+static inline String int2str_event(int);
 
 struct ServiceEnvent{
     int event {kServiceEvent_NONE};
@@ -91,13 +95,21 @@ public:
     virtual ServiceInfo* getServiceInfo(){
         return &m_info;
     }
+    //should set info for 'm_info'
     virtual bool init(CSpContext data) = 0;
 
     virtual bool load(CSpContext ctx) = 0;
 
     virtual bool unload(CSpContext ctx) = 0;
 
+    //ctx: often be a once use context - IN
+    //saveState: often used to save state with once run - OUT.
     virtual bool run(CSpContext ctx, CSpContext saveState) = 0;
+
+    //----------------
+    virtual bool saveState(SpContext&){return false;}
+
+    virtual bool restoreState(const SpContext&){return false;}
 
 protected:
     ServiceInfo m_info;
@@ -117,7 +129,11 @@ public:
 
     bool unload(CSpContext ctx) final;
 
+    //saveState: often be mediator-state
     bool run(CSpContext ctx, CSpContext saveState) final;
+
+    bool saveState(SpContext&) final;
+    bool restoreState(const SpContext&) final;
 
 public:
     System* system;
@@ -226,6 +242,60 @@ public:
 
     int getServiceCnt()const{return m_apis.size();}
 
+    List<ServiceApi> load(CSpContext ctx){
+        List<ServiceApi> failedVec;
+        dispatchGroupEvent(sys, kServiceEvent_LOAD, true);
+        for(auto& s : m_apis){
+            if(!s->load(ctx)){
+                failedVec.push_back(s);
+            }
+        }
+        dispatchGroupEvent(sys, kServiceEvent_LOAD, false);
+        return failedVec;
+    }
+    List<ServiceApi> unload(CSpContext ctx){
+        List<ServiceApi> failedVec;
+        dispatchGroupEvent(sys, kServiceEvent_UNLOAD, true);
+        for(auto& s : m_apis){
+            if(!s->unload(ctx)){
+                failedVec.push_back(s);
+            }
+        }
+        dispatchGroupEvent(sys, kServiceEvent_UNLOAD, false);
+        return failedVec;
+    }
+
+    std::unordered_map<String,SpContext> saveState(List<ServiceApi>* failedVec = nullptr){
+        dispatchGroupEvent(sys, kServiceEvent_SAVE_STATE, true);
+        std::unordered_map<String,SpContext> map;
+        for(auto& v : m_apis){
+            SpContext ctx;
+            if(v->saveState(ctx)){
+                map[v->getName()] = std::move(ctx);
+            }else if(failedVec){
+                failedVec->push_back(v);
+            }
+        }
+        dispatchGroupEvent(sys, kServiceEvent_SAVE_STATE, false);
+        return map;
+    }
+    List<ServiceApi> restoreState(const std::unordered_map<String,SpContext>& map){
+        dispatchGroupEvent(sys, kServiceEvent_RESTORE_STATE, true);
+        List<ServiceApi> failedVec;
+        for(auto& v : m_apis){
+            auto it = map.find(v->getName());
+            if(it != map.end()){
+                v->restoreState(it->second);
+            }else{
+                //printf("[Warn] restoreState >> failed, service = %s.\n", v->getName().data());
+                failedVec.push_back(v);
+            }
+        }
+        dispatchGroupEvent(sys, kServiceEvent_RESTORE_STATE, false);
+        return failedVec;
+    }
+
+    //return failed service
     List<ServiceApi> runAll(CSpContext ctx, CSpContext saveState){
         dispatchGroupEvent(sys, kServiceEvent_RUN_ALL, true);
         List<ServiceApi> failedVec;
@@ -289,12 +359,10 @@ public:
             si += act_count;
             int tidx = i;
             //
-            auto func0 = [func, tp, tidx](int sidx, ServiceApi api){
-                func(tp, tidx, sidx, api);
-            };
-            auto task = std::make_shared<PKT>(
-                std::bind(func0, std::placeholders::_1, std::placeholders::_2)
-                );
+            auto task = std::make_shared<PKT>([func, tp, tidx](int sidx, ServiceApi api)->bool{
+                    return func(tp, tidx, sidx, api);
+                }
+            );
             //
             scheduler->schedule([finalTask, task, tp, ki, act_count,
                                  anyFailed, breakIfAnyFailed](){
@@ -346,7 +414,12 @@ public:
             auto& name = service->getServiceInfo()->name;
             auto preService = getService(name);
             if(preService == nullptr){
-                m_serviceMap.put(name, std::make_shared<WrapService>(this, service));
+                std::shared_ptr<WrapService> impl = std::dynamic_pointer_cast<WrapService>(service);
+                if(impl){
+                    m_serviceMap.put(name, impl);
+                }else{
+                    m_serviceMap.put(name, std::make_shared<WrapService>(this, service));
+                }
             }else{
                 dispatchEvent(name, kServiceEvent_REGISTER, false, init_env);
                 return std::make_pair<>(false, name);
@@ -374,6 +447,16 @@ public:
         }
         return nullptr;
     }
+    GroupService group(){
+        List<ServiceApi> apis;
+        {
+            m_serviceMap.readAll([&apis](CString,WrapServiceApi& v){
+                apis.push_back(v);
+            });
+        }
+        return GroupService(this, apis);
+    }
+
     GroupService group(CString group){
         List<ServiceApi> apis;
         {
@@ -396,6 +479,7 @@ public:
         }
         return GroupService(this, apis);
     }
+    //-------------
     void dispatchEvent(CString serviceName, int event, bool state,
                        CSpContext ctx, CSpContext saveState = SpContext()){
         if(m_listener){
@@ -423,6 +507,24 @@ private:
 //------
 //----------------- impl ------------
 //
+String int2str_event(int e){
+    switch (e) {
+    case  kServiceEvent_NONE:{return "NONE";}break;
+    case  kServiceEvent_INIT:{return "INIT";}break;
+    case  kServiceEvent_LOAD:{return "LOAD";}break;
+    case  kServiceEvent_UNLOAD:{return "UNLOAD";}break;
+    case  kServiceEvent_RUN:{return "RUN";}break;
+    case  kServiceEvent_SAVE_STATE:{return "SAVE_STATE";}break;
+    case  kServiceEvent_RESTORE_STATE:{return "RESTORE_STATE";}break;
+    case  kServiceEvent_REGISTER:{return "REGISTER";}break;
+    case  kServiceEvent_UNREGISTER:{return "UNREGISTER";}break;
+    case  kServiceEvent_RUN_ALL:{return "RUN_ALL";}break;
+    case  kServiceEvent_RUN_ONE:{return "RUN_ONE";}break;
+    case  kServiceEvent_RUN_MULTI_THREAD:{return "RUN_MULTI_THREAD";}break;
+    default:
+        return "UNknown";
+    }
+}
 bool WrapService::init(CSpContext ctx){
     bool result = false;
     {
@@ -465,6 +567,28 @@ bool WrapService::run(CSpContext ctx, CSpContext saveState){
         }
     }
     system->dispatchEvent(getName(), kServiceEvent_RUN, result, ctx, saveState);
+    return result;
+}
+bool WrapService::saveState(SpContext& state){
+    bool result = false;
+    {
+        WrapServiceHolder holder(this);
+        if(holder.casBusy()){
+            result = base->saveState(state);
+        }
+    }
+    system->dispatchEvent(getName(), kServiceEvent_SAVE_STATE, result, state);
+    return result;
+}
+bool WrapService::restoreState(const SpContext& state){
+    bool result = false;
+    {
+        WrapServiceHolder holder(this);
+        if(holder.casBusy()){
+            result = base->restoreState(state);
+        }
+    }
+    system->dispatchEvent(getName(), kServiceEvent_RESTORE_STATE, result, state);
     return result;
 }
 //----------------
