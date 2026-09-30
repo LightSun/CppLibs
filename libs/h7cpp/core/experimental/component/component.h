@@ -324,7 +324,7 @@ public:
      * @param tc  :the thread cnt
      * @param scheduler: the thread scheduler
      * @param func : the func to run. args[1] is thread idx(>=0), args[2] is service idx(>=0).
-     * @param final : the final task, if all task runned(can be failed/unknown).
+     * @param final : the final task, if all task runned(can be success/failed/unknown).
      *                be called from the any-scheduler thread.
      * @param breakIfAnyFailed: should break if any service failed
      * @return the run param.
@@ -382,7 +382,6 @@ public:
                     //check
                     if(breakIfAnyFailed && !ret){
                         anyFailed->store(true);
-                        break;
                     }
                 }
                 if(tp->isAllRunned()){
@@ -427,7 +426,7 @@ public:
             dispatchEvent(name, kServiceEvent_REGISTER, true, init_env);
             return std::make_pair<>(true, name);
         }
-        return std::make_pair<>(false, "");;
+        return std::make_pair<>(false, "init failed");;
     }
     ServiceApi unregisterService(CString name){
         ServiceApi api;
@@ -507,7 +506,7 @@ private:
 //------
 //----------------- impl ------------
 //
-String int2str_event(int e){
+static String int2str_event(int e){
     switch (e) {
     case  kServiceEvent_NONE:{return "NONE";}break;
     case  kServiceEvent_INIT:{return "INIT";}break;
